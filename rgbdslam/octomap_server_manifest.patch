@@ -1,0 +1,4 @@
+14c14
+<     <cpp cflags="-I${prefix}/include"  lflags="-L${prefix}/lib -Wl,-rpath,${prefix}/lib -loctomap_server"/>
+---
+>     <cpp cflags="-I${prefix}/include -I${prefix}/cfg/cpp "  lflags="-L${prefix}/lib -Wl,-rpath,${prefix}/lib -loctomap_server"/>

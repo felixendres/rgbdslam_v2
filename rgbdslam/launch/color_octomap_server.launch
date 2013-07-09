@@ -1,0 +1,15 @@
+<launch>
+    <!-- Launch octomap_server for mappingL: Listens to incoming PointCloud2 data 
+    and incrementally build an octomap. The data is sent out in different representations. -->
+    <node pkg="octomap_server" type="color_octomap_server_node" name="color_octomap_server" output="screen">
+      <param name="resolution" value="0.01" />
+      <!-- fixed map frame (set to 'map' if SLAM or localization running!) -->
+      <param name="frame_id" type="string" value="map" />
+      <!-- maximum range to integrate (speedup, accuracy) -->
+      <param name="max_sensor_range" value="2.2" />
+      <!-- Save octomap here on destruction of the server -->
+      <param name="data_directory" value="/tmp/)" />
+      <!-- data source to integrate (PointCloud2) -->
+      <remap from="cloud_in" to="/rgbdslam/batch_clouds" />
+    </node>
+</launch>

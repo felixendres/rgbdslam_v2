@@ -1,0 +1,91 @@
+<!-- This file demonstrates the parameters that can be set via the parameter server.
+     The settings here typically show the default values (c.f. parameter_server.cpp)
+     This file strives to enlist all possibilities, to be a good copy-paste source.
+     In general most options/tags don't need to be altered/used. -->
+<launch>
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find rgbdslam)/log.conf"/>
+  <env name="ROSCONSOLE_FORMAT" value="[${severity}] [${time}]: ${message}"/>
+
+  <arg name="debug" default="false"/>
+  <!-- Several possibilities to debug (uncomment only one)-->
+  <arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/gdb -ex run -args"/>
+  <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/xterm -rv -e gdb -ex run -args"/-->
+  <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/valgrind -DELeTEME-tool=cachegrind -DELETEME-cachegrind-out-file=/tmp/cachegrind.out"/-->
+  <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/valgrind -DELETEME-leak-check=full "/-->
+  <arg unless="$(arg debug)" name="launch_prefix" value=""/>
+
+  <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" cwd="node" required="true" output="log"  launch-prefix="$(arg launch_prefix)"> 
+    <!-- Input data settings-->
+    <param name="config/topic_image_mono"              value="/camera/rgb/image_mono"/> <!--could also be color -->
+  	<param name="config/topic_image_depth"             value="/camera/depth/image"/>
+    <param name="config/topic_points"                  value="/camera/rgb/points"/> <!--if empty, poincloud will be reconstructed from image and depth -->
+    <param name="config/camera_info_topic"             value="/camera/rgb/camera_info"/>
+    <param name="config/wide_topic"                    value="/wide_stereo/left/image_mono"/>
+    <param name="config/wide_cloud_topic"              value="/wide_stereo/points2"/>
+  	<param name="config/subscriber_queue_size"         value="2"/>
+    <param name="config/drop_async_frames"             value="false"/> <!-- Check association of depth and visual image, reject if not in sync -->
+    <param name="config/depth_scaling_factor"          value="1.0"/> <!-- to correct bad depth scaling of kinect -->
+    <param name="config/bagfile_name"                  value=""/><!-- read data from a bagfile, make sure to enter the right topics above-->
+    <param name="config/data_skip_step"                value="1"/><!-- skip every n-th frame completely -->
+
+    <!-- Output data settings-->
+    <param name="config/store_pointclouds"             value="true"/> <!-- if, e.g., only trajectory is required, setting this to false saves lots of memory -->
+    <param name="config/individual_cloud_out_topic"    value="/rgbdslam/batch_clouds"/><!-- The point clouds, e.g., for octomap server (the corresp. sensor poses are sent via /tf). Requires store_pointclouds to be true. Is sent only on request (service call or gui menu) -->
+    <param name="config/aggregate_cloud_out_topic"     value="/rgbdslam/aggregate_clouds"/>
+    <param name="config/publisher_queue_size"          value="2"/><!-- affects all publishers -->
+    <param name="config/send_clouds_rate"              value="5"/> <!-- When sending the point clouds (e.g. to RVIZ or Octomap Server) limit sending to this many clouds per second -->
+
+    <!-- TF information settings -->
+  	<param name="config/fixed_frame_name"              value="/map"/>
+    <param name="config/ground_truth_frame_name"       value="/ground_truth_map"/><!--empty string if no ground truth-->
+    <param name="config/base_frame_name"               value="/openni_camera"/> <!-- /openni_camera for hand-held kinect. For robot, e.g., /base_link -->
+    <param name="config/fixed_camera"                  value="true"/> <!--is the kinect fixed with respect to base, or can it be moved (false makes sense only if transform betw. base_frame and openni_camera is sent via tf)-->
+
+    <!-- Visual Features, to activate GPU-based features see CMakeLists.txt -->
+    <param name="config/feature_detector_type"         value="SURF"/><!-- If SIFTGPU is enabled in CMakeLists.txt, use SURF here -->
+    <param name="config/feature_extractor_type"        value="SURF"/><!-- If SIFTGPU is enabled in CMakeLists.txt, use SURF here -->
+    <param name="config/matcher_type"                  value="FLANN"/> <!-- FLANN (not avail for ORB features), SIFTGPU (only for SIFTGPU detector)  or BRUTEFORCE-->
+    <param name="config/nn_distance_ratio"             value="0.6"/> <!-- Feature correspondence is valid if distance to nearest neighbour is smaller than this parameter times the distance to the 2nd neighbour -->
+    <param name="config/max_keypoints"                 value="700"/><!-- Extract no more than this many keypoints (not honored by SIFTGPU)-->
+    <param name="config/min_keypoints"                 value="100"/><!-- Extract no less than this many ... -->
+  	<param name="config/adjuster_max_iterations"       value="3"/>
+
+    <!-- Algortithm settings -->
+    <param name="config/min_translation_meter"         value="0.1"/><!-- frames with motion less than this, will be omitted -->
+  	<param name="config/min_rotation_degree"           value="5"/><!-- frames with motion less than this, will be omitted -->
+    <param name="config/predecessor_candidates"        value="5"/><!-- search through this many immediate predecessor nodes for corrspondences -->
+    <param name="config/neighbor_candidates"           value="5"/><!-- search through this many graph neighbour nodes for corrspondences -->
+    <param name="config/min_sampled_candidates"        value="5"/><!-- search through this many uniformly sampled nodes for corrspondences -->
+    <param name="config/max_connections"               value="10"/><!-- stop after this many succesfully found spation relations -->
+    <param name="config/min_matches"                   value="50"/><!-- Prune unreliable transformations from too few feature matches -->
+    <param name="config/sufficient_matches"            value="400"/><!-- Instead of matching all new descriptors against all of a previous node in one step, sufficient_matches+100 of the new descriptors are iteratively compared to all of the previous node until sufficient_matches are found. Setting this parameter low (e.g. 2x min_matches) speeds up comparisons of frames with many matches, but with a potential loss of accuracy, as the transformation is estimated from less features. Set it to max_keypoints for maximum accuracy -->
+    <param name="config/ransac_iterations"             value="5000"/><!-- these are fast, so high values are ok -->
+    <param name="config/max_dist_for_inliers"          value="3"/> <!--matches considered inliers by ransac (in mahalanobis distance, i.e. std deviations)-->
+    <param name="config/optimizer_iterations"          value="2"/><!-- maximum of iterations in online operation (i.e., does not affect the final optimization in batch mode) -->
+    <param name="config/optimizer_skip_step"           value="1"/><!-- optimize every n-th frame. Set high for offline operation -->
+    <param name="config/use_icp"                       value="false"/> <!-- Ignored if ICP is not compiled in (see top of CMakeLists.txt) -->
+    <param name="config/backend_solver"                value="cholmod"/> <!-- Which solver to use in g2o for matrix inversion: "csparse" , "cholmod" or "pcg"  -->
+    <param name="config/optimize_landmarks"            value="false"/> <!-- Include feature poses as vertices in graph optimization-->
+
+    <!-- Visualization Settings -->
+    <param name="config/squared_meshing_threshold"     value="0.0009"/><!-- don't triangulate over depth jumps -->
+    <param name="config/visualization_skip_step"       value="1"/> <!-- draw only every nth pointcloud row and line, high values require higher squared_meshing_threshold -->
+    <param name="config/visualize_mono_depth_overlay"  value="false"/> <!-- Show Depth and Monochrome image as overlay in featureflow -->
+    <param name="config/use_glwidget"                  value="true"/><!-- 3D visualization needs performance -->
+    <param name="config/use_gui"                       value="true"/><!-- No visualization, e.g., on robot -->
+    <param name="config/show_axis"                     value="true"/>    <!-- do/don't visualize the pose graph in glwidget-->
+    <param name="config/scalable_2d_display"           value="false"/>   <!-- do/don't scale input displays. Consumes more cpu if set true-->
+
+    <!-- Misc -->
+    <param name="config/concurrent_node_construction"  value="true"/> <!-- detect+extract features for new frame, while current frame is inserted into graph -->
+    <param name="config/concurrent_edge_construction"  value="true"/> <!-- compare current frame to many predecessors in parallel, might not work with SIFTGPU matcher (but SIFTGPU detector and extractor is ok) -->
+    <param name="config/concurrent_optimization"       value="true"/> <!-- Do graph optimization in a seperate thread -->
+    <param name="config/voxelfilter_size"              value="-1.0"/> <!-- in meter voxefilter displayed and stored pointclouds, incompatible with use_glwidget=true. Set negative to disable-->
+  	<param name="config/preserve_raster_on_save"       value="false"/>
+    <param name="config/min_time_reported"             value="0.01"/><!-- for easy runtime analysis -->
+  	<param name="config/start_paused"                  value="true"/>
+    <param name="config/batch_processing"              value="false"/>    <!--store results and close after bagfile has been processed-->
+    <param name="config/keep_all_nodes"                value="false"/> <!-- add nodes with constant motion if no transformation can be found -->
+    <param name="config/keep_good_nodes"               value="true"/> <!-- add nodes with constant motion if no transformation can be found but minimal number of keypoints were found -->
+  </node>
+</launch>

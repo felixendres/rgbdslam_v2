@@ -1,0 +1,248 @@
+Background\ ColorR=0
+Background\ ColorG=0
+Background\ ColorB=0
+Fixed\ Frame=/openni_camera
+Target\ Frame=<Fixed Frame>
+Blue\=Sensed\ Cloud.Alpha=1
+Blue\=Sensed\ Cloud.Billboard\ Size=0,001
+Blue\=Sensed\ Cloud.Color\ Transformer=Flat Color
+Blue\=Sensed\ Cloud.Decay\ Time=0
+Blue\=Sensed\ Cloud.Enabled=0
+Blue\=Sensed\ Cloud.Position\ Transformer=XYZ
+Blue\=Sensed\ Cloud.Selectable=1
+Blue\=Sensed\ Cloud.Style=2
+Blue\=Sensed\ Cloud.Topic=/camera/depth/points2
+Blue\=Sensed\ Cloud..AxisAutocompute\ Value\ Bounds=0
+Blue\=Sensed\ Cloud..AxisAxis=2
+Blue\=Sensed\ Cloud..AxisMax\ Value=0,628353
+Blue\=Sensed\ Cloud..AxisMin\ Value=-0,361676
+Blue\=Sensed\ Cloud..AxisUse\ Fixed\ Frame=1
+Blue\=Sensed\ Cloud..Flat\ ColorColorR=0
+Blue\=Sensed\ Cloud..Flat\ ColorColorG=0,00784314
+Blue\=Sensed\ Cloud..Flat\ ColorColorB=0,54902
+Blue\=Sensed\ Cloud..IntensityAutocompute\ Intensity\ Bounds=1
+Blue\=Sensed\ Cloud..IntensityMax\ ColorR=1
+Blue\=Sensed\ Cloud..IntensityMax\ ColorG=1
+Blue\=Sensed\ Cloud..IntensityMax\ ColorB=1
+Blue\=Sensed\ Cloud..IntensityMax\ Intensity=4096
+Blue\=Sensed\ Cloud..IntensityMin\ ColorR=0
+Blue\=Sensed\ Cloud..IntensityMin\ ColorG=0
+Blue\=Sensed\ Cloud..IntensityMin\ ColorB=0
+Blue\=Sensed\ Cloud..IntensityMin\ Intensity=0
+Camera.Alpha=1
+Camera.Enabled=1
+Camera.Image\ Topic=/camera/rgb/image_color
+Camera.Transport\ Hint=raw
+Grid.Alpha=0,5
+Grid.Cell\ Size=1
+Grid.ColorR=0,5
+Grid.ColorG=0,5
+Grid.ColorB=0,5
+Grid.Enabled=1
+Grid.Line\ Style=0
+Grid.Line\ Width=0,03
+Grid.Normal\ Cell\ Count=0
+Grid.OffsetX=0
+Grid.OffsetY=0
+Grid.OffsetZ=0
+Grid.Plane=0
+Grid.Plane\ Cell\ Count=10
+Grid.Reference\ Frame=<Fixed Frame>
+Markers.Enabled=1
+Markers.Marker\ Topic=/rgbdslam/pose_graph_markers
+Markers2.Enabled=1
+Markers2.Marker\ Topic=/rgbdslam/correspondence_marker
+Moved\ Camera.Enabled=1
+Moved\ Camera.Length=1
+Moved\ Camera.Radius=0,01
+Moved\ Camera.Reference\ Frame=/slam_transform
+Online\ Non-Transformed.Alpha=0,5
+Online\ Non-Transformed.Billboard\ Size=0,0015
+Online\ Non-Transformed.Color\ Transformer=RGB8
+Online\ Non-Transformed.Decay\ Time=-1
+Online\ Non-Transformed.Enabled=1
+Online\ Non-Transformed.Position\ Transformer=XYZ
+Online\ Non-Transformed.Selectable=1
+Online\ Non-Transformed.Style=1
+Online\ Non-Transformed.Topic=/rgbdslam/cloud
+Online\ Non-Transformed..AxisAutocompute\ Value\ Bounds=1
+Online\ Non-Transformed..AxisAxis=2
+Online\ Non-Transformed..AxisMax\ Value=0,619856
+Online\ Non-Transformed..AxisMin\ Value=-0,597836
+Online\ Non-Transformed..AxisUse\ Fixed\ Frame=1
+Online\ Non-Transformed..Flat\ ColorColorR=1
+Online\ Non-Transformed..Flat\ ColorColorG=1
+Online\ Non-Transformed..Flat\ ColorColorB=1
+Online\ Non-Transformed..IntensityAutocompute\ Intensity\ Bounds=1
+Online\ Non-Transformed..IntensityMax\ ColorR=1
+Online\ Non-Transformed..IntensityMax\ ColorG=1
+Online\ Non-Transformed..IntensityMax\ ColorB=1
+Online\ Non-Transformed..IntensityMax\ Intensity=4096
+Online\ Non-Transformed..IntensityMin\ ColorR=0
+Online\ Non-Transformed..IntensityMin\ ColorG=0
+Online\ Non-Transformed..IntensityMin\ ColorB=0
+Online\ Non-Transformed..IntensityMin\ Intensity=0
+Online\ Transformed.Alpha=1
+Online\ Transformed.Billboard\ Size=0,001
+Online\ Transformed.Color\ Transformer=RGB8
+Online\ Transformed.Decay\ Time=-1
+Online\ Transformed.Enabled=0
+Online\ Transformed.Position\ Transformer=XYZ
+Online\ Transformed.Selectable=1
+Online\ Transformed.Style=0
+Online\ Transformed.Topic=/rgbdslam/transformed_slowdown_cloud
+Online\ Transformed..AxisAutocompute\ Value\ Bounds=1
+Online\ Transformed..AxisAxis=2
+Online\ Transformed..AxisMax\ Value=2,43735
+Online\ Transformed..AxisMin\ Value=-0,110952
+Online\ Transformed..AxisUse\ Fixed\ Frame=1
+Online\ Transformed..Flat\ ColorColorR=1
+Online\ Transformed..Flat\ ColorColorG=0
+Online\ Transformed..Flat\ ColorColorB=0
+Online\ Transformed..IntensityAutocompute\ Intensity\ Bounds=1
+Online\ Transformed..IntensityMax\ ColorR=1
+Online\ Transformed..IntensityMax\ ColorG=1
+Online\ Transformed..IntensityMax\ ColorB=1
+Online\ Transformed..IntensityMax\ Intensity=4096
+Online\ Transformed..IntensityMin\ ColorR=0
+Online\ Transformed..IntensityMin\ ColorG=0
+Online\ Transformed..IntensityMin\ ColorB=0
+Online\ Transformed..IntensityMin\ Intensity=0
+Save\ Aggregate.Alpha=0,5
+Save\ Aggregate.Billboard\ Size=0,0015
+Save\ Aggregate.Color\ Transformer=RGB8
+Save\ Aggregate.Decay\ Time=0
+Save\ Aggregate.Enabled=1
+Save\ Aggregate.Position\ Transformer=XYZ
+Save\ Aggregate.Selectable=1
+Save\ Aggregate.Style=1
+Save\ Aggregate.Topic=/rgbdslam/aggregate_clouds
+Save\ Aggregate..AxisAutocompute\ Value\ Bounds=1
+Save\ Aggregate..AxisAxis=2
+Save\ Aggregate..AxisMax\ Value=1,13249
+Save\ Aggregate..AxisMin\ Value=-0,568644
+Save\ Aggregate..AxisUse\ Fixed\ Frame=1
+Save\ Aggregate..Flat\ ColorColorR=1
+Save\ Aggregate..Flat\ ColorColorG=1
+Save\ Aggregate..Flat\ ColorColorB=1
+Save\ Aggregate..IntensityAutocompute\ Intensity\ Bounds=1
+Save\ Aggregate..IntensityMax\ ColorR=1
+Save\ Aggregate..IntensityMax\ ColorG=1
+Save\ Aggregate..IntensityMax\ ColorB=1
+Save\ Aggregate..IntensityMax\ Intensity=4096
+Save\ Aggregate..IntensityMin\ ColorR=0
+Save\ Aggregate..IntensityMin\ ColorG=0
+Save\ Aggregate..IntensityMin\ ColorB=0
+Save\ Aggregate..IntensityMin\ Intensity=0
+Send\ Aggregate.Alpha=1
+Send\ Aggregate.Billboard\ Size=0,0015
+Send\ Aggregate.Color\ Transformer=RGB8
+Send\ Aggregate.Decay\ Time=-1
+Send\ Aggregate.Enabled=1
+Send\ Aggregate.Position\ Transformer=XYZ
+Send\ Aggregate.Selectable=1
+Send\ Aggregate.Style=1
+Send\ Aggregate.Topic=/rgbdslam/batch_clouds
+Send\ Aggregate..AxisAutocompute\ Value\ Bounds=1
+Send\ Aggregate..AxisAxis=2
+Send\ Aggregate..AxisMax\ Value=0,566264
+Send\ Aggregate..AxisMin\ Value=-0,453032
+Send\ Aggregate..AxisUse\ Fixed\ Frame=1
+Send\ Aggregate..Flat\ ColorColorR=1
+Send\ Aggregate..Flat\ ColorColorG=1
+Send\ Aggregate..Flat\ ColorColorB=1
+Send\ Aggregate..IntensityAutocompute\ Intensity\ Bounds=1
+Send\ Aggregate..IntensityMax\ ColorR=1
+Send\ Aggregate..IntensityMax\ ColorG=1
+Send\ Aggregate..IntensityMax\ ColorB=1
+Send\ Aggregate..IntensityMax\ Intensity=4096
+Send\ Aggregate..IntensityMin\ ColorR=0
+Send\ Aggregate..IntensityMin\ ColorG=0
+Send\ Aggregate..IntensityMin\ ColorB=0
+Send\ Aggregate..IntensityMin\ Intensity=0
+TF.All\ Enabled=0
+TF.Enabled=0
+TF.Frame\ Timeout=15
+TF.Show\ Arrows=1
+TF.Show\ Axes=1
+TF.Show\ Names=1
+TF.Update\ Interval=0
+White\=Reference\ Frame.Alpha=1
+White\=Reference\ Frame.Billboard\ Size=0,001
+White\=Reference\ Frame.Color\ Transformer=Flat Color
+White\=Reference\ Frame.Decay\ Time=0
+White\=Reference\ Frame.Enabled=0
+White\=Reference\ Frame.Position\ Transformer=XYZ
+White\=Reference\ Frame.Selectable=1
+White\=Reference\ Frame.Style=2
+White\=Reference\ Frame.Topic=/rgbdslam/first_frame
+White\=Reference\ Frame..AxisAutocompute\ Value\ Bounds=1
+White\=Reference\ Frame..AxisAxis=2
+White\=Reference\ Frame..AxisMax\ Value=0,746205
+White\=Reference\ Frame..AxisMin\ Value=-0,584149
+White\=Reference\ Frame..AxisUse\ Fixed\ Frame=1
+White\=Reference\ Frame..Flat\ ColorColorR=1
+White\=Reference\ Frame..Flat\ ColorColorG=1
+White\=Reference\ Frame..Flat\ ColorColorB=1
+White\=Reference\ Frame..IntensityAutocompute\ Intensity\ Bounds=1
+White\=Reference\ Frame..IntensityMax\ ColorR=1
+White\=Reference\ Frame..IntensityMax\ ColorG=1
+White\=Reference\ Frame..IntensityMax\ ColorB=1
+White\=Reference\ Frame..IntensityMax\ Intensity=4096
+White\=Reference\ Frame..IntensityMin\ ColorR=0
+White\=Reference\ Frame..IntensityMin\ ColorG=0
+White\=Reference\ Frame..IntensityMin\ ColorB=0
+White\=Reference\ Frame..IntensityMin\ Intensity=0
+Tool\ 2D\ Nav\ GoalTopic=goal
+Tool\ 2D\ Pose\ EstimateTopic=initialpose
+Camera\ Type=rviz::OrbitViewController
+Camera\ Config=1.451 1.24786 8.43048 -0.471117 0.556147 -1.19629
+Property\ Grid\ State=selection=Save Aggregate.Enabled;expanded=TF.Enabled.TF.StatusTopStatus,TF.Enabled.TF.Tree,Markers.Enabled.Markers.Namespaces,Markers2.Enabled.Markers2.Namespaces,White=Reference Frame.Enabled.White=Reference Frame.StatusTopStatus,Blue=Sensed Cloud.Enabled.Blue=Sensed Cloud.StatusTopStatus,Online Transformed.Enabled.Online Transformed.StatusTopStatus;scrollpos=0,0;splitterpos=221,459;ispageselected=1
+[Display0]
+Name=Grid
+Package=rviz
+ClassName=rviz::GridDisplay
+[Display1]
+Name=TF
+Package=rviz
+ClassName=rviz::TFDisplay
+[Display2]
+Name=Markers
+Package=rviz
+ClassName=rviz::MarkerDisplay
+[Display3]
+Name=Camera
+Package=rviz
+ClassName=rviz::CameraDisplay
+[Display4]
+Name=Markers2
+Package=rviz
+ClassName=rviz::MarkerDisplay
+[Display5]
+Name=Moved Camera
+Package=rviz
+ClassName=rviz::AxesDisplay
+[Display6]
+Name=White=Reference Frame
+Package=rviz
+ClassName=rviz::PointCloud2Display
+[Display7]
+Name=Blue=Sensed Cloud
+Package=rviz
+ClassName=rviz::PointCloud2Display
+[Display8]
+Name=Online Transformed
+Package=rviz
+ClassName=rviz::PointCloud2Display
+[Display9]
+Name=Send Aggregate
+Package=rviz
+ClassName=rviz::PointCloud2Display
+[Display10]
+Name=Online Non-Transformed
+Package=rviz
+ClassName=rviz::PointCloud2Display
+[Display11]
+Name=Save Aggregate
+Package=rviz
+ClassName=rviz::PointCloud2Display

@@ -1,0 +1,15 @@
+libglew:  
+  ubuntu: 
+    libglew1.5-dev 
+libdevil:  
+  ubuntu: 
+    libdevil-dev
+suitesparse:  
+  ubuntu: 
+    libsuitesparse-dev
+gsl-dev:
+  ubuntu:
+    libgsl0-dev
+gl2ps:
+  ubuntu:
+    libgl2ps-dev

@@ -1,0 +1,7 @@
+<launch>
+  <!-- using the rgbdslam headless -->
+  <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" cwd="node" required="true" output="screen" > 
+  	<param name="/config/use_gui" value="false"/>
+  </node>
+  <!--include file="$(find openni_camera)/launch/kinect_frames.launch"/-->
+</launch>

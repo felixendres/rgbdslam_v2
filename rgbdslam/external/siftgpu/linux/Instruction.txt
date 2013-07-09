@@ -1,0 +1,59 @@
+*********************************************************************************************************
+NEW: Parameters for making siftgpu library can be changed in makefile. 
+	Look at the top part of makefile for details. 
+*********************************************************************************************************
+
+
+
+1. DEPENDING LIBRARIES
+*********************************************************************************************************
+The list of required libraries for Linux is 
+libGLEW.a	libglut.so 	libIL.so -> libIL.so.1 		libIL.so.1	
+
+optional libaries: 
+	libCudart.so 
+
+Those libraris may also be dependent on other libraries, and you may need to download them yourself. 
+You also need to handle the compatibility of those libraies yourself. 
+
+Get those libraries either in the system default path or ./bin here before compiling. 
+********************************************************************************************************
+
+
+2. MAC OS
+*********************************************************************************************************
+For Mac User, the libraries are 
+GLUT.framework		OpenGL.framework	
+
+libGLEW		libIL 	libCudart (optional)
+*********************************************************************************************************
+
+
+
+3. SSE SETTING
+***************************************************************************************************
+Please change the compiler options according to your CPU to enable SSE if the default setting doesn't work.
+
+siftgpu_sse_options = -march=(cpu_type) -mfpmath=sse
+
+SSE is only used in OpenGL-based imiplementations to speed up the descriptor normalization,
+you can delete them from CFLAGS if you are using only CUDA.
+****************************************************************************************************
+
+
+
+4. OUTPUT
+*******************************************************************************************************
+The list of output binaries is
+./bin/libsiftgpu.a	./bin/libsiftgpu.so
+./bin/TestWinGlut	./bin/SimpleSIFT 	./bin/speed 	./bin/server_siftgpu
+
+
+If you want to run the stuff with any .so files in ./bin, don't forget to add . to LD_LIBRARY_PATH/
+DYDL_LIBRARY_PATH. For example:  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.
+
+*********************************************************************************************************
+
+
+
+

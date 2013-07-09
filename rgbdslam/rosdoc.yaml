@@ -1,0 +1,4 @@
+ - builder: doxygen
+   name: C++ API
+   file_patterns: '*.c *.cpp *.h *.cc *.hh *.dox'
+   exclude_patterns: '*/.svn/* */.hg/* */external/* */gicp/* */src/rgbdslam/* */srv_gen/* */srv/*'

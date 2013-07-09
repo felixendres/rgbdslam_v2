@@ -1,0 +1,37 @@
+<package>
+  <description brief="SLAM on RGBD Data">
+    This package can be used to register the point clouds from RGBD sensors such as the kinect or stereo cameras.
+    The created world model can be saved as point cloud or integrated into an octomap.
+  </description>
+  <author>Felix Endres, Juergen Hess, Nikolas Engelhard</author>
+  <license>GPL v3</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/rgbdslam</url>
+  <depend package="tf"/>
+  <depend package="pcl"/>
+  <depend package="rospy"/>
+  <depend package="roscpp"/>
+  <depend package="rosbag"/>
+  <depend package="pcl_ros"/>
+  <!--depend package="opencv2"/-->
+  <depend package="cv_bridge"/>
+  <depend package="sensor_msgs"/>
+  <!--depend package="openni_camera"/-->
+  <depend package="octomap_server"/>
+  <!--depend package="octomap"/-->
+  <depend package="geometry_msgs"/>
+  <depend package="visualization_msgs"/>
+  <rosdep name="libqt4-opengl-dev"/>
+  <rosdep name="libqt4-dev"/>
+  <rosdep name="libglew-dev"/>
+  <rosdep name="libdevil-dev"/>
+  <rosdep name="libgsl"/>
+  <!--rosdep name="gl2ps"/-->
+  <rosdep name="eigen"/>
+  <rosdep name="libg2o"/>
+  <export>
+    <rosdoc config="rosdoc.yaml" />
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+    <cpp cflags="-I${prefix}/srv_gen/cpp"/>
+ </export>
+</package>

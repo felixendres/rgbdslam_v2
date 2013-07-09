@@ -1,0 +1,93 @@
+<launch>
+  <!-- These parameters are used for the benchmark evaluation. Documentation can be found in parameter_server.cpp -->
+
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find rgbdslam)/rgbd_benchmark/log_eval.conf"/>
+  <env name="ROSCONSOLE_FORMAT" value="[${severity}] Time:[${time}] Thread:[${thread}]: ${message}"/>
+  <arg name="debug" default="false"/>
+  <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/time"/-->
+  <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/gdb -ex run -args"/-->
+  <arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/xterm -e gdb -ex run -args"/>
+  <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/ddd -ex run -args"/-->
+  <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/valgrind -DELeTEME-tool=cachegrind -DELETEME-cachegrind-out-file=/tmp/cachegrind.out"/-->
+  <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/valgrind -DELETEME-leak-check=full "/-->
+  <arg unless="$(arg debug)" name="launch_prefix" value=""/>
+
+  <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" cwd="node" required="true" output="screen"  launch-prefix="$(arg launch_prefix)"> 
+    <!-- Input data settings-->
+    <param name="config/topic_image_mono"              value="/camera/rgb/image_color"/> 
+  	<param name="config/topic_image_depth"             value="/camera/depth/image"/>
+  	<param name="config/topic_points"                  value=""/>
+    <param name="config/camera_info_topic"             value="/camera/rgb/camera_info"/>
+    <param name="config/wide_topic"                    value=""/>
+    <param name="config/wide_cloud_topic"              value=""/>
+
+    <!--Values for benchmark dataset fr1 -->
+    <param name="config/depth_camera_fx"                     value="591.1"/>
+    <param name="config/depth_camera_fy"                     value="590.1"/>
+    <param name="config/depth_camera_cx"                     value="331.0"/>
+    <param name="config/depth_camera_cy"                     value="234.0"/>
+
+    <!-- TF information settings -->
+  	<param name="config/fixed_frame_name"              value="/map"/>
+    <param name="config/odom_frame_name"               value=""/>
+    <param name="config/ground_truth_frame_name"       value="/world"/><!--empty string if no ground truth-->
+    <param name="config/base_frame_name"               value="/openni_rgb_optical_frame"/> <!-- /openni_camera for hand-held kinect. For robot, e.g., /base_link -->
+    <param name="config/fixed_camera"                  value="true"/> <!--is the kinect fixed with respect to base, or can it be moved (false makes sense only if transform betw. base_frame and openni_camera is sent via tf)-->
+  	<param name="config/start_paused"                  value="false"/>
+    <param name="config/store_pointclouds"             value="true"/> <!-- if, e.g., only trajectory is required, setting this to false saves lots of memory -->
+
+    <!--
+    <param name="config/feature_detector_type"         value="SIFTGPU"/>
+    <param name="config/feature_extractor_type"        value="SIFTGPU"/>
+   -->
+
+    <param name="config/matcher_type"                  value="FLANN"/> <!-- FLANN (not avail for ORB features), SIFTGPU (only for SIFTGPU detector)  or BRUTEFORCE-->
+  	<!--param name="config/bagfile_name"                  value="/home/endres/tmp/rgbd_datasets/rgbd_dataset_freiburg1_desk.bag"/-->
+    <!--param name="config/nn_distance_ratio"             value="0.80"/--> <!-- Feature correspondence is valid if distance to nearest neighbour is smaller than this parameter times the distance to the 2nd neighbour -->
+  	<!--param name="config/max_keypoints"                 value="600"/-->
+  	<param name="config/min_keypoints"                 value="0"/>
+    <param name="config/sufficient_matches"            value="18001"/><!-- Instead of matching all new descriptors against all of a previous node in one step, sufficient_matches+100 of the new descriptors are iteratively compared to all of the previous node until sufficient_matches are found. Setting this parameter low (e.g. 2x min_matches) speeds up comparisons of frames with many matches, but with a potential loss of accuracy, as the transformation is estimated from less features. Set it to max_keypoints for maximum accuracy -->
+    <param name="config/min_translation_meter"         value="-1.0"/><!--disabled -->
+    <param name="config/min_rotation_degree"           value="-1.0"/><!--disabled -->
+    <param name="config/max_translation_meter"         value="100.0"/><!-- transformations with motion more than this per second!, will be omitted -->
+    <param name="config/max_rotation_degree"           value="900"/><!-- transformations with motion more than this per second!, will be omitted -->
+  	<param name="config/min_time_reported"             value="0.01"/>
+
+    <!-- <param name="config/predecessor_candidates"        value="2"/>search through this many immediate predecessor nodes for corrspondences -->
+    <!-- <param name="config/neighbor_candidates"           value="2"/>search through this many graph neighbour nodes for corrspondences -->
+    <!-- <param name="config/min_sampled_candidates"        value="5"/>search through this many uniformly sampled nodes for corrspondences -->
+    <param name="config/max_connections"               value="-1"/><!-- stop after this many succesfully found spation relations -->
+  	
+  	<param name="config/drop_async_frames"             value="false"/>
+  	<!--param name="config/min_matches"                   value="75"/-->
+  	<param name="config/max_dist_for_inliers"          value="2.0"/>
+  	<!--param name="config/ransac_iterations"             value="100"/--><!-- these are fast, so high values are ok -->
+  	<param name="config/use_gui"                       value="false"/>
+  	<param name="config/use_glwidget"                  value="false"/>
+  	<param name="config/glwidget_without_clouds"       value="false"/> <!-- incompatible with voxelgrid filter > 0 -->
+  	<param name="config/concurrent_node_construction"  value="true"/>
+  	<param name="config/concurrent_edge_construction"  value="true"/>
+  	<param name="config/concurrent_optimization"       value="false"/>
+    <param name="config/optimizer_skip_step"           value="10000050"/><!-- optimize at end only -->
+    <param name="config/backend_solver"                value="csparse"/>
+    <param name="config/optimize_landmarks"            value="false"/> <!-- Include feature poses as vertices in graph optimization-->
+  	<param name="config/data_skip_step"                value="1"/><!-- skip every n-th frame completely -->
+  	<param name="config/visualization_skip_step"       value="2"/> <!-- draw only every nth pointcloud row and line, high values require higher squared_meshing_threshold -->
+  	<param name="config/encoding_bgr"                  value="false"/>
+  	<param name="config/visualize_mono_depth_overlay"  value="false"/>
+    <param name="config/squared_meshing_threshold"     value="0.0081"/>
+    <param name="config/batch_processing"              value="true"/>    <!--store results and close after bagfile has been processed-->
+    <param name="config/keep_all_nodes"                value="true"/> <!-- add nodes with constant motion if no transformation can be found -->
+    <param name="config/use_icp"                       value="false"/> <!-- Ignored if ICP is not compiled in (see top of CMakeLists.txt) -->
+    <param name="config/gicp_max_cloud_size"           value="25000"/>
+    <!--param name="config/use_root_sift"                 value="true"/-->
+    <param name="config/optimizer_iterations"          value="0.001"/><!-- maximum of iterations in online operation (i.e., does affect the final optimization in batch mode) -->
+    <param name="config/emm__skip_step"            value="2"/> 
+    <param name="config/emm__mark_outliers"        value="false"/> 
+  <!--      <param name="config/observability_threshold"       value="0.95"/>  -->
+  <!--      <param name="config/max_edge_error"       value="0.01"/>  -->
+    <param name="config/cloud_creation_skip_step"      value="8"/> <!-- Only active if cloud is computed (i.e. "topic_points" is empty. This value multiplies to emm__skip_step and visualization_skip_step-->
+    <!--param name="config/g2o_transformation_refinement" value="1000"/--> <!-- Use g2o to refine the ransac result, i.e. optimize the Mahalanobis distance in a final step.-->
+  </node>
+  <!--include file="$(find openni_camera)/launch/kinect_frames.launch"/-->
+</launch>

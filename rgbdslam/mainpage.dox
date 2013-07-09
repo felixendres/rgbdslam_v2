@@ -1,0 +1,47 @@
+/**
+\mainpage
+\htmlinclude manifest.html
+
+\b RGBD-SLAM Implements a SLAM-Frontend based on structure from 
+motion using visual features to identify keypoints in the RGBD
+image of a kinect. It makes use of the g2o SLAM backend to
+compute a globally consistent trajectory from the individual
+transformations provided by the frontend.
+
+<!-- 
+Provide an overview of your package.
+-->
+
+
+\section codeapi Code API
+
+The main classes are the following:
+<ul>
+<li>Node - Holds the data for a graph node, e.g., the extracted features and their position in the image plane and the local 3D coordinate systems.
+It provides functionality to find the transformation to another node and for publishing the associated pointcloud.</li>
+<li>GraphManager - Decides for each Node, which edges are included in the graph. Stores all Nodes with valid edges and optimizes the camera pose graph globally with HOG-MAN as SLAM backend.
+Provides functionality to send (ROS-Msgs) or save (to PCD File) the globally consistent whole model.</li>
+</ul>
+The following classes are mainly for communication with ROS and the user:
+<ul>
+<li>OpenNIListener - Subscribes to the openni topics, constructs a node for each image-pointcloud pair and hands it to the graph manager. Online visualization results are sent out.</li>
+<li>Graphical_UI - Constructs a QT GUI for easy control of the program</li>
+<li>RosUi - a UI for controlling the program via ROS service calls</li>
+<li>QtROS - Sets up a thread for ROS event processing, to seperate SLAM-computations from the GUI</li>
+<li>GLViewer - OpenGL based display of the 3d model</li>
+</ul>
+
+<!--
+Provide links to specific auto-generated API documentation within your
+package that is of particular interest to a reader. Doxygen will
+document pretty much every part of your code, so do your best here to
+point the reader to the actual API.
+
+If your codebase is fairly large or has different sets of APIs, you
+should use the doxygen 'group' tag to keep these APIs together. For
+example, the roscpp documentation has 'libros' group.
+-->
+
+
+*/
+

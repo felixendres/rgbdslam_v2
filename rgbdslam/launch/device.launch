@@ -1,0 +1,87 @@
+<!-- This has been copied from the openni_launch package. The only change is to include
+     the paramter depth_registration and set it to true
+ -->
+<launch>
+
+  <!-- Name of nodelet manager, must be fully resolved -->
+  <arg name="manager" />
+
+  <!-- Driver parameters -->
+  <arg name="device_id" />
+  <arg name="rgb_frame_id" />
+  <arg name="depth_frame_id" />
+  <arg name="rgb_camera_info_url" />
+  <arg name="depth_camera_info_url" />
+  <arg name="bond" default="--no-bond" />
+  
+  <!-- Remapping arguments -->
+  <arg name="rgb"              default="rgb" />
+  <arg name="ir"               default="ir" />
+  <arg name="depth"            default="depth" />
+  <arg name="depth_registered" default="depth_registered" />
+  <arg name="projector"        default="projector" />
+
+
+  <!-- Driver nodelet -->
+  <node pkg="nodelet" type="nodelet" name="driver" 
+        args="load openni_camera/driver $(arg manager) $(arg bond)">
+    <param name="device_id" value="$(arg device_id)" />
+    <param name="rgb_camera_info_url"   value="$(arg rgb_camera_info_url)" />
+    <param name="depth_camera_info_url" value="$(arg depth_camera_info_url)" />
+    <param name="rgb_frame_id"   value="$(arg rgb_frame_id)" />
+    <param name="depth_frame_id" value="$(arg depth_frame_id)" />
+    <remap from="ir" to="$(arg ir)" />
+    <remap from="rgb" to="$(arg rgb)" />
+    <remap from="depth" to="$(arg depth)" />
+    <remap from="depth_registered" to="$(arg depth_registered)" />
+    <param name="depth_registration" value="true" />
+  </node>
+
+
+  <!-- RGB processing -->
+  <include file="$(find openni_launch)/launch/includes/rgb.launch"
+	   ns="$(arg rgb)">
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="bond" value="$(arg bond)" />
+  </include>
+
+  <!-- IR processing -->
+  <include file="$(find openni_launch)/launch/includes/ir.launch"
+	   ns="$(arg ir)">
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="bond" value="$(arg bond)" />
+  </include>
+
+  <!-- Unregistered depth processing -->
+  <include file="$(find openni_launch)/launch/includes/depth.launch"
+	   ns="$(arg depth)">
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="bond" value="$(arg bond)" />
+  </include>
+
+  <!-- Depth-to-RGB registration and processing -->
+  <include file="$(find openni_launch)/launch/includes/depth_registered.launch">
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="rgb" value="$(arg rgb)" />
+    <arg name="depth" value="$(arg depth)" />
+    <arg name="depth_registered" value="$(arg depth_registered)" />
+    <arg name="bond" value="$(arg bond)" />
+  </include>
+
+  <!-- Unregistered disparity image -->
+  <include file="$(find openni_launch)/launch/includes/disparity.launch">
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="depth" value="$(arg depth)" />
+    <arg name="projector" value="$(arg projector)" />
+    <arg name="bond" value="$(arg bond)" />    
+  </include>
+
+  <!-- Registered disparity image -->
+  <include file="$(find openni_launch)/launch/includes/disparity.launch">
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="depth" value="$(arg depth_registered)" />
+    <arg name="projector" value="$(arg projector)" />
+    <arg name="bond" value="$(arg bond)" />    
+  </include>
+
+</launch>

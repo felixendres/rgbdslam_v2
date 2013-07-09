@@ -1,0 +1,150 @@
+LICENSE
+=======
+  Generalized-ICP Copyright (c) 2009 Aleksandr Segal; avsegal@cs.stanford.edu.
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with 
+  or without modification, are permitted provided that the 
+  following conditions are met:
+
+* Redistributions of source code must retain the above 
+  copyright notice, this list of conditions and the 
+  following disclaimer.
+* Redistributions in binary form must reproduce the above
+  copyright notice, this list of conditions and the 
+  following disclaimer in the documentation and/or other
+  materials provided with the distribution.
+* The names of the contributors may not be used to endorse
+  or promote products derived from this software
+  without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+  CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
+  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+  DAMAGE.
+
+
+ABOUT
+=====
+This is a reference implementation of Generalized-ICP, a scanmatching approach based on the ICP algorithm. You can find specific details in the original paper:
+     Generalized-ICP, Aleksandr V. Segal, Dirk Haehnel, and Sebastian Thrun. In Robotics: Science and Systems 2009.
+This reference implementation uses the plane-to-plane approach described in the paper; to adapt this code to other models within the framework, you will have to dig through the code a bit and set up your own 'matrices' (check out the paper/code if interested in this).
+
+
+ACKNOWLEDGMENTS
+================
+This version is implemented with the help of some external code:
+    Mike Montemerlo's dgc_transform_t struct and associated library was originally written for the Stanford Driving software.
+    GSL library can be found at: http://www.gnu.org/software/gsl/
+    ANN library: http://www.cs.umd.edu/~mount/ANN/ respectively.
+    plot_gaussian_ellipsoid.m by Gautam Vallabha.
+
+Overall, Dirk Haehnel and Sebastian Thrun have helped a lot in this project.
+
+
+COMPILATION INSTRUCTIONS
+========================
+1. Compile the ANN library
+   go to gicp/ann_1.1.1/ and run "make <ARCH>"
+
+2. Compile the GICP library and test code
+   go to gicp/ and run "make".
+   If this doesn't work, you make have to modify the Makefile to get the linking to work on your system. This may involve changing the LFLAGS and CXXFLAGS variables to be consistent with your library installations.
+
+
+
+USAGE INSTRUCTIONS
+==================
+After compiling the library, you should run a test or two to make sure it works. The test_gicp program is provided for this. Running ./test_gicp --help will give usage information. The parameters and usage are described in more detail below:
+
+test_gicp runs gicp to align two input scans. scan2 is used as a base, and scan1 is aligned to it. There are a couple of basic parameters to the algorithm which can be changed from the command line. 
+
+
+scan1, scan2 -- These are the filenames of the two scans, assumed to be tab-deliminated ascii
+
+t_base 	     -- The provides a base transformation which is applied to scan1 before any matching happens. You can use this to specify the initial alignment. I.e. t_base should specify the transformation which initially best aligns scan1 to scan2. The .tfm file format is a text file which specifies rotations for each axis, followed by translation. The rotations are applied in the order that they are specified, and the translation is done after all rotations. t_base should specify the filename of a .tfm file.
+
+debug	     -- Set to true (or 1) to enable debug out and information. Set to false (or 0) to hide intermediate output. Defaults to true.
+
+epsilon	     -- This is the epsilon constant mentioned in the Generalized-ICP paper (see RSS '09). It controls the ratio between cost along a surface and cost along the surface normal. Setting epsilon=1. makes the algorithm equivalent to standard ICP (i.e. euclidean distance). Setting it to 0 will break everything and cause NaNs everywhere. The ideal value seems to be the lowest possible which does not cause numerical instability. In practice 1e-3 works well and is used as the default value. I don't think there is a need to adjust it more finely then 1e-4, 5e-4, 1e-3, 5e-3, etc. but it's possible you may.
+
+d_max	     -- Controls the maximum matching distance threshold. In any given iteration, point correspondences which are more then this distance apart will be ignored. It is important to note that the correspondences are computed and filtered using standard euclidean distance.
+
+
+
+VISUALIZATION
+=============
+There is a matlab directory provided which contains some simple code to visualize the debugging output of test_gicp. After running test_gicp in a directory with debugging output enabled, you can use the plot_convergence command in matlab to show how the algorithm converged. There are a couple options for this which are important when dealing with large files. The following documentation is copied from the top of plot_convergence.m:
+
+   % plot_convergence plots the convergence of the icp algorithm based on
+   % debugging output from the c++ program test_gicp. test_gicp outputs both
+   % pointclouds, a sequence of transformations (one for each iteration),
+   % the final correspondence, and the corresponding weight matrices. Running
+   % plot_convergence will plot this information.
+   % dir -- base directory were debug output was saved (directory test_gicp was run in)
+   % show_corresp -- set to 1 to plot final correspondences
+   % show_metrics -- set to 1 to plot final weight matrix ellipsoids (slow)
+   % skip1 -- draws every skip1 point in pointcloud1
+   % skip2 -- draws every skip2 point in pointcloud2
+   % the default values for show_corresp, show_metrics, skip1, skip2 are
+   % 0,0,1,1 respecively.
+
+running "plot_convergence('../');" from gicp/matlab should visualize the output of thr last run of test_gicp from the gicp/ directory.
+
+
+SAMPLE COMMANDS
+===============
+Here are some sample to get you started:
+# default parameters
+./test_gicp data/car/car0.ascii data/car/car1.ascii --t_base data/sample_base.tfm 
+
+# simulates standard ICP
+./test_gicp data/car/car0.ascii data/car/car1.ascii --t_base data/sample_base.tfm --epsilon 1.
+
+
+# default parameters
+./test_gicp data/outdoor/outdoor0\[300x541\].ascii data/outdoor/outdoor2\[300x541\].ascii --t_base data/sample_base.tfm
+
+# simulates standard ICP
+this simulates standard ICP on the same data:
+./test_gicp data/outdoor/outdoor0\[300x541\].ascii data/outdoor/outdoor2\[300x541\].ascii --t_base data/sample_base.tfm --epsilon 1.
+
+
+
+OUTPUT
+======
+final output will be formatted like this:
+
+t_base:
+   1.000    0.000    0.000    0.000 
+   0.000    1.000    0.000    0.000 
+   0.000    0.000    1.000    0.000 
+   0.000    0.000    0.000    1.000 
+t0:
+   1.000    0.000    0.000    0.000 
+   0.000    1.000    0.000    0.000 
+   0.000    0.000    1.000    0.000 
+   0.000    0.000    0.000    1.000 
+t1:
+   0.707   -0.707    0.000   -2.854 
+   0.707    0.707   -0.000   -3.142 
+   0.000    0.000    1.000   -0.513 
+   0.000    0.000    0.000    1.000 
+
+
+t_base is the base transformation read as input (or defaults to identity)
+t0 is the initial value of the transformation before optimization
+t1 is the final converged value.
+
+based on this output, scan2 ~= t1(t_base(scan1))

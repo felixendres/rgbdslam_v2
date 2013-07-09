@@ -1,0 +1,12 @@
+<launch>
+  <include file="$(find rgbdslam)/launch/openni.launch">
+      <arg name="bond" value="true" />
+  </include>
+  <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" cwd="node" required="false" output="log" > 
+    <param name="config/topic_image_mono"              value="/camera/rgb/image_color"/>
+    <param name="config/topic_image_depth"             value="/camera/depth_registered/image"/>
+    <param name="config/topic_points"                  value="/camera/depth_registered/points"/> 
+    <param name="config/wide_topic"                    value=""/>
+    <param name="config/wide_cloud_topic"              value=""/>
+  </node>
+</launch>

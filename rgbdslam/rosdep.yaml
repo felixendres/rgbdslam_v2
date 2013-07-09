@@ -1,0 +1,22 @@
+#For ROS Electric
+libqt4-dev:
+  ubuntu:
+    libqt4-dev
+libqt4-opengl-dev:
+  ubuntu:
+    libqt4-opengl-dev
+libglew-dev:  
+  ubuntu: 
+    libglew1.5-dev 
+libdevil-dev:  
+  ubuntu: 
+    libdevil-dev
+suitesparse:  
+  ubuntu: 
+    libsuitesparse-dev
+libgsl:
+  ubuntu:
+    libgsl0-dev
+gl2ps:
+  ubuntu:
+    libgl2ps-dev

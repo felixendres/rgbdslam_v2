@@ -1,0 +1,7 @@
+<library path="lib/librgbdslamnodelet">
+     <class name="rgbdslam_dev/feature_nodelet" type="RGBDSlam::RGBDSlamNodelet" base_class_type="nodelet::Nodelet">
+     	<description>
+        	RGBDSlam feature extraction and sending pointclouds / descriptors
+     	</description>
+     </class>
+</library>

@@ -1,0 +1,46 @@
+<launch>
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find rgbdslam)/log.conf"/>
+  
+  <!--might only work with the experimental octomap (as of May 11)-->
+    <include file="$(find openni_camera)/launch/openni_node.launch"/>
+    <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" cwd="node" required="false" output="log" > 
+      <param name="config/topic_image_mono"              value="/camera/rgb/image_color"/>
+      <param name="config/topic_points"                  value="/camera/rgb/points"/> <!--if empty, poincloud will be reconstructed from image and depth -->
+      <param name="config/wide_topic"                    value=""/>;
+      <param name="config/wide_cloud_topic"              value=""/>;
+      <param name="config/drop_async_frames"             value="true"/> <!-- Check association of depth and visual image, reject if not in sync -->
+      <param name="config/feature_detector_type"         value="SIFTGPU"/><!-- If SIFTGPU is enabled in CMakeLists.txt, use SURF here -->
+      <param name="config/feature_extractor_type"        value="SIFTGPU"/><!-- If SIFTGPU is enabled in CMakeLists.txt, use SURF here -->
+      <param name="config/matcher_type"                  value="FLANN"/> <!-- FLANN (not avail for ORB features), SIFTGPU (only for SIFTGPU detector)  or BRUTEFORCE-->
+      <param name="config/max_keypoints"                 value="700"/><!-- Extract no more than this many keypoints (not honored by SIFTGPU)-->
+      <param name="config/min_keypoints"                 value="300"/><!-- Extract no less than this many ... -->
+      <param name="config/nn_distance_ratio"             value="0.6"/> <!-- Feature correspondence is valid if distance to nearest neighbour is smaller than this parameter times the distance to the 2nd neighbour -->
+      <param name="config/optimizer_skip_step"           value="1"/><!-- optimize every n-th frame -->
+      <param name="config/optimizer_iterations"          value="4"/><!-- optimize every n-th frame -->
+      <param name="config/store_pointclouds"             value="true"/> <!-- if, e.g., only trajectory is required, setting this to false saves lots of memory -->
+      <param name="config/backend_solver"                value="pcg"/>
+      <param name="config/individual_cloud_out_topic"    value="/rgbdslam/batch_clouds"/>;
+      <param name="config/visualization_skip_step"       value="1"/> <!-- draw only every nth pointcloud row and line, high values require higher squared_meshing_threshold -->
+      <param name="config/send_clouds_rate"              value="2"/> <!-- When sending the point clouds (e.g. to RVIZ or Octomap Server) limit sending to this many clouds per second -->
+      <param name="config/min_time_reported"             value="0.01"/><!-- for easy runtime analysis -->
+      <param name="config/min_translation_meter"         value="0.05"/><!-- frames with motion less than this, will be omitted -->
+      <param name="config/min_rotation_degree"           value="1"/><!-- frames with motion less than this, will be omitted -->
+      <param name="config/predecessor_candidates"        value="5"/><!-- search through this many immediate predecessor nodes for corrspondences -->
+      <param name="config/neighbor_candidates"           value="5"/><!-- search through this many graph neighbour nodes for corrspondences -->
+      <param name="config/min_sampled_candidates"        value="5"/><!-- search through this many uniformly sampled nodes for corrspondences -->
+    </node>
+
+    <!-- Launch octomap_server for mappingL: Listens to incoming PointCloud2 data 
+    and incrementally build an octomap. The data is sent out in different representations. -->
+    <node pkg="octomap_server" type="color_octomap_server_node" name="color_octomap_server" output="screen">
+      <param name="resolution" value="0.005" />
+      <!-- fixed map frame (set to 'map' if SLAM or localization running!) -->
+      <param name="frame_id" type="string" value="map" />
+      <!-- maximum range to integrate (speedup, accuracy) -->
+      <param name="max_sensor_range" value="6.0" />
+      <!-- Save octomap here on destruction of the server -->
+      <param name="save_directory" value="$(optenv OCTOMAP_SAVE_DIR ./)" />
+      <!-- data source to integrate (PointCloud2) -->
+      <remap from="cloud_in" to="/rgbdslam/batch_clouds" />
+    </node>
+</launch>

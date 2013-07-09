@@ -1,0 +1,24 @@
+<!-- This file demonstrates the parameterization for a computer with low performance
+     The openni driver is started from this file -->
+<launch>
+  <include file="$(find openni_launch)/launch/openni.launch"/>
+  <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" cwd="node" required="true" output="log"> 
+    <!-- Input data settings-->
+    <param name="config/topic_image_mono"              value="/camera/rgb/image_rect_color"/> <!--could also be color -->
+  	<param name="config/topic_image_depth"             value="/camera/depth_registered/image_rect"/>
+
+    <param name="config/feature_detector_type"         value="ORB"/><!-- ORB are fastest and require no GPU -->
+    <param name="config/feature_extractor_type"        value="ORB"/><!-- ORB are fastest and require no GPU -->
+    <param name="config/max_keypoints"                 value="200"/><!-- Frame-to-frame comparisons are faster with few features-->
+    <param name="config/min_sampled_candidates"        value="5"/><!-- Frame-to-frame comparisons to random frames-->
+    <param name="config/nn_distance_ratio"             value="1"/><!-- Frame-to-frame comparisons to random frames-->
+
+    <param name="config/data_skip_step"                value="2"/><!-- skip every n-th frame completely -->
+    <param name="config/optimizer_skip_step"           value="10"/><!-- optimize every n-th frame. Set high for offline operation -->
+    <param name="config/backend_solver"                value="pcg"/> <!-- pcg is fast and good for online operation -->
+    <param name="config/cloud_creation_skip_step"      value="4"/> <!-- Subsample point cloud during creation: Makes creation and EMM faster, requires less storage -->
+    <param name="config/visualization_skip_step"       value="1"/> <!-- Increase this if 3D rendering in GUI is still to slow-->
+    <param name="config/octomap_resolution"            value="0.05"/><!-- 5 cm resolution renders fast enough for small maps -->
+    <param name="config/maximum_depth"                 value="3.0"/><!-- Do not render points further than 3 meter in GUI and Octomap-->
+  </node>
+</launch>

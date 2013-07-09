@@ -123,11 +123,13 @@ private Q_SLOTS:
     void pruneEdgesWithHighError();
     void toggleFullscreen(bool);
     void toggleCloudStorage(bool);
+    void toggleOnlineVoxelMapping(bool);
     void toggleLandmarkOptimization(bool);
     void toggleMappingPriv(bool);
     void toggleScreencast(bool);
     //Display a Dialog to change the value of the mentioned parameter
     void setParam(QString param_name);
+    void setOctoMapResolution();
 private:
     //!Menus and Menu elements are defined here
     void createMenus();

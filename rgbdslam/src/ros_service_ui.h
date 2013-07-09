@@ -24,6 +24,7 @@
 #include "rgbdslam/rgbdslam_ros_ui.h"
 #include "rgbdslam/rgbdslam_ros_ui_b.h"
 #include "rgbdslam/rgbdslam_ros_ui_f.h"
+#include "rgbdslam/rgbdslam_ros_ui_s.h"
 
 class QAction;
 
@@ -39,8 +40,10 @@ public:
     bool services(rgbdslam::rgbdslam_ros_ui::Request  &req, rgbdslam::rgbdslam_ros_ui::Response &res);
     ///a service-client for all methods with bool as argument: {pause, record}
     bool services_b(rgbdslam::rgbdslam_ros_ui_b::Request  &req, rgbdslam::rgbdslam_ros_ui_b::Response &res);
-    ///a service-client for changing the maximal depth of a point: {set_max}
+    ///a service-client for floats, e.g., for changing the maximal depth of a point: {set_max}
     bool services_f(rgbdslam::rgbdslam_ros_ui_f::Request  &req, rgbdslam::rgbdslam_ros_ui_f::Response &res);
+    ///a service-client for commands with string arguments, e.g. a filename
+    bool services_s(rgbdslam::rgbdslam_ros_ui_s::Request  &req, rgbdslam::rgbdslam_ros_ui_s::Response &res);
 Q_SIGNALS:
     ///User selected to reset the graph
     void reset(); 
@@ -57,6 +60,7 @@ Q_SIGNALS:
     void sendAllClouds(); ///< Signifies the sending of the whole model
     ///User wants the current world model to be saved to a pcd-file or ply file
     void saveAllClouds(QString filename);
+    ///User wants the current world model to be saved to an octomap 
     void saveOctomapSig(QString filename);
     ///User wants the feature locations and descriptions saved to yaml or xml file
     void saveAllFeatures(QString filename);
@@ -67,6 +71,7 @@ Q_SIGNALS:
     void setMaxDepth(float max_depth);
     ///User wants logfiles of the trajectory estimate (and ground truth if available)
     void saveTrajectory(QString);
+    ///Trigger graph optimizer
     void optimizeGraph();
      
 public Q_SLOTS:
@@ -95,6 +100,7 @@ private:
     ros::ServiceServer server;
     ros::ServiceServer server_b;
     ros::ServiceServer server_f;
+    ros::ServiceServer server_s;
 };
 
 #endif

@@ -8,7 +8,8 @@ set(ENV{SIFT_GPU_MODE}		2) #CUDA = 1, GLSL = 2
 set(ENV{SIFT_GPU_CUDA_PATH}	/usr/local/cuda)	
 	
 set(USE_GICP_BIN		0)
-set(USE_GICP_CODE		1)
+set(USE_GICP_CODE		0)
+set(USE_PCL_ICP		  1)
 set(USE_GL2PS       0) #For printing the 3D Window to PostScript - requires installation of additional library: libgl2ps-dev
 IF ("${ROS_PARALLEL_JOBS}" EQUAL "")
   set(ROS_PARALLEL_JOBS 1)
@@ -62,6 +63,13 @@ rosbuild_gensrv()
 ##############################################################################
 # Required 3rd party
 ##############################################################################
+#############################
+# Octomap ###################
+#############################
+find_package(octomap REQUIRED)
+include_directories(${OCTOMAP_INCLUDE_DIRS})
+link_directories(${OCTOMAP_LIBRARY_DIRS})
+link_libraries(${OCTOMAP_LIBRARIES})
 
 #############################
 # Qt ########################
@@ -152,6 +160,9 @@ ENDIF (${USE_GICP_BIN})
 IF (${USE_GICP_CODE})
 	add_definitions(-DUSE_ICP_CODE) 
 ENDIF (${USE_GICP_CODE})
+IF (${USE_PCL_ICP})
+  add_definitions(-DUSE_PCL_ICP) 
+ENDIF (${USE_PCL_ICP})
 
 
 
@@ -188,8 +199,8 @@ QT4_WRAP_CPP(QT_MOC_HPP ${QT_MOC})
 ##############################################################################
 # Sources to Compile
 ##############################################################################
-SET(ADDITIONAL_SOURCES src/gicp-fallback.cpp src/main.cpp src/qtros.cpp  src/openni_listener.cpp src/qt_gui.cpp src/flow.cpp src/node.cpp src/graph_manager.cpp src/graph_mgr_io.cpp src/glviewer.cpp src/parameter_server.cpp src/ros_service_ui.cpp src/misc.cpp src/landmark.cpp src/loop_closing.cpp src/ColorOctomapServer.cpp src/scoped_timer.cpp)
-SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/transformation_estimation.cpp src/graph_manager2.cpp)
+SET(ADDITIONAL_SOURCES src/gicp-fallback.cpp src/main.cpp src/qtros.cpp  src/openni_listener.cpp src/qt_gui.cpp src/flow.cpp src/node.cpp src/graph_manager.cpp src/graph_mgr_io.cpp src/glviewer.cpp src/parameter_server.cpp src/ros_service_ui.cpp src/misc.cpp src/landmark.cpp src/loop_closing.cpp src/ColorOctomapServer.cpp src/scoped_timer.cpp src/icp.cpp)
+SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/transformation_estimation_euclidean.cpp src/transformation_estimation.cpp src/graph_manager2.cpp)
 
 IF (${USE_SIFT_GPU})
  	SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/sift_gpu_wrapper.cpp)

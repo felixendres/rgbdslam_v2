@@ -26,6 +26,7 @@
 #include "scoped_timer.h"
 
 #include "g2o/types/slam3d/se3quat.h"
+#include "g2o/types/slam3d/vertex_se3.h"
 
 #include <pcl_ros/transforms.h>
 
@@ -159,7 +160,8 @@ void transformAndAppendPointCloud (const pointcloud_type &cloud_in,
 }
 
 //do spurious type conversions
-geometry_msgs::Point pointInWorldFrame(const Eigen::Vector4f& point3d, g2o::SE3Quat transf){
+geometry_msgs::Point pointInWorldFrame(const Eigen::Vector4f& point3d, const g2o::VertexSE3::EstimateType& transf)
+{
     Eigen::Vector3d tmp(point3d[0], point3d[1], point3d[2]);
     tmp = transf * tmp; //transform to world frame
     geometry_msgs::Point p;
@@ -455,17 +457,21 @@ pointcloud_type* createXYZRGBPointCloud (const cv::Mat& depth_img,
   pointcloud_type* cloud (new pointcloud_type() );
   cloud->is_dense         = false; //single point of view, 2d rasterized NaN where no depth value was found
 
-  float cx, cy, fx, fy;//principal point and focal lengths
+  ParameterServer* ps = ParameterServer::instance();
+  float fx = 1./ (ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : cam_info->K[0]); //(cloud->width >> 1) - 0.5f;
+  float fy = 1./ (ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : cam_info->K[4]); //(cloud->width >> 1) - 0.5f;
+  float cx = ps->get<double>("depth_camera_cx") > 0 ? ps->get<double>("depth_camera_cx") : cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
+  float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") : cam_info->K[5]; //(cloud->width >> 1) - 0.5f;
   int data_skip_step = ParameterServer::instance()->get<int>("cloud_creation_skip_step");
   if(depth_img.rows % data_skip_step != 0 || depth_img.cols % data_skip_step != 0){
     ROS_WARN("The parameter cloud_creation_skip_step is not a divisor of the depth image dimensions. This will most likely crash the program!");
   }
   cloud->height = ceil(depth_img.rows / static_cast<float>(data_skip_step));
   cloud->width = ceil(depth_img.cols / static_cast<float>(data_skip_step));
-  cx = cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
-  cy = cam_info->K[5]; //(cloud->height >> 1) - 0.5f;
-  fx = 1.0f / cam_info->K[0]; 
-  fy = 1.0f / cam_info->K[4]; 
+  //cx = cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
+  //cy = cam_info->K[5]; //(cloud->height >> 1) - 0.5f;
+  //fx = 1.0f / cam_info->K[0]; 
+  //fy = 1.0f / cam_info->K[4]; 
   int pixel_data_size = 3;
   //Assume BGR
   //char red_idx = 2, green_idx = 1, blue_idx = 0;

@@ -21,6 +21,7 @@
 #include <sensor_msgs/CameraInfo.h>
 #include <cv.h>
 
+#include "g2o/types/slam3d/vertex_se3.h"
 void printTransform(const char* name, const tf::Transform t) ;
 ///Write Transformation to textstream
 void logTransform(QTextStream& out, const tf::Transform& t, double timestamp, const char* label = NULL);
@@ -30,6 +31,37 @@ void printQMatrix4x4(const char* name, const QMatrix4x4& m);
 QMatrix4x4    g2o2QMatrix(const g2o::SE3Quat se3) ;
 ///Conversion Function
 tf::Transform g2o2TF(     const g2o::SE3Quat se3) ;
+template <typename T >
+QMatrix4x4 eigenTF2QMatrix(const T& transf) 
+{
+  Eigen::Matrix<qreal, 4, 4, Eigen::RowMajor> m = transf.matrix();
+  QMatrix4x4 qmat( static_cast<qreal*>( m.data() )  );
+  printQMatrix4x4("From Eigen::Transform", qmat); 
+  return qmat;
+}
+
+template <typename T >
+tf::Transform eigenTransf2TF(const T& transf) 
+{
+    tf::Transform result;
+    tf::Vector3 translation;
+    translation.setX(transf.translation().x());
+    translation.setY(transf.translation().y());
+    translation.setZ(transf.translation().z());
+
+    tf::Quaternion rotation;
+    Eigen::Quaterniond quat;
+    quat = transf.rotation();
+    rotation.setX(quat.x());
+    rotation.setY(quat.y());
+    rotation.setZ(quat.z());
+    rotation.setW(quat.w());
+
+    result.setOrigin(translation);
+    result.setRotation(rotation);
+    //printTransform("from conversion", result);
+    return result;
+}
 ///Conversion Function
 g2o::SE3Quat  eigen2G2O(  const Eigen::Matrix4d& eigen_mat);
 ///Conversion Function
@@ -52,7 +84,8 @@ void transformAndAppendPointCloud (const pointcloud_type &cloud_in, pointcloud_t
                                    const tf::Transform transformation, float Max_Depth);
 
 
-geometry_msgs::Point pointInWorldFrame(const Eigen::Vector4f& point3d, g2o::SE3Quat transf);
+//geometry_msgs::Point pointInWorldFrame(const Eigen::Vector4f& point3d, g2o::SE3Quat transf);
+geometry_msgs::Point pointInWorldFrame(const Eigen::Vector4f& point3d, const g2o::VertexSE3::EstimateType& transf);
 // true if translation > 10cm or largest euler-angle>5 deg
 // used to decide if the camera has moved far enough to generate a new nodes
 bool isBigTrafo(const Eigen::Matrix4f& t);

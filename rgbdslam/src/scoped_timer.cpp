@@ -2,8 +2,9 @@
 #include <ros/console.h>
 #include "parameter_server.h"
 
-ScopedTimer::ScopedTimer(const char* thename){
+ScopedTimer::ScopedTimer(const char* thename, bool unconditional_logging){
   name = thename;
+  unconditional_triggering = unconditional_logging;
   clock_gettime(CLOCK_MONOTONIC, &start);
 }
 
@@ -15,9 +16,11 @@ double ScopedTimer::elapsed(){
 
 ScopedTimer::~ScopedTimer(){
   double min_time = ParameterServer::instance()->get<double>("min_time_reported");
-  if(min_time > 0){
+  if(unconditional_triggering || min_time > 0){
     double runtime = elapsed();
-    ROS_INFO_STREAM_COND_NAMED(runtime > min_time, "timings", name << " runtime: "<< runtime <<" s");
+    if(unconditional_triggering || runtime > min_time){
+      ROS_INFO_STREAM_NAMED("timings", name << " runtime: "<< runtime <<" s");
+    }
   }
 }
 

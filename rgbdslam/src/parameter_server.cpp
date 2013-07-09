@@ -59,6 +59,7 @@ void ParameterServer::defaultConfig() {
   addOption("octomap_clamping_min",          static_cast<double> (0.001),                 "Minimum value for clamping of occupancy threshold in voxels");
   addOption("octomap_prob_hit",              static_cast<double> (0.9),                 "Octomap sensor model: Probability value for hit.");
   addOption("octomap_prob_miss",             static_cast<double> (0.4),                 "Octomap sensor model: Probability value for miss.");
+  addOption("octomap_online_creation",       static_cast<bool> (false),                 "Create the octomap during mapping. If using this, every node will be rendered to the octomap directly after they have been added to the graph (and graph optimization, if not skipped b/c of optimizer_skip_step).");
   addOption("screencast_path_prefix",        std::string(""),                           "If set: capture frames for a screencast with this path as filename-prefix.");
 
   // TF information settings 
@@ -88,13 +89,15 @@ void ParameterServer::defaultConfig() {
   addOption("min_rotation_degree",           static_cast<double> (2.5),                 "Frames with motion less than this, will be omitted ");
   addOption("max_dist_for_inliers",          static_cast<double> (3),                   "Mahalanobis distance for matches to be considered inliers by ransac");
   addOption("ransac_iterations",             static_cast<int> (100),                   "These are fast, so high values are ok ");
+  addOption("ransac_termination_inlier_pct", static_cast<double> (60.0),                "Percentage of matches that need to be inliers to succesfully terminate ransac before the 'ransac_iterations' have been reached");
   addOption("g2o_transformation_refinement", static_cast<int> (0),                     "Use g2o to refine the ransac result for that many iterations, i.e. optimize the Mahalanobis distance in a final step. Use zero to disable.");
   addOption("max_connections",               static_cast<int> (-1),                     "Stop frame comparisons after this many succesfully found spation relations. Negative value: No limit.");
   addOption("geodesic_depth",                static_cast<int> (3),                      "For comparisons with neighbors, consider those with a graph distance (hop count) equal or below this value as neighbors of the direct predecessor");
   addOption("predecessor_candidates",        static_cast<int> (2),                      "Compare Features to this many direct sequential predecessors");
   addOption("neighbor_candidates",           static_cast<int> (2),                      "Compare Features to this many graph neighbours. Sample from the candidates");
   addOption("min_sampled_candidates",        static_cast<int> (2),                      "Compare Features to this many uniformly sampled nodes for corrspondences ");
-  addOption("use_icp",                       static_cast<bool> (false),                 "Activate GICP Fallback. Ignored if GICP is not compiled in (see top of CMakeLists.txt) ");
+  addOption("use_icp",                       static_cast<bool> (false),                 "Activate ICP Fallback. Ignored if ICP is not compiled in (see top of CMakeLists.txt) ");
+  addOption("icp_method",                    std::string("icp"),                        "gicp, icp or icp_nl");
   addOption("gicp_max_cloud_size",           static_cast<int> (10000),                  "Subsample for increased speed");
   addOption("emm__skip_step",                static_cast<int> (5),                      "When evaluating the transformation, subsample rows and cols with this stepping");
   addOption("emm__mark_outliers",            static_cast<bool> (false),                 "Mark outliers in the observation likelihood evaluation with colors. Red: point would have blocked the view of an earlier observation. Cyan: An earlier observation should have blocked the view to this point");
@@ -114,6 +117,8 @@ void ParameterServer::defaultConfig() {
   addOption("glwidget_without_clouds",       static_cast<bool> (false),                 "3D view should only display the graph");
   addOption("visualize_mono_depth_overlay",  static_cast<bool> (false),                 "Show Depth and Monochrome image as overlay in featureflow");
   addOption("visualization_skip_step",       static_cast<int> (1),                      "Draw only every nth pointcloud row and line, high values require higher squared_meshing_threshold ");
+  addOption("visualize_keyframes_only",      static_cast<bool> (false),                 "Do not render point cloud of non-keyframes.");
+  addOption("fast_rendering_step",           static_cast<int> (1),                      "Draw only every nth pointcloud during user interaction");
   addOption("gl_point_size",                 static_cast<double> (1.0),                 "Point size, when not triangulating. See documentation of GL_POINT_SIZE.");
   addOption("gl_grid_size_xy",               static_cast<int> (0),                      "Grid size in the xy plane (sidelength in number of cell). Zero disables. Note that this is in the coordinate system of the point cloud");
   addOption("gl_grid_size_xz",               static_cast<int> (20),                     "Grid size in the xz plane (sidelength in number of cell). Zero disables. Note that this is in the coordinate system of the point cloud");
@@ -133,8 +138,10 @@ void ParameterServer::defaultConfig() {
   addOption("nn_distance_ratio",             static_cast<double> (0.6),                 "Feature correspondence is valid if distance to nearest neighbour is smaller than this parameter times the distance to the 2nd neighbour. This needs to be 0.9-1.0 for SIFTGPU w/ FLANN, since SIFTGPU Features are normalized");
   addOption("keep_all_nodes",                static_cast<bool> (false),                 "Keep all nodes with 'no motion' assumption");
   addOption("keep_good_nodes",               static_cast<bool> (false),                 "Keep nodes without transformation estimation but enough features (according to min_keypoints) with 'no motion' assumption. These are not rendered in visualization.");
+  addOption("clear_non_keyframes",           static_cast<bool> (false),                 "Remove the net data of nodes when it becomes clear that they will not be used as keyframe. However, this makes matching against them impossible.");
   addOption("min_time_reported",             static_cast<double> (-1.0),                "For easy profiling. Negative: nothing should be reported");
   addOption("preserve_raster_on_save",       static_cast<bool> (false),                 "Filter NaNs when saving clouds, destroying the image raster");
+  addOption("skip_first_n_frames",           static_cast<int> (0),                      "Useful to skip start of a bagfile");
 }
 
 

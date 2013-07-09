@@ -144,11 +144,20 @@ class GraphManager : public QObject {
     /// \callergraph
     bool addNode(Node* newNode); 
 
+    //! Try to compute transformations to previous nodes
+    /// getPotentialEdgeTargetsWithDijkstra is used to select
+    /// previous nodes to match against, then the comparison
+    /// of nodes is called, possibly in parallel.
+    /// \callergraph
+    bool nodeComparisons(Node* newNode, 
+                         QMatrix4x4& curr_motion_estimate,
+                         bool& edge_to_keyframe);///Output:contains the best-yet of the pairwise motion estimates for the current node
     /// Adds the first node
     void firstNode(Node* new_node);
 
     g2o::HyperGraph::VertexSet camera_vertices;
     g2o::HyperGraph::EdgeSet cam_cam_edges;
+    g2o::HyperGraph::EdgeSet current_match_edges_;
 
 #ifdef DO_FEATURE_OPTIMIZATION
     g2o::HyperGraph::EdgeSet cam_lm_edges;
@@ -166,6 +175,8 @@ class GraphManager : public QObject {
     //!Warning: This is a dangerous way to save memory. Some methods will behave undefined after this.
     ///Notable exception: optimizeGraph()
     void deleteFeatureInformation();
+    ///Only write (not create, not clear) existing octomap
+    void writeOctomap(QString filename) const;
 protected:
         
     ///Start over
@@ -173,11 +184,16 @@ protected:
     ///Applies g2o for optimization returns chi2
     double optimizeGraphImpl(double max_iter);
 
+    ///Write current position estimate to the node's point cloud's origin
+    ///Make sure to acquire the optimizer_mutex_ before calling
+    bool updateCloudOrigin(Node* node);
     ///Instanciate the optimizer with the desired backend
     void createOptimizer(std::string backend, g2o::SparseOptimizer* optimizer = NULL);
     ///will contain the motion to the best matching node
     MatchingResult curr_best_result_; 
 
+    ///Compute the tranformation between (sensor) Base and Fixed (Map) frame
+    tf::StampedTransform computeFixedToBaseTransform(Node* node, bool invert);
     /// Suggest nodes for comparison. Suggests <sequential_targets> direct predecessors in the time sequence
     /// <geodesic_targets> nodes from the graph-neighborhood and <sample_targets> randomly chosen from the keyframes
     /// Using the graph neighborhood, has the advantage that once a loop closure is found by sampling, the edge 
@@ -186,6 +202,8 @@ protected:
     
     //std::vector<int> getPotentialEdgeTargetsFeatures(const Node* new_node, int max_targets);
 
+    ///use matching results to update location
+    void localizationUpdate(Node* new_node, QMatrix4x4 motion_estimate);
 #ifdef DO_FEATURE_OPTIMIZATION
     std::vector<Landmark> landmarks;
     void updateLandmarks(const MatchingResult& match_result, Node* old_node, Node* new_node);
@@ -222,9 +240,19 @@ protected:
     //Delete a camera frame. Be careful, this might split the graph!
     void deleteCameraFrame(int id);
 
-    ///Send the transform between openni_camera (the initial position of the cam)
-    ///and the cumulative motion. 
-    void broadcastTransform(Node* node, tf::Transform& computed_motion);
+    ///Broadcast given transform
+    void broadcastTransform(const tf::StampedTransform& computed_motion) const;
+
+    ///Broadcast cached transform
+    void broadcastLatestTransform(const ros::TimerEvent& event) const;
+
+    ///Compute the transform between the fixed frame (usually the initial position of the cam) 
+    /// and the node from the motion (given in sensor frame)
+    tf::StampedTransform stampedTransformInWorldFrame(const Node* node, 
+                                                      const tf::Transform& computed_motion) const;
+
+    ///Add a keyframe to the list (and log keyframes)
+    void addKeyframe(int id);
 
     int last_added_cam_vertex_id(){
       return graph_[graph_.size()-1]->vertex_id_;
@@ -257,10 +285,10 @@ protected:
     //!Used to start the broadcasting of the pose estimate regularly
     ros::Timer timer_;
     //!Used to broadcast the pose estimate
-    tf::TransformBroadcaster br_;
+    mutable tf::TransformBroadcaster br_;
     tf::Transform computed_motion_; ///<transformation of the last frame to the first frame (assuming the first one is fixed)
     tf::Transform  init_base_pose_;
-    tf::Transform base2points_;//base_frame -> optical_frame 
+    tf::StampedTransform latest_transform_cache_;//base_frame -> optical_frame 
 
     //!Map from node id to node. Assumption is, that ids start at 0 and are consecutive
     typedef std::pair<int, Node*> GraphNodeType;
@@ -272,9 +300,9 @@ protected:
     bool process_node_runs_;
     bool localization_only_;
     //!This mutex restricts access to the optimizer's data structures
-    QMutex optimizer_mutex;
+    QMutex optimizer_mutex_;
     //!This mutex restricts the optimization computation itself
-    QMutex optimization_mutex;
+    QMutex optimization_mutex_;
     //cv::FlannBasedMatcher global_flann_matcher;
     QList<int> keyframe_ids_;//Keyframes are added, if no previous keyframe was matched
     //NEW std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f> > feature_coords_;  
@@ -295,6 +323,7 @@ protected:
     ///iterate over all Nodes, save each in one pcd-file
     void saveIndividualCloudsToFile(QString filename);
     void saveOctomapImpl(QString filename);
+    void renderToOctomap(Node* node);
     void pointCloud2MeshFile(QString filename, pointcloud_type full_cloud);
 
     //RVIZ visualization stuff (also in graph_mgr_io.cpp)
@@ -308,6 +337,7 @@ protected:
     void visualizeFeatureFlow3D(unsigned int marker_id = 0, bool draw_outlier = true);
     
     g2o::RobustKernelHuber robust_kernel_;
+    //g2o::RobustKernelDCS robust_kernel_;
 
 };
 

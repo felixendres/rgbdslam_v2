@@ -19,7 +19,7 @@
 ///dependencies (except for the class header).
 
 void GraphManager::toggleMapping(bool mappingOn){
-  QMutexLocker locker(&optimizer_mutex);
+  QMutexLocker locker(&optimizer_mutex_);
   ROS_INFO_COND(mappingOn, "Switching mapping back on");
   ROS_INFO_COND(!mappingOn, "Switching mapping off: Localization continues");
   localization_only_ = !mappingOn;
@@ -42,13 +42,16 @@ void GraphManager::clearPointClouds() {
 }
 
 void GraphManager::clearPointCloud(pointcloud_type const * pc) {
+  ROS_DEBUG("Should clear cloud at %p", pc);
   BOOST_REVERSE_FOREACH(GraphNodeType entry, graph_){
     if(entry.second->pc_col.get() == pc){
       entry.second->clearPointCloud();
       ROS_WARN("Cleared PointCloud after rendering to openGL list. It will not be available for save/send.");
       return;
     }
+    ROS_DEBUG("Compared to node %d (cloud at %p has size %zu)", entry.first, entry.second->pc_col.get(), entry.second->pc_col->points.size());
   }
+  ROS_WARN("Should Clear cloud at %p, but didn't find it in any node.", pc);
 }
 
 void GraphManager::deleteLastFrame(){
@@ -82,9 +85,9 @@ GraphManager::~GraphManager() {
       delete entry.second; 
     }
     graph_.clear();
-    QMutexLocker locker(&optimizer_mutex);
-    QMutexLocker locker2(&optimization_mutex);
-    delete (optimizer_);
+    QMutexLocker locker(&optimizer_mutex_);
+    QMutexLocker locker2(&optimization_mutex_);
+    delete (optimizer_); optimizer_=NULL; //FIXME: this leads to a double free corruption. Bug in g2o?
     ransac_marker_pub_.shutdown();
     whole_cloud_pub_.shutdown();
     marker_pub_.shutdown();

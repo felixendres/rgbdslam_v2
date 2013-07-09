@@ -16,31 +16,26 @@
 
 
 #include "node.h"
+#include "transformation_estimation_euclidean.h"
 #include "transformation_estimation.h"
 #include <cmath>
 #include "scoped_timer.h"
 #include <Eigen/Geometry>
-//#include "pcl/ros/conversions.h"
-#include <pcl/common/transformation_from_correspondences.h>
-//#include <opencv2/highgui/highgui.hpp>
-//#include <qtconcurrentrun.h>
-//#include <QtConcurrentMap> 
 
 #ifdef USE_SIFT_GPU
 #include "sift_gpu_wrapper.h"
 #endif
 
-//#include <math.h>
 #include <fstream>
 
-//#ifdef USE_ICP_CODE
-//#include "../external/gicp/transform.h"
-//#endif
-
-//#include <iostream>
 #include "misc.h"
 #include <pcl/filters/voxel_grid.h>
 #include <opencv/highgui.h>
+#ifdef USE_PCL_ICP
+#include "icp.h"
+#endif
+#include <string>
+#include <iostream>
 
 QMutex Node::gicp_mutex;
 QMutex Node::siftgpu_mutex;
@@ -54,8 +49,11 @@ Node::Node(const cv::Mat& visual,
            std_msgs::Header depth_header,
            cv::Ptr<cv::FeatureDetector> detector,
            cv::Ptr<cv::DescriptorExtractor> extractor) :
-  id_(-1), seq_id_(-1), vertex_id_(-1), valid_tf_estimate_(true),
+  id_(-1), seq_id_(-1), vertex_id_(-1), valid_tf_estimate_(true), matchable_(true),
   pc_col(new pointcloud_type()),
+#ifdef USE_PCL_ICP
+  filtered_pc_col(new pointcloud_type()),
+#endif
   flannIndex(NULL),
   base2points_(tf::Transform::getIdentity(), depth_header.stamp, ParameterServer::instance()->get<std::string>("base_frame_name"), depth_header.frame_id),
   ground_truth_transform_(tf::Transform::getIdentity(), depth_header.stamp, ParameterServer::instance()->get<std::string>("ground_truth_frame_name"), ParameterServer::instance()->get<std::string>("base_frame_name")),
@@ -79,6 +77,11 @@ Node::Node(const cv::Mat& visual,
   }
   pc_col->header = depth_header;
 
+#ifdef USE_PCL_ICP
+  if(ps->get<bool>("use_icp")){
+    filterCloud(*pc_col, *filtered_pc_col, ps->get<int>("gicp_max_cloud_size")); 
+  }
+#endif
   cv::Mat gray_img; 
   if(visual.type() == CV_8UC3){
     cvtColor(visual, gray_img, CV_RGB2GRAY);
@@ -117,6 +120,7 @@ Node::Node(const cv::Mat& visual,
   }
   assert(feature_locations_2d_.size() == feature_locations_3d_.size());
   assert(feature_locations_3d_.size() == (unsigned int)feature_descriptors_.rows); 
+  feature_matching_stats_.resize(feature_locations_2d_.size(), 0);
   ROS_INFO_NAMED("statistics", "Feature Count of Node:\t%d", (int)feature_locations_2d_.size());
   //computeKeypointDepthStats(depth, feature_locations_2d_);
 
@@ -154,8 +158,11 @@ Node::Node(const cv::Mat visual,
            cv::Ptr<cv::DescriptorExtractor> extractor,
            pointcloud_type::Ptr point_cloud,
            const cv::Mat detection_mask) : 
-  id_(-1), seq_id_(-1), vertex_id_(-1), valid_tf_estimate_(true),
+  id_(-1), seq_id_(-1), vertex_id_(-1), valid_tf_estimate_(true), matchable_(true),
   pc_col(point_cloud),
+#ifdef USE_PCL_ICP
+  filtered_pc_col(new pointcloud_type()),
+#endif
   flannIndex(NULL),
   base2points_(tf::Transform::getIdentity(), point_cloud->header.stamp,ParameterServer::instance()->get<std::string>("base_frame_name"), point_cloud->header.frame_id),
   ground_truth_transform_(tf::Transform::getIdentity(), point_cloud->header.stamp, ParameterServer::instance()->get<std::string>("ground_truth_frame_name"), ParameterServer::instance()->get<std::string>("base_frame_name")),
@@ -212,6 +219,7 @@ Node::Node(const cv::Mat visual,
   {
     assert(feature_locations_2d_.size() == feature_locations_3d_.size());
     assert(feature_locations_3d_.size() == (unsigned int)feature_descriptors_.rows); 
+    feature_matching_stats_.resize(feature_locations_2d_.size(), 0);
     ROS_INFO_NAMED("statistics", "Feature Count of Node:\t%d", (int)feature_locations_2d_.size());
     /* Now inside the projection method:
     size_t max_keyp = ps->get<int>("max_keypoints");
@@ -233,6 +241,11 @@ Node::Node(const cv::Mat visual,
     gicp_mutex.lock();
     gicp_point_set_ = this->getGICPStructure();
     gicp_mutex.unlock();
+  }
+#endif
+#ifdef USE_PCL_ICP
+  if(ps->get<bool>("use_icp")){
+    filterCloud(*pc_col, *filtered_pc_col, ps->get<int>("gicp_max_cloud_size")); 
   }
 #endif
 
@@ -264,7 +277,7 @@ Node::Node(const cv::Mat visual,
 }
 
 Node::~Node() {
-    delete flannIndex;
+    delete flannIndex; flannIndex = NULL;
 }
 
 void Node::setOdomTransform(tf::StampedTransform gt){
@@ -276,13 +289,13 @@ void Node::setGroundTruthTransform(tf::StampedTransform gt){
 void Node::setBase2PointsTransform(tf::StampedTransform& b2p){
     base2points_ = b2p;
 }
-tf::StampedTransform Node::getOdomTransform(){
+tf::StampedTransform Node::getOdomTransform() const {
     return odom_transform_;
 }
-tf::StampedTransform Node::getGroundTruthTransform(){
+tf::StampedTransform Node::getGroundTruthTransform() const {
     return ground_truth_transform_;
 }
-tf::StampedTransform Node::getBase2PointsTransform(){
+tf::StampedTransform Node::getBase2PointsTransform() const {
     return base2points_;
 }
 
@@ -578,10 +591,15 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
   size_t max_keyp = ParameterServer::instance()->get<int>("max_keypoints");
   float x,y;//temp point, 
   //principal point and focal lengths:
-  float cx = 325.1;//cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
-  float cy = 249.7;//cam_info->K[5]; //(cloud->height >> 1) - 0.5f;
-  float fx = 1.0/521.0;//1.0f / cam_info->K[0]; 
-  float fy = 1.0/521.0;//1.0f / cam_info->K[4]; 
+  ParameterServer* ps = ParameterServer::instance();
+  float fx = 1./ (ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : cam_info->K[0]); //(cloud->width >> 1) - 0.5f;
+  float fy = 1./ (ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : cam_info->K[4]); //(cloud->width >> 1) - 0.5f;
+  float cx = ps->get<double>("depth_camera_cx") > 0 ? ps->get<double>("depth_camera_cx") : cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
+  float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") : cam_info->K[5]; //(cloud->width >> 1) - 0.5f;
+  //float cx = 325.1;//cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
+  //float cy = 249.7;//cam_info->K[5]; //(cloud->height >> 1) - 0.5f;
+  //float fx = 1.0/521.0;//1.0f / cam_info->K[0]; 
+  //float fy = 1.0/521.0;//1.0f / cam_info->K[4]; 
   cv::Point2f p2d;
 
   if(feature_locations_3d.size()){
@@ -767,10 +785,15 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
   size_t max_keyp = ParameterServer::instance()->get<int>("max_keypoints");
   float x,y;//temp point, 
   //principal point and focal lengths:
-  float cx = 325.1;//cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
-  float cy = 249.7;//cam_info->K[5]; //(cloud->height >> 1) - 0.5f;
-  float fx = 1.0/521.0;//1.0f / cam_info->K[0]; 
-  float fy = 1.0/521.0;//1.0f / cam_info->K[4]; 
+  ParameterServer* ps = ParameterServer::instance();
+  float fx = 1./ (ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : cam_info->K[0]); //(cloud->width >> 1) - 0.5f;
+  float fy = 1./ (ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : cam_info->K[4]); //(cloud->width >> 1) - 0.5f;
+  float cx = ps->get<double>("depth_camera_cx") > 0 ? ps->get<double>("depth_camera_cx") : cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
+  float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") : cam_info->K[5]; //(cloud->width >> 1) - 0.5f;
+  //float cx = 325.1;//cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
+  //float cy = 249.7;//cam_info->K[5]; //(cloud->height >> 1) - 0.5f;
+  //float fx = 1.0/521.0;//1.0f / cam_info->K[0]; 
+  //float fy = 1.0/521.0;//1.0f / cam_info->K[4]; 
 
   cv::Point2f p2d;
 
@@ -864,59 +887,6 @@ void Node::computeInliersAndError(const std::vector<cv::DMatch> & all_matches,
 
 }
 
-Eigen::Matrix4f Node::getTransformFromMatchesUmeyama(const Node* earlier_node, std::vector<cv::DMatch> matches) const 
-{
-  Eigen::Matrix<float, 3, Eigen::Dynamic> tos(3,matches.size()), froms(3,matches.size());
-  std::vector<cv::DMatch>::const_iterator it = matches.begin();
-  for (int i = 0 ;it!=matches.end(); it++, i++) {
-    Eigen::Vector3f f = this->feature_locations_3d_[it->queryIdx].head<3>(); //Oh my god, c++
-    Eigen::Vector3f t = earlier_node->feature_locations_3d_[it->trainIdx].head<3>();
-    if(isnan(f(2)) || isnan(t(2)))
-      continue;
-    froms.col(i) = f;
-    tos.col(i) = t;
-  }
-  Eigen::Matrix4f res = Eigen::umeyama(froms, tos, false);
-  return res;
-}
-
-Eigen::Matrix4f Node::getTransformFromMatches(const Node* earlier_node,
-                                              const std::vector<cv::DMatch>& matches,
-                                              bool& valid, 
-                                              const float max_dist_m) const 
-{
-  pcl::TransformationFromCorrespondences tfc;
-  valid = true;
-  std::vector<Eigen::Vector3f> t, f;
-
-  BOOST_FOREACH(const cv::DMatch& m, matches)
-  {
-    Eigen::Vector3f from = this->feature_locations_3d_[m.queryIdx].head<3>();
-    Eigen::Vector3f to = earlier_node->feature_locations_3d_[m.trainIdx].head<3>();
-    if(isnan(from(2)) || isnan(to(2)))
-      continue;
-    //Validate that 3D distances are corresponding
-    if (max_dist_m > 0) {  //storing is only necessary, if max_dist is given
-      if(f.size() >= 1)
-      {
-        float delta_f = (from - f.back()).squaredNorm();//distance to the previous query point
-        float delta_t = (to   - t.back()).squaredNorm();//distance from one to the next train point
-
-        if ( abs(delta_f-delta_t) > max_dist_m * max_dist_m ) {
-          valid = false;
-          return Eigen::Matrix4f();
-        }
-      }
-      f.push_back(from);
-      t.push_back(to);    
-    }
-
-    tfc.add(from, to,1.0);// 1.0/(to(2)*to(2)));//the further, the less weight b/c of quadratic accuracy decay
-  }
-
-  // get relative movement from samples
-  return tfc.getTransformation().matrix();
-}
 
 ///Randomly choose <sample_size> of the matches
 std::vector<cv::DMatch> sample_matches_prefer_by_distance(unsigned int sample_size, std::vector<cv::DMatch>& matches_with_depth)
@@ -979,8 +949,10 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
   //VALIDATION
   assert(initial_matches != NULL);
   
+  std::stringstream nodesstringstream; nodesstringstream << "Nodes " << (this->id_) << "<->" << (earlier_node->id_);
+  std::string nodesstring = nodesstringstream.str();
   if(initial_matches->size() <= (unsigned int) ParameterServer::instance()->get<int>("min_matches")){
-    ROS_INFO("Only %d feature matches between %d and %d (minimal: %i)",(int)initial_matches->size() , this->id_, earlier_node->id_, ParameterServer::instance()->get<int>("min_matches"));
+    ROS_INFO("%s: Only %d feature matches between %d and %d (minimal: %i)",nodesstring.c_str(), (int)initial_matches->size() , this->id_, earlier_node->id_, ParameterServer::instance()->get<int>("min_matches"));
     return false;
   }
 
@@ -1029,7 +1001,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
     real_iterations++;
     for(int refinements = 1; refinements < 20 /*got stuck?*/; refinements++) 
     {
-        Eigen::Matrix4f transformation = getTransformFromMatches(earlier_node, inlier,valid_tf,max_dist_m);
+        Eigen::Matrix4f transformation = getTransformFromMatches(this, earlier_node, inlier,valid_tf,max_dist_m);
         if (!valid_tf || transformation!=transformation)  //Trafo Contains NaN?
           break; // valid_tf is false iff the sampled points aren't inliers themself 
 
@@ -1119,7 +1091,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
                            earlier_node->feature_locations_3d_, //earlier_node->feature_depth_stats_, 
                            inlier,inlier_error, //Output!
                            max_dist_m*max_dist_m); 
-    ROS_INFO_STREAM("Transformation estimated to Node " << earlier_node->id_ << ":\n" << transformation);
+    ROS_INFO_STREAM(nodesstring << ": g2o transformation estimated to Node " << earlier_node->id_ << ":\n" << transformation);
     //superior in inliers or equal inliers and better rmse?
     if (inlier.size() >= matches.size() || inlier.size() >= min_inlier_threshold && inlier_error < rmse) {
       //if More inliers -> Refine with them included
@@ -1145,13 +1117,13 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
       }
     }
     else {
-      ROS_INFO("G2O optimization of RANSAC for %i<->%i rejected: inliers: %i (min %i), inlier_error: %.2f (max %.2f)", this->id_, earlier_node->id_, (int)inlier.size(), (int) min_inlier_threshold,  inlier_error, max_dist_m);
+      ROS_INFO("G2O optimization of RANSAC for %s rejected: G2O inliers: %i (min %i), inlier_error: %.2f (max %.2f) RANSAC inls: %i (min %i), inlier_error: %.2f", nodesstring.c_str(), (int)inlier.size(), (int) min_inlier_threshold,  inlier_error, max_dist_m, (int)matches.size(), (int) min_inlier_threshold,  rmse);
     }
   }
   
 
 
-  ROS_INFO("%i good iterations (from %i), inlier pct %i, inlier cnt: %i, error (MHD): %.2f",valid_iterations, ransac_iterations, (int) (matches.size()*1.0/initial_matches->size()*100),(int) matches.size(),rmse);
+  ROS_INFO("%s: %i good iterations (from %i), inlier pct %i, inlier cnt: %i, error (MHD): %.2f",nodesstring.c_str(), valid_iterations, ransac_iterations, (int) (matches.size()*1.0/initial_matches->size()*100),(int) matches.size(),rmse);
   // ROS_INFO("best overall: inlier: %i, error: %.2f",best_inlier_invalid, best_error_invalid*100);
 
   bool enough_absolute = matches.size() >= min_inlier_threshold;
@@ -1181,23 +1153,117 @@ void Node::gicpSetIdentity(dgc_transform_t m){
         m[i][j] = 0;
 }
 #endif
+///Used only in matchNodePair
+void printNNRatioInfo(const char* validity, const char* nodes, const std::vector<cv::DMatch>& matches)
+{
+  float nn_ratio = 0.0;
+  //double w = 1.0 + (double)matches.size()-(double)min_matches;///(double)mr.all_matches.size();
+  for(unsigned int i = 0; i < matches.size(); i++){
+    nn_ratio += matches[i].distance;
+  }
+  nn_ratio /= matches.size();
+  ROS_INFO("%s: RANSAC found a %s transformation with %d inliers matches with average ratio %f", 
+           nodes, validity, (int) matches.size(), nn_ratio);
+}
 
+///Used only in matchNodePair
+void edgeFromMatchingResult(const Node* newer_node, const Node* older_node, const Eigen::Matrix4f& final_trafo, MatchingResult& mr){
+  mr.final_trafo = final_trafo;
+  mr.edge.id1 = older_node->id_;//and we have a valid transformation
+  mr.edge.id2 = newer_node->id_; //since there are enough matching features,
+  mr.edge.mean = eigen2G2O(mr.final_trafo.cast<double>());//we insert an edge between the frames
 
+  //Information Matrix
+  mr.edge.informationMatrix = Eigen::Matrix<double,6,6>::Identity()*((1+mr.inlier_matches.size())/(mr.rmse*mr.rmse)); //TODO: What do we do about the information matrix? Scale with inlier_count. Should rmse be integrated?)
+/*
+  Eigen::Affine3f eigen_transform(mr.final_trafo);
+  Eigen::Vector3f translation(mr.final_trafo(0, 3), mr.final_trafo(1, 3), mr.final_trafo(2, 3));
 
+  Eigen::Quaternionf eigen_quat(eigen_transform.rotation());
+  //float rotationnorm = acos(eigen_quat.w()) * 2; //in rad. deg: 360.0 / 3.14159;
+  //rotationnorm = (1.0+rotationnorm);
+  
+  //Experimental: Weight by "traveled distance"
+  //mr.edge.informationMatrix =   Eigen::Matrix<double,6,6>::Identity() * translationnorm*rotationnorm;
+  mr.edge.informationMatrix(0,0) /= 1.0 + translation.x() * translation.x();
+  mr.edge.informationMatrix(1,1) /= 1.0 + translation.y() * translation.y();
+  mr.edge.informationMatrix(2,2) /= 1.0 + translation.z() * translation.z();
+  mr.edge.informationMatrix(3,3) /= 1.0 + eigen_quat.x()  * eigen_quat.x();
+  mr.edge.informationMatrix(4,4) /= 1.0 + eigen_quat.y()  * eigen_quat.y();
+  mr.edge.informationMatrix(5,5) /= 1.0 + eigen_quat.z()  * eigen_quat.z();
+  //mr.edge.informationMatrix = mr.edge.informationMatrix;// * mr.edge.informationMatrix ;
+  ROS_INFO_STREAM("Information Matrix: \n" << mr.edge.informationMatrix);
+  */
+
+}
+
+bool edge_from_icp_alignment(bool found_transformation, Node* newer_node, const Node* older_node, MatchingResult& mr, double ransac_quality)
+{
+    std::string icp_method = ParameterServer::instance()->get<std::string>("icp_method") ;
+    if(ParameterServer::instance()->get<bool>("use_icp"))
+    {   //Apply icp only for adjacent frames, or with initial guess as the initial guess needs to be in the global minimum
+        if((!found_transformation && (((int)newer_node->id_ - (int)older_node->id_) <= 1)) )
+        {
+            ROS_INFO("Applying GICP for Transformation between Nodes %d and %d",newer_node->id_ , older_node->id_);
+            MatchingResult mr_icp;
+#ifdef USE_PCL_ICP
+            if(icp_method == "icp"||icp_method == "icp_nl")
+            {
+              mr_icp.final_trafo = icpAlignment(older_node->filtered_pc_col, newer_node->filtered_pc_col, mr.final_trafo);   
+            }
+#endif  
+#ifdef USE_ICP_CODE
+            if(icp_method == "gicp")
+            {
+              bool converged = newer_node->getRelativeTransformationTo_ICP_code(older_node,mr_icp.final_trafo, mr.final_trafo); 
+              if(!converged) return false; 
+            }
+#endif  
+            ROS_INFO_STREAM("RANSAC Transformation:\n" << mr.final_trafo);
+            ROS_INFO_STREAM("ICP Transformation:\n" << mr_icp.final_trafo);
+
+            //if(getRelativeTransformationTo_ICP_code(older_node,mr_icp.icp_trafo, mr.ransac_trafo) && //converged
+            if(!containsNaN(mr_icp.final_trafo)) 
+            {
+                ROS_INFO("%s for Nodes %u and %u Successful", icp_method.c_str(), newer_node->id_, older_node->id_);
+                double icp_quality;
+                pairwiseObservationLikelihood(newer_node, older_node, mr_icp);
+                if(observation_criterion_met(mr_icp.inlier_points, mr_icp.outlier_points, mr_icp.occluded_points + mr_icp.inlier_points + mr_icp.outlier_points, icp_quality)
+                   && icp_quality >= ransac_quality)
+                { //This signals a valid result:
+                    mr.inlier_matches.clear();
+                    ROS_INFO("Using %s estimate for Nodes %u and %u", icp_method.c_str(), newer_node->id_, older_node->id_);
+                    edgeFromMatchingResult(newer_node, older_node, mr_icp.final_trafo, mr);
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+///Apply Feature based Alignment and/or ICP
 MatchingResult Node::matchNodePair(const Node* older_node)
 {
   MatchingResult mr;
+  ///First check if this node has the information required
+  if(older_node->pc_col->size() == 0 || older_node->feature_locations_2d_.size() == 0){
+    ROS_WARN("Tried to match against a cleared node (%d). Skipping.", older_node->id_); 
+    return mr;
+  }
+  ParameterServer* ps = ParameterServer::instance();
+  if(ps->get<int>("max_connections") > 0 && initial_node_matches_ > ps->get<int>("max_connections")) {
+    return mr; //enough is enough
+  }
+
   try{
+    ///FEATURE MATCHING+RANSAC
     bool found_transformation = false;
-    if(ParameterServer::instance()->get<int>("max_connections") > 0 &&
-       initial_node_matches_ > ParameterServer::instance()->get<int>("max_connections")) 
-      return mr; //enough is enough
     const unsigned int min_matches = (unsigned int) ParameterServer::instance()->get<int>("min_matches");// minimal number of feature correspondences to be a valid candidate for a link
 
     this->featureMatching(older_node, &mr.all_matches); 
 
     double ransac_quality = 0;
-    ROS_DEBUG_NAMED(__FILE__, "found %i inital matches",(int) mr.all_matches.size());
     if (mr.all_matches.size() < min_matches){
         ROS_INFO("Too few inliers between %i and %i for RANSAC method. Only %i correspondences to begin with.",
                  older_node->id_,this->id_,(int)mr.all_matches.size());
@@ -1232,47 +1298,19 @@ MatchingResult Node::matchNodePair(const Node* older_node)
         }
     } 
     
-#ifdef USE_ICP_CODE
-    unsigned int ransac_inlier_points = 0, ransac_outlier_points = 0;
-    if(ParameterServer::instance()->get<bool>("use_icp")){
-        if((!found_transformation && (((int)this->id_ - (int)older_node->id_) <= 1)) //Apply icp only for adjacent frames, as the initial guess needs to be in the global minimum
-            || found_transformation) //Apply icp only for adjacent frames, as the initial guess needs to be in the global minimum
-           //|| (!found_transformation && initial_node_matches_ == 0)) //no matches were found, and frames are not too far apart => identity is a good initial guess.
-        {
-            ROS_INFO("Applying GICP for Transformation between Nodes %d and %d",this->id_ , older_node->id_);
-            MatchingResult mr_icp;
-            if(getRelativeTransformationTo_ICP_code(older_node,mr_icp.icp_trafo, mr.ransac_trafo) && //converged
-               !((mr_icp.icp_trafo.array() != mr_icp.icp_trafo.array()).any())) //No NaNs
-            {
-                ROS_INFO("GICP for Nodes %u and %u Successful", this->id_, older_node->id_);
-                double icp_quality;
-                pairwiseObservationLikelihood(this, older_node, mr_icp);
-                if(observation_criterion_met(mr_icp.inlier_points, mr_icp.outlier_points, mr_icp.occluded_points + mr_icp.inlier_points + mr_icp.outlier_points, icp_quality)
-                   && icp_quality > ransac_quality)
-                {
-                    //This signals a valid result:
-                    found_transformation = true;
-                    mr.edge.id1 = older_node->id_;//and we have a valid transformation
-                    mr.edge.id2 = this->id_; //since there are enough matching features,
-                    mr.final_trafo = mr_icp.icp_trafo;    
-                    mr.edge.informationMatrix = Eigen::Matrix<double,6,6>::Identity()*(1e-2); //TODO: What do we do about the information matrix? 
-                    mr.edge.mean = eigen2G2O(mr.final_trafo.cast<double>());//we insert an edge between the frames
-                }
-            }
-        }
-    }
+#if  defined USE_ICP_CODE || defined USE_PCL_ICP
+    ///ICP - This sets the icp transformation in "mr", if the icp alignment is better than the ransac_quality
+    found_transformation = edge_from_icp_alignment(found_transformation, this, older_node, mr, ransac_quality) || found_transformation;
 #endif  
 
     if(found_transformation) {
         ROS_INFO("Returning Valid Edge");
         ++initial_node_matches_; //trafo is accepted
-    }
-    else {
-        mr.edge.id1 = -1;
-        mr.edge.id2 = -1;
+    } else {
+        mr.edge.id1 = mr.edge.id2 = -1;
     }
   }
-  catch (std::exception e){
+  catch (std::exception e){//Catch exceptions: Unexpected problems shouldn't crash the application
     ROS_ERROR("Caught Exception in comparison of Nodes %i and %i: %s", this->id_, older_node->id_, e.what());
   }
 
@@ -1281,11 +1319,16 @@ MatchingResult Node::matchNodePair(const Node* older_node)
 
 void Node::clearFeatureInformation(){
   //clear feature info, by swapping data with empty vector (so mem really gets freed)
+  ROS_INFO("Deleting feature information of Node %i", this->id_);
 	std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f> > f_l_3d;  
   f_l_3d.swap(feature_locations_3d_);
 	std::vector<cv::KeyPoint> f_l_2d; 
   f_l_2d.swap(feature_locations_2d_);
+	std::vector<float> f_l_siftgpu; 
+  f_l_siftgpu.swap(siftgpu_descriptors);
   feature_descriptors_.release();
+  delete flannIndex; flannIndex = NULL;
+  matchable_ = false;
 }
 void Node::addPointCloud(pointcloud_type::Ptr new_pc){
   pc_col = new_pc;
@@ -1302,6 +1345,36 @@ void Node::reducePointCloud(double vfs){
   } else {
     ROS_WARN("Point Clouds can't be reduced because of invalid voxelfilter_size");
   }
+}
+long Node::getMemoryFootprint(bool write_to_log)
+{
+  size_t size = 0, tmp = 0;
+  tmp = sizeof(Node);
+  ROS_INFO_COND(write_to_log, "Base Size of Node Class: %zu bytes", tmp); 
+  size += tmp;
+
+  tmp = feature_descriptors_.step * feature_descriptors_.rows;  
+  ROS_INFO_COND(write_to_log, "Descriptor Information: %zu bytes", tmp);
+  size += tmp;
+
+  tmp = siftgpu_descriptors.size() * sizeof(float);
+  ROS_INFO_COND(write_to_log, "SIFTGPU Descriptor Information: %zu bytes", tmp);
+  size += tmp;
+
+  tmp = feature_locations_2d_.size() * sizeof(cv::KeyPoint);
+  ROS_INFO_COND(write_to_log, "Feature 2D Location Information: %zu bytes", tmp);
+  size += tmp;
+
+  tmp = feature_locations_3d_.size() * sizeof(Eigen::Vector4f);
+  ROS_INFO_COND(write_to_log, "Feature 3D Location Information: %zu bytes", tmp);
+  size += tmp;
+
+  tmp = pc_col->size() * sizeof(point_type);
+  ROS_INFO_COND(write_to_log, "Point Cloud: %zu bytes", tmp);
+  size += tmp;
+  ROS_INFO_COND(write_to_log, "Rough Summary: %zu Kbytes", size/1024);
+  ROS_WARN("Rough Summary: %zu Kbytes", size/1024);
+  return size;
 }
 void Node::clearPointCloud(){
     ROS_INFO("Deleting points of Node %i", this->id_);
@@ -1368,12 +1441,13 @@ void pairwiseObservationLikelihood(const Node* newer_node, const Node* older_nod
       mr.all_points = all_points;
 }
 
+///Compute the RootSIFT from SIFT according to Arandjelovic and Zisserman
 void squareroot_descriptor_space(cv::Mat& descriptors)
 {
   // Compute sums for L1 Norm
   cv::Mat sums_vec;
   descriptors = cv::abs(descriptors); //otherwise we draw sqrt of negative vals
-  cv::reduce(descriptors, sums_vec, 1 /*sum over columns*/, CV_REDUCE_SUM);
+  cv::reduce(descriptors, sums_vec, 1 /*sum over columns*/, CV_REDUCE_SUM, CV_32FC1);
   for(unsigned int row = 0; row < descriptors.rows; row++){
     int offset = row*descriptors.cols;
     for(unsigned int col = 0; col < descriptors.cols; col++){
@@ -1383,3 +1457,11 @@ void squareroot_descriptor_space(cv::Mat& descriptors)
   }
 }
 
+void Node::knnSearch(cv::Mat& query,
+                     cv::Mat& indices,
+                     cv::Mat& dists,
+                     int knn, 
+                     const cv::flann::SearchParams& params) const
+{
+  this->flannIndex->knnSearch(query, indices, dists, knn, params);
+}

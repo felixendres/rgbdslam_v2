@@ -15,7 +15,7 @@
  */
 
 /** This file contains the methods of GraphManager concerned with transfering 
- * data via ROS or to disk. They are declared in graph_manager.h */
+ * data via ROS, to the screen (visualization) or to disk. They are declared in graph_manager.h */
 
 #include <sys/time.h>
 #include "scoped_timer.h"
@@ -49,6 +49,41 @@ void GraphManager::sendAllClouds(bool threaded){
     }
 }
 
+tf::StampedTransform GraphManager::computeFixedToBaseTransform(Node* node, bool invert)
+{
+    g2o::VertexSE3* v = dynamic_cast<g2o::VertexSE3*>(optimizer_->vertex(node->vertex_id_));
+    if(!v){ 
+      ROS_FATAL("Nullpointer in graph at position %i!", node->vertex_id_);
+      throw std::exception();
+    }
+
+    tf::Transform computed_motion = eigenTransf2TF(v->estimate());//get pose of point cloud w.r.t. first frame's pc
+    tf::Transform base2points = node->getBase2PointsTransform();//get pose of base w.r.t current pc at capture time
+    printTransform("base2points", base2points);
+    printTransform("computed_motion", computed_motion);
+    printTransform("init_base_pose_", init_base_pose_);
+
+    tf::Transform world2base = init_base_pose_*base2points*computed_motion*base2points.inverse();
+    tf::Transform gt_world2base = node->getGroundTruthTransform();//get mocap pose of base in map
+    tf::Transform err = gt_world2base.inverseTimes(world2base);
+
+    //makes sure things have a corresponding timestamp
+    //also avoids problems with tflistener cache size if mapping took long. Must be synchronized with tf broadcasting
+    ros::Time now = ros::Time::now(); 
+
+    printTransform("World->Base", world2base);
+    std::string fixed_frame = ParameterServer::instance()->get<std::string>("fixed_frame_name");
+    std::string base_frame  = ParameterServer::instance()->get<std::string>("base_frame_name");
+    if(base_frame.empty())
+    { //if there is no base frame defined, use frame of sensor data
+      base_frame = graph_.begin()->second->pc_col->header.frame_id;
+    }
+    if(invert){
+      return tf::StampedTransform(world2base.inverse(), now, base_frame, fixed_frame);
+    } else {
+      return tf::StampedTransform(world2base, now, fixed_frame, base_frame);
+    }
+}
 
 void GraphManager::sendAllCloudsImpl()
 {
@@ -63,51 +98,19 @@ void GraphManager::sendAllCloudsImpl()
   batch_processing_runs_ = true;
   ros::Rate r(ParameterServer::instance()->get<double>("send_clouds_rate")); //slow down a bit, to allow for transmitting to and processing in other nodes
 
-  std::string fixed_frame = ParameterServer::instance()->get<std::string>("fixed_frame_name");
-  std::string base_frame  = ParameterServer::instance()->get<std::string>("base_frame_name");
-  if(base_frame.empty()){ //if there is no base frame defined, use frame of sensor data
-    base_frame = graph_.begin()->second->pc_col->header.frame_id;
-  }
 
-  for (graph_it it = graph_.begin(); it != graph_.end(); ++it){
+  for (graph_it it = graph_.begin(); it != graph_.end(); ++it)
+{
 
     Node* node = it->second;
     if(!node->valid_tf_estimate_) {
       ROS_INFO("Skipping node %i: No valid estimate", node->id_);
       continue;
     }
+    tf::StampedTransform base_to_fixed = this->computeFixedToBaseTransform(node, true);
+    br_.sendTransform(base_to_fixed);
+    publishCloud(node, base_to_fixed.stamp_, batch_cloud_pub_);
 
-    g2o::VertexSE3* v = dynamic_cast<g2o::VertexSE3*>(optimizer_->vertex(node->vertex_id_));
-    if(!v){ 
-      ROS_ERROR("Nullpointer in graph at position %i!", it->first);
-      continue;
-    }
-
-    tf::Transform base2points = node->getBase2PointsTransform();//get pose of base w.r.t current pc at capture time
-    printTransform("base2points", base2points);
-    tf::Transform computed_motion = g2o2TF(v->estimateAsSE3Quat());//get pose of point cloud w.r.t. first frame's pc
-    printTransform("computed_motion", computed_motion);
-    printTransform("init_base_pose_", init_base_pose_);
-
-    tf::Transform world2base = init_base_pose_*base2points*computed_motion*base2points.inverse();
-    tf::Transform gt_world2base = node->getGroundTruthTransform();//get mocap pose of base in map
-    tf::Transform err = gt_world2base.inverseTimes(world2base);
-    //TODO: Compute err from relative transformations betw. time steps
-
-    //makes sure things have a corresponding timestamp
-    //also avoids problems with tflistener cache size if mapping took long. Must be synchronized with tf broadcasting
-    ros::Time now = ros::Time::now(); 
-
-    ROS_DEBUG("Sending out transform %i", it->first);
-    printTransform("World->Base", world2base);
-    br_.sendTransform(tf::StampedTransform(world2base, now, fixed_frame, base_frame));
-    br_.sendTransform(tf::StampedTransform(err, now, fixed_frame, "/where_mocap_should_be"));
-    ROS_DEBUG("Sending out cloud %i", it->first);
-    //graph_[i]->publish("/batch_transform", now, batch_cloud_pub_);
-    publishCloud(node, now, batch_cloud_pub_);
-
-    //co_server.insertCloudCallbackCommon(*(node->pc_col.get()), world2base*base2points);
-    //tf::Transform ground_truth_tf = graph_[i]->getGroundTruthTransform();
     QString message;
     Q_EMIT setGUIInfo(message.sprintf("Sending pointcloud and map transform (%i/%i) on topics %s and /tf", it->first, (int)graph_.size(), ParameterServer::instance()->get<std::string>("individual_cloud_out_topic").c_str()) );
     r.sleep();
@@ -138,14 +141,43 @@ void GraphManager::saveIndividualClouds(QString filename, bool threaded){
   }
 }
 
+
+///Write current pose estimate to pcl cloud header
+///Returns false if node has no valid estimate or is empty
+bool GraphManager::updateCloudOrigin(Node* node)
+{
+    if(!node->valid_tf_estimate_) {
+      ROS_INFO("Skipping node %i: No valid estimate", node->id_);
+      return false;
+    }
+    g2o::VertexSE3* v = dynamic_cast<g2o::VertexSE3*>(optimizer_->vertex(node->vertex_id_));
+    if(!v){
+      ROS_ERROR("Nullpointer in graph at position %i!", node->id_);
+      return false;
+    }
+    if(node->pc_col->size() == 0){
+      ROS_INFO("Skipping Node %i, point cloud data is empty!", node->id_);
+      return false;
+    }
+    // Update the sensor pose stored in the point clouds
+    node->pc_col->sensor_origin_.head<3>() = v->estimate().translation().cast<float>();
+    node->pc_col->sensor_orientation_ =  v->estimate().rotation().cast<float>();
+    //node->pc_col->header.frame_id = ParameterServer::instance()->get<std::string>("fixed_frame_name");
+}
+
 void GraphManager::saveOctomap(QString filename, bool threaded){
-  if (ParameterServer::instance()->get<bool>("concurrent_io") && threaded) {
-    //saveOctomapImpl(filename);
-    QFuture<void> f1 = QtConcurrent::run(this, &GraphManager::saveOctomapImpl, filename);
-    //f1.waitForFinished();
-  }
-  else {
-    saveOctomapImpl(filename);
+  if (ParameterServer::instance()->get<bool>("octomap_online_creation")) {
+    this->writeOctomap(filename);
+  } 
+  else{ //if not online creation, create now
+    if (ParameterServer::instance()->get<bool>("concurrent_io") && threaded) {
+      //saveOctomapImpl(filename);
+      QFuture<void> f1 = QtConcurrent::run(this, &GraphManager::saveOctomapImpl, filename);
+      //f1.waitForFinished();
+    }
+    else {
+      saveOctomapImpl(filename);
+    }
   }
 }
 
@@ -155,33 +187,16 @@ void GraphManager::saveOctomapImpl(QString filename)
 
   batch_processing_runs_ = true;
   Q_EMIT iamBusy(0, "Saving Octomap", 0);
-  std::string fixed_frame_id = ParameterServer::instance()->get<std::string>("fixed_frame_name");
   std::list<Node*> nodes_for_octomapping;
   unsigned int points_to_render = 0;
   { //Get the transformations from the optimizer and store them in the node's point cloud header
-    QMutexLocker locker(&optimizer_mutex);
+    QMutexLocker locker(&optimizer_mutex_);
     for (graph_it it = graph_.begin(); it != graph_.end(); ++it){
       Node* node = it->second;
-      if(!node->valid_tf_estimate_) {
-        ROS_INFO("Skipping node %i: No valid estimate", node->id_);
-        continue;
+      if(this->updateCloudOrigin(node)){
+        nodes_for_octomapping.push_back(node);
+        points_to_render += node->pc_col->size();
       }
-      g2o::VertexSE3* v = dynamic_cast<g2o::VertexSE3*>(optimizer_->vertex(node->vertex_id_));
-      if(!v){ 
-        ROS_ERROR("Nullpointer in graph at position %i!", it->first);
-        continue;
-      }
-      if(node->pc_col->size() == 0){
-        ROS_INFO("Skipping Node %i, point cloud data is empty!", it->first);
-        continue;
-      }
-      nodes_for_octomapping.push_back(node);
-      // Update the sensor pose stored in the point clouds
-      g2o::SE3Quat pose = v->estimateAsSE3Quat();
-      node->pc_col->sensor_origin_.head<3>() = pose.translation().cast<float>();
-      node->pc_col->sensor_orientation_ =  pose.rotation().cast<float>();
-      node->pc_col->header.frame_id = fixed_frame_id;
-      points_to_render += node->pc_col->size();
     }
   } 
   // Now (this takes long) render the clouds into the octomap
@@ -193,18 +208,14 @@ void GraphManager::saveOctomapImpl(QString filename)
   {
       QString message;
       Q_EMIT setGUIStatus(message.sprintf("Inserting Node %i/%i into octomap", ++counter, (int)nodes_for_octomapping.size()));
-      co_server_.insertCloudCallback(node->pc_col, ParameterServer::instance()->get<double>("maximum_depth")); // Will be transformed according to sensor pose set previously
-      Q_EMIT progress(0, "Saving Octomap", counter);
+      this->renderToOctomap(node);
       rendered_points += node->pc_col->size();
       ROS_INFO("Rendered %u points of %u", rendered_points, points_to_render);
-      if(ParameterServer::instance()->get<bool>("octomap_clear_raycasted_clouds")){
-        node->clearPointCloud();
-      }
+      Q_EMIT progress(0, "Saving Octomap", counter);
       if(counter % ParameterServer::instance()->get<int>("octomap_autosave_step") == 0){
         Q_EMIT setGUIStatus(QString("Autosaving preliminary octomap to ") + filename);
-        co_server_.save(qPrintable(filename));
+        this->writeOctomap(filename);
       }
-      ROS_INFO("Cleared pointcloud of Node ", node->id_);
   }
 
 
@@ -220,6 +231,22 @@ void GraphManager::saveOctomapImpl(QString filename)
   batch_processing_runs_ = false;
 }
 
+void GraphManager::writeOctomap(QString filename) const
+{
+    ScopedTimer s(__FUNCTION__);
+    co_server_.save(qPrintable(filename));
+}
+
+void GraphManager::renderToOctomap(Node* node)
+{
+    ScopedTimer s(__FUNCTION__);
+    ROS_INFO("Rendering Node %i with frame %s", node->id_, node->pc_col->header.frame_id.c_str());
+    co_server_.insertCloudCallback(node->pc_col, ParameterServer::instance()->get<double>("maximum_depth")); // Will be transformed according to sensor pose set previously
+    if(ParameterServer::instance()->get<bool>("octomap_clear_raycasted_clouds")){
+      node->clearPointCloud();
+      ROS_INFO("Cleared pointcloud of Node %i", node->id_);
+    }
+}
 void GraphManager::saveIndividualCloudsToFile(QString file_basename)
 {
   ScopedTimer s(__FUNCTION__);
@@ -250,13 +277,13 @@ void GraphManager::saveIndividualCloudsToFile(QString file_basename)
       continue;
     }
     /*/TODO: is all this correct?
-      tf::Transform transform = g2o2TF(v->estimateAsSE3Quat());
+      tf::Transform transform = eigenTransf2TF(v->estimate());
       tf::Transform cam2rgb;
       cam2rgb.setRotation(tf::createQuaternionFromRPY(-1.57,0,-1.57));
       cam2rgb.setOrigin(tf::Point(0,-0.04,0));
       world2base = cam2rgb*transform;
       */
-    tf::Transform pose = g2o2TF(v->estimateAsSE3Quat());
+    tf::Transform pose = eigenTransf2TF(v->estimate());
     tf::StampedTransform base2points =  node->getBase2PointsTransform();//get pose of base w.r.t current pc at capture time
     world2base = init_base_pose_*base2points*pose*base2points.inverse();
 
@@ -328,7 +355,7 @@ void GraphManager::saveAllFeaturesToFile(QString filename)
       }
 
       g2o::VertexSE3* v = dynamic_cast<g2o::VertexSE3*>(optimizer_->vertex(node->vertex_id_));
-            tf::Transform world2cam = g2o2TF(v->estimateAsSE3Quat());
+            tf::Transform world2cam = eigenTransf2TF(v->estimate());
             world2rgb = cam2rgb*world2cam;
             Eigen::Matrix4f world2rgbMat;
             pcl_ros::transformAsMatrix(world2rgb, world2rgbMat);
@@ -392,7 +419,7 @@ void GraphManager::saveAllCloudsToFile(QString filename){
         ROS_ERROR("Nullpointer in graph at position %i!", it->first);
         continue;
       }
-      tf::Transform transform = g2o2TF(v->estimateAsSE3Quat());
+      tf::Transform transform = eigenTransf2TF(v->estimate());
       world2cam = cam2rgb*transform;
       transformAndAppendPointCloud (*(node->pc_col), aggregate_cloud, world2cam, ParameterServer::instance()->get<double>("maximum_depth"));
 
@@ -467,7 +494,7 @@ void GraphManager::saveTrajectory(QString filebasename, bool with_ground_truth)
       return;
     }
     ROS_INFO("Logging Trajectory");
-    QMutexLocker locker(&optimizer_mutex);
+    QMutexLocker locker(&optimizer_mutex_);
 
     //FIXME: DO this block only if with_ground_truth is true and !gt.empty()
     std::string gt = ParameterServer::instance()->get<std::string>("ground_truth_frame_name");
@@ -500,7 +527,7 @@ void GraphManager::saveTrajectory(QString filebasename, bool with_ground_truth)
 
       ROS_ERROR_COND(!v, "Nullpointer in graph at position %i!", it->first);
 
-      tf::Transform pose = g2o2TF(v->estimateAsSE3Quat());
+      tf::Transform pose = eigenTransf2TF(v->estimate());
 
       tf::StampedTransform base2points = node->getBase2PointsTransform();//get pose of base w.r.t current pc at capture time
       tf::Transform world2base = init_base_pose_*base2points*pose*base2points.inverse();
@@ -593,9 +620,9 @@ void GraphManager::visualizeFeatureFlow3D(unsigned int marker_id, bool draw_outl
             marker_lines.colors.push_back(color_blue);
 
             marker_lines.points.push_back(
-                    pointInWorldFrame(last->feature_locations_3d_[newer_id], newer_v->estimateAsSE3Quat()));
+                    pointInWorldFrame(last->feature_locations_3d_[newer_id], newer_v->estimate()));
             marker_lines.points.push_back(
-                    pointInWorldFrame(prev->feature_locations_3d_[earlier_id], earlier_v->estimateAsSE3Quat()));
+                    pointInWorldFrame(prev->feature_locations_3d_[earlier_id], earlier_v->estimate()));
           }
         }
 
@@ -610,9 +637,9 @@ void GraphManager::visualizeFeatureFlow3D(unsigned int marker_id, bool draw_outl
           marker_lines.colors.push_back(color_blue);
 
           marker_lines.points.push_back(
-                  pointInWorldFrame(last->feature_locations_3d_[newer_id], newer_v->estimateAsSE3Quat()));
+                  pointInWorldFrame(last->feature_locations_3d_[newer_id], newer_v->estimate()));
           marker_lines.points.push_back(
-                  pointInWorldFrame(prev->feature_locations_3d_[earlier_id], earlier_v->estimateAsSE3Quat()));
+                  pointInWorldFrame(prev->feature_locations_3d_[earlier_id], earlier_v->estimate()));
         }
 
         ransac_marker_pub_.publish(marker_lines);
@@ -660,14 +687,14 @@ void GraphManager::visualizeGraphEdges() const {
             v1 = dynamic_cast<g2o::VertexSE3*>(myvertices.at(1));
             v2 = dynamic_cast<g2o::VertexSE3*>(myvertices.at(0));
 
-            point.x = v1->estimateAsSE3Quat().translation().x();
-            point.y = v1->estimateAsSE3Quat().translation().y();
-            point.z = v1->estimateAsSE3Quat().translation().z();
+            point.x = v1->estimate().translation().x();
+            point.y = v1->estimate().translation().y();
+            point.z = v1->estimate().translation().z();
             edges_marker.points.push_back(point);
             
-            point.x = v2->estimateAsSE3Quat().translation().x();
-            point.y = v2->estimateAsSE3Quat().translation().y();
-            point.z = v2->estimateAsSE3Quat().translation().z();
+            point.x = v2->estimate().translation().x();
+            point.y = v2->estimate().translation().y();
+            point.z = v2->estimate().translation().z();
             edges_marker.points.push_back(point);
         }
 
@@ -782,6 +809,39 @@ void GraphManager::saveG2OGraph(QString filename)
   optimizer_->save(qPrintable(filename));
 }
 
+tf::StampedTransform GraphManager::stampedTransformInWorldFrame(const Node* node, const tf::Transform& computed_motion) const 
+{
+    std::string fixed_frame = ParameterServer::instance()->get<std::string>("fixed_frame_name");
+    std::string base_frame  = ParameterServer::instance()->get<std::string>("base_frame_name");
+    if(base_frame.empty()){ //if there is no base frame defined, use frame of sensor data
+      base_frame = node->pc_col->header.frame_id;
+    }
+    const tf::StampedTransform& base2points = node->getBase2PointsTransform();//get pose of base w.r.t current pc at capture time
+
+    tf::Transform world2base = init_base_pose_*base2points*computed_motion*base2points.inverse();
+    //printTransform("World->Base", world2base);
+
+    return tf::StampedTransform(world2base.inverse(), base2points.stamp_, base_frame, fixed_frame);
+}
+
+void GraphManager::broadcastLatestTransform(const ros::TimerEvent& event) const
+{
+    //printTransform("Broadcasting cached transform", latest_transform_cache_);
+  /*
+    tf::StampedTransform tmp(latest_transform_cache_, 
+                             ros::Time::now(),
+                             latest_transform_cache_.frame_id_,
+                             latest_transform_cache_.child_frame_id_);
+    broadcastTransform(tmp);
+    */
+}
+
+void GraphManager::broadcastTransform(const tf::StampedTransform& stamped_transform) const 
+{
+    br_.sendTransform(stamped_transform);
+}
+
+/*
 void GraphManager::broadcastTransform(Node* node, tf::Transform& computed_motion){
     std::string fixed_frame = ParameterServer::instance()->get<std::string>("fixed_frame_name");
     std::string base_frame  = ParameterServer::instance()->get<std::string>("base_frame_name");
@@ -795,7 +855,7 @@ void GraphManager::broadcastTransform(Node* node, tf::Transform& computed_motion
       br_.sendTransform(tf::StampedTransform(tf::Transform::getIdentity(), ros::Time::now(), fixed_frame, base_frame));
       return;
     }
-    */
+    * /
     const tf::StampedTransform& base2points = node->getBase2PointsTransform();//get pose of base w.r.t current pc at capture time
 
     //Assumption: computed_motion_ contains last pose
@@ -806,6 +866,7 @@ void GraphManager::broadcastTransform(Node* node, tf::Transform& computed_motion
     
     br_.sendTransform(tf::StampedTransform(world2base.inverse(), base2points.stamp_, base_frame, fixed_frame));
 }
+*/
 
 ///Send node's pointcloud with given publisher and timestamp
 void publishCloud(Node* node, ros::Time timestamp, ros::Publisher pub){
@@ -816,6 +877,42 @@ void publishCloud(Node* node, ros::Time timestamp, ros::Publisher pub){
   ROS_INFO("Pointcloud with id %i sent with frame %s", node->id_, node->pc_col->header.frame_id.c_str());
 }
 
+void drawFeatureConnectors(cv::Mat& canvas, cv::Scalar line_color, 
+                           const std::vector<cv::DMatch> matches,
+                           const std::vector<cv::KeyPoint>& newer_keypoints,
+                           const std::vector<cv::KeyPoint>& older_keypoints)
+{
+    const double pi_fourth = 3.14159265358979323846 / 4.0;
+    const int line_thickness = 1;
+    const int circle_radius = 6;
+    const int cv_aa = 16;
+    for(unsigned int mtch = 0; mtch < matches.size(); mtch++) {
+        cv::Point2f p,q; //TODO: Use sub-pixel-accuracy
+        unsigned int newer_idx = matches[mtch].queryIdx;
+        unsigned int earlier_idx = matches[mtch].trainIdx;
+        if(newer_idx > newer_keypoints.size()) break;//Added in case the feature info has been cleared
+        q = newer_keypoints[newer_idx].pt;
+        if(earlier_idx > older_keypoints.size()) break;//Added in case the feature info has been cleared
+        p = older_keypoints[earlier_idx].pt;
+
+        double angle;    angle = atan2( (double) p.y - q.y, (double) p.x - q.x );
+        double hypotenuse = cv::norm(p-q);
+        if(hypotenuse > 0.1){  //only larger motions larger than one pix get an arrow line
+            cv::line( canvas, p, q, line_color, line_thickness, cv_aa );
+        } else { //draw a smaller circle into the bigger one 
+            cv::circle(canvas, p, 1, line_color, line_thickness, cv_aa);
+        }
+        if(hypotenuse > 3.0){  //only larger motions larger than this get an arrow tip
+            /* Now draw the tips of the arrow.  */
+            p.x =  (q.x + 4 * cos(angle + pi_fourth));
+            p.y =  (q.y + 4 * sin(angle + pi_fourth));
+            cv::line( canvas, p, q, line_color, line_thickness, cv_aa );
+            p.x =  (q.x + 4 * cos(angle - pi_fourth));
+            p.y =  (q.y + 4 * sin(angle - pi_fourth));
+            cv::line( canvas, p, q, line_color, line_thickness, cv_aa );
+        } 
+    }
+}
 void GraphManager::drawFeatureFlow(cv::Mat& canvas, cv::Scalar line_color,
                                    cv::Scalar circle_color)
 {
@@ -823,10 +920,6 @@ void GraphManager::drawFeatureFlow(cv::Mat& canvas, cv::Scalar line_color,
     if(!ParameterServer::instance()->get<bool>("use_gui")){ return; }
     ROS_DEBUG("Number of features to draw: %d", (int)curr_best_result_.inlier_matches.size());
 
-    const double pi_fourth = 3.14159265358979323846 / 4.0;
-    const int line_thickness = 1;
-    const int circle_radius = 6;
-    const int cv_aa = 16;
     if(graph_.empty()) {
       ROS_WARN("Feature Flow for empty graph requested. Bug?");
       return;
@@ -848,12 +941,6 @@ void GraphManager::drawFeatureFlow(cv::Mat& canvas, cv::Scalar line_color,
       return;
     }
 
-    //encircle all keypoints in this image
-    //for(unsigned int feat = 0; feat < newernode->feature_locations_2d_.size(); feat++) {
-    //    cv::Point2f p; 
-    //    p = newernode->feature_locations_2d_[feat].pt;
-    //    cv::circle(canvas, p, circle_radius, circle_color, line_thickness, 8);
-    //}
     cv::Mat tmpimage = cv::Mat::zeros(canvas.rows, canvas.cols, canvas.type());
     if(canvas.type() == CV_8UC1) circle_color = cv::Scalar(255);
 
@@ -867,34 +954,15 @@ void GraphManager::drawFeatureFlow(cv::Mat& canvas, cv::Scalar line_color,
       }
     }
 
+    //Draw normal keypoints in given color 
     cv::drawKeypoints(canvas, with_depth, tmpimage, circle_color, 5);
+    //Draw depthless keypoints in orange 
     cv::drawKeypoints(canvas, without_depth, tmpimage, cv::Scalar(0,128,255,0), 5);
-
-
     canvas+=tmpimage;
-    for(unsigned int mtch = 0; mtch < curr_best_result_.inlier_matches.size(); mtch++) {
-        cv::Point2f p,q; //TODO: Use sub-pixel-accuracy
-        unsigned int newer_idx = curr_best_result_.inlier_matches[mtch].queryIdx;
-        unsigned int earlier_idx = curr_best_result_.inlier_matches[mtch].trainIdx;
-        q = newernode->feature_locations_2d_[newer_idx].pt;
-        p = earliernode->feature_locations_2d_[earlier_idx].pt;
 
-        double angle;    angle = atan2( (double) p.y - q.y, (double) p.x - q.x );
-        double hypotenuse = cv::norm(p-q);
-            cv::line(canvas, p, q, line_color, line_thickness, cv_aa);
-        if(hypotenuse > 1.5){  //only larger motions larger than one pix get an arrow tip
-            cv::line( canvas, p, q, line_color, line_thickness, cv_aa );
-            /* Now draw the tips of the arrow.  */
-            p.x =  (q.x + 4 * cos(angle + pi_fourth));
-            p.y =  (q.y + 4 * sin(angle + pi_fourth));
-            cv::line( canvas, p, q, line_color, line_thickness, cv_aa );
-            p.x =  (q.x + 4 * cos(angle - pi_fourth));
-            p.y =  (q.y + 4 * sin(angle - pi_fourth));
-            cv::line( canvas, p, q, line_color, line_thickness, cv_aa );
-        } else { //draw a smaller circle into the bigger one 
-            cv::circle(canvas, p, circle_radius-2, circle_color, line_thickness, cv_aa);
-        }
-    }
+    drawFeatureConnectors(canvas, cv::Scalar(0.0), curr_best_result_.all_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
+    drawFeatureConnectors(canvas, line_color, curr_best_result_.inlier_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
+
     clock_gettime(CLOCK_MONOTONIC, &finish); elapsed = (finish.tv_sec - starttime.tv_sec); elapsed += (finish.tv_nsec - starttime.tv_nsec) / 1000000000.0; ROS_INFO_STREAM_COND_NAMED(elapsed > ParameterServer::instance()->get<double>("min_time_reported"), "timings", __FUNCTION__ << " runtime: "<< elapsed <<" s");
 }
 

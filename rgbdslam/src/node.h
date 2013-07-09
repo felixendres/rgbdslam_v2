@@ -166,7 +166,6 @@ public:
 #ifdef  DO_FEATURE_OPTIMIZATION
 
   std::map<int, int> kpt_to_landmark;
-  // std::set<int> visible_landmarks;
 #endif
 
   long getMemoryFootprint(bool print);
@@ -210,6 +209,11 @@ protected:
                    const cv::Mat& depth,
                    const sensor_msgs::CameraInfoConstPtr& cam_info);
 
+
+	///Get the norm of the translational part of an affine matrix (Helper for isBigTrafo)
+	void mat2dist(const Eigen::Matrix4f& t, double &dist){
+		dist = sqrt(t(0,3)*t(0,3)+t(1,3)*t(1,3)+t(2,3)*t(2,3));
+	}
 
   
   ///Retrieves and stores the transformation from base to point cloud at capturing time 

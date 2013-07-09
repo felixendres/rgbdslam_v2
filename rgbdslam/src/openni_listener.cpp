@@ -160,10 +160,10 @@ void OpenNIListener::loadBag(const std::string &filename)
     }
     ROS_INFO("Opened Bagfile %s", filename.c_str());
 
-    ParameterServer* params = ParameterServer::instance();
-    std::string visua_tpc = params->get<std::string>("topic_image_mono");
-    std::string depth_tpc = params->get<std::string>("topic_image_depth");
-    std::string cinfo_tpc = params->get<std::string>("camera_info_topic");
+    ParameterServer* ps = ParameterServer::instance();
+    std::string visua_tpc = ps->get<std::string>("topic_image_mono");
+    std::string depth_tpc = ps->get<std::string>("topic_image_depth");
+    std::string cinfo_tpc = ps->get<std::string>("camera_info_topic");
     std::string tf_tpc = std::string("/tf");
 
     // Image topics to load for bagfiles
@@ -636,6 +636,7 @@ void OpenNIListener::processNode(Node* new_node)
       if(ParameterServer::instance()->get<bool>("visualize_mono_depth_overlay")){
         cv::Mat feature_img = cv::Mat::zeros( visualization_img_.rows, visualization_img_.cols, CV_8UC1); 
         graph_mgr_->drawFeatureFlow(feature_img);
+        Q_EMIT newDepthImage(cvMat2QImage(depth_mono8_img_, 6)); //show registration
         Q_EMIT newFeatureFlowImage(cvMat2QImage(visualization_img_,visualization_depth_mono8_img_, feature_img, 2)); //show registration
       } else {
         graph_mgr_->drawFeatureFlow(visualization_img_, cv::Scalar(0,0,255), cv::Scalar(0,128,0) );

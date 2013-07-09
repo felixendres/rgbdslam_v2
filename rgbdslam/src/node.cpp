@@ -21,13 +21,24 @@
 #include <cmath>
 #include "scoped_timer.h"
 #include <Eigen/Geometry>
+//#include "pcl/ros/conversions.h"
+#include <pcl/common/transformation_from_correspondences.h>
+//#include <opencv2/highgui/highgui.hpp>
+//#include <qtconcurrentrun.h>
+//#include <QtConcurrentMap> 
 
 #ifdef USE_SIFT_GPU
 #include "sift_gpu_wrapper.h"
 #endif
 
+//#include <math.h>
 #include <fstream>
 
+//#ifdef USE_ICP_CODE
+//#include "../external/gicp/transform.h"
+//#endif
+
+//#include <iostream>
 #include "misc.h"
 #include <pcl/filters/voxel_grid.h>
 #include <opencv/highgui.h>
@@ -51,9 +62,6 @@ Node::Node(const cv::Mat& visual,
            cv::Ptr<cv::DescriptorExtractor> extractor) :
   id_(-1), seq_id_(-1), vertex_id_(-1), valid_tf_estimate_(true), matchable_(true),
   pc_col(new pointcloud_type()),
-#ifdef USE_PCL_ICP
-  filtered_pc_col(new pointcloud_type()),
-#endif
   flannIndex(NULL),
   base2points_(tf::Transform::getIdentity(), depth_header.stamp, ParameterServer::instance()->get<std::string>("base_frame_name"), depth_header.frame_id),
   ground_truth_transform_(tf::Transform::getIdentity(), depth_header.stamp, ParameterServer::instance()->get<std::string>("ground_truth_frame_name"), ParameterServer::instance()->get<std::string>("base_frame_name")),
@@ -77,11 +85,6 @@ Node::Node(const cv::Mat& visual,
   }
   pc_col->header = depth_header;
 
-#ifdef USE_PCL_ICP
-  if(ps->get<bool>("use_icp")){
-    filterCloud(*pc_col, *filtered_pc_col, ps->get<int>("gicp_max_cloud_size")); 
-  }
-#endif
   cv::Mat gray_img; 
   if(visual.type() == CV_8UC3){
     cvtColor(visual, gray_img, CV_RGB2GRAY);
@@ -160,9 +163,6 @@ Node::Node(const cv::Mat visual,
            const cv::Mat detection_mask) : 
   id_(-1), seq_id_(-1), vertex_id_(-1), valid_tf_estimate_(true), matchable_(true),
   pc_col(point_cloud),
-#ifdef USE_PCL_ICP
-  filtered_pc_col(new pointcloud_type()),
-#endif
   flannIndex(NULL),
   base2points_(tf::Transform::getIdentity(), point_cloud->header.stamp,ParameterServer::instance()->get<std::string>("base_frame_name"), point_cloud->header.frame_id),
   ground_truth_transform_(tf::Transform::getIdentity(), point_cloud->header.stamp, ParameterServer::instance()->get<std::string>("ground_truth_frame_name"), ParameterServer::instance()->get<std::string>("base_frame_name")),
@@ -241,11 +241,6 @@ Node::Node(const cv::Mat visual,
     gicp_mutex.lock();
     gicp_point_set_ = this->getGICPStructure();
     gicp_mutex.unlock();
-  }
-#endif
-#ifdef USE_PCL_ICP
-  if(ps->get<bool>("use_icp")){
-    filterCloud(*pc_col, *filtered_pc_col, ps->get<int>("gicp_max_cloud_size")); 
   }
 #endif
 
@@ -591,15 +586,10 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
   size_t max_keyp = ParameterServer::instance()->get<int>("max_keypoints");
   float x,y;//temp point, 
   //principal point and focal lengths:
-  ParameterServer* ps = ParameterServer::instance();
-  float fx = 1./ (ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : cam_info->K[0]); //(cloud->width >> 1) - 0.5f;
-  float fy = 1./ (ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : cam_info->K[4]); //(cloud->width >> 1) - 0.5f;
-  float cx = ps->get<double>("depth_camera_cx") > 0 ? ps->get<double>("depth_camera_cx") : cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
-  float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") : cam_info->K[5]; //(cloud->width >> 1) - 0.5f;
-  //float cx = 325.1;//cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
-  //float cy = 249.7;//cam_info->K[5]; //(cloud->height >> 1) - 0.5f;
-  //float fx = 1.0/521.0;//1.0f / cam_info->K[0]; 
-  //float fy = 1.0/521.0;//1.0f / cam_info->K[4]; 
+  float cx = 325.1;//cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
+  float cy = 249.7;//cam_info->K[5]; //(cloud->height >> 1) - 0.5f;
+  float fx = 1.0/521.0;//1.0f / cam_info->K[0]; 
+  float fy = 1.0/521.0;//1.0f / cam_info->K[4]; 
   cv::Point2f p2d;
 
   if(feature_locations_3d.size()){
@@ -785,15 +775,10 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
   size_t max_keyp = ParameterServer::instance()->get<int>("max_keypoints");
   float x,y;//temp point, 
   //principal point and focal lengths:
-  ParameterServer* ps = ParameterServer::instance();
-  float fx = 1./ (ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : cam_info->K[0]); //(cloud->width >> 1) - 0.5f;
-  float fy = 1./ (ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : cam_info->K[4]); //(cloud->width >> 1) - 0.5f;
-  float cx = ps->get<double>("depth_camera_cx") > 0 ? ps->get<double>("depth_camera_cx") : cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
-  float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") : cam_info->K[5]; //(cloud->width >> 1) - 0.5f;
-  //float cx = 325.1;//cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
-  //float cy = 249.7;//cam_info->K[5]; //(cloud->height >> 1) - 0.5f;
-  //float fx = 1.0/521.0;//1.0f / cam_info->K[0]; 
-  //float fy = 1.0/521.0;//1.0f / cam_info->K[4]; 
+  float cx = 325.1;//cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
+  float cy = 249.7;//cam_info->K[5]; //(cloud->height >> 1) - 0.5f;
+  float fx = 1.0/521.0;//1.0f / cam_info->K[0]; 
+  float fy = 1.0/521.0;//1.0f / cam_info->K[4]; 
 
   cv::Point2f p2d;
 
@@ -1002,6 +987,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
     for(int refinements = 1; refinements < 20 /*got stuck?*/; refinements++) 
     {
         Eigen::Matrix4f transformation = getTransformFromMatches(this, earlier_node, inlier,valid_tf,max_dist_m);
+        //Eigen::Matrix4f transformation = getTransformFromMatchesUmeyama(this, earlier_node, inlier,valid_tf);
         if (!valid_tf || transformation!=transformation)  //Trafo Contains NaN?
           break; // valid_tf is false iff the sampled points aren't inliers themself 
 
@@ -1036,7 +1022,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
             refined_matches.size() >= matches.size() && 
             refined_matches.size() >= min_inlier_threshold)
         {
-          ROS_INFO("Improvment in iteration %d: inliers: %i (min %i), inlier_error: %.2f (max %.2f)", real_iterations, (int)refined_matches.size(), (int) min_inlier_threshold,  refined_error, max_dist_m);
+          ROS_INFO("%s: Improvment in iteration %d: inliers: %i (min %i), inlier_error: %.2f (max %.2f)",nodesstring.c_str(), real_iterations, (int)refined_matches.size(), (int) min_inlier_threshold,  refined_error, max_dist_m);
           rmse = refined_error;
           resulting_transformation = refined_transformation;
           matches.assign(refined_matches.begin(), refined_matches.end());
@@ -1079,7 +1065,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
   //G2O Refinement (minimize mahalanobis distance, include depthless features in optimization)
   //Optimize transform based on latest inliers (in "matches") and initial guess (in "resulting_transformation")
   int g2o_iterations = ParameterServer::instance()->get<int>( "g2o_transformation_refinement");
-  if(g2o_iterations > 0 && matches.size() > min_inlier_threshold)
+  if(g2o_iterations > 0 && matches.size() > min_inlier_threshold)//Do not do this if RANSAC didn't succeed. Can't handle outliers
   {
     Eigen::Matrix4f transformation = resulting_transformation;//current hypothesis
     getTransformFromMatchesG2O(earlier_node, this,matches, transformation, g2o_iterations);
@@ -1153,117 +1139,23 @@ void Node::gicpSetIdentity(dgc_transform_t m){
         m[i][j] = 0;
 }
 #endif
-///Used only in matchNodePair
-void printNNRatioInfo(const char* validity, const char* nodes, const std::vector<cv::DMatch>& matches)
-{
-  float nn_ratio = 0.0;
-  //double w = 1.0 + (double)matches.size()-(double)min_matches;///(double)mr.all_matches.size();
-  for(unsigned int i = 0; i < matches.size(); i++){
-    nn_ratio += matches[i].distance;
-  }
-  nn_ratio /= matches.size();
-  ROS_INFO("%s: RANSAC found a %s transformation with %d inliers matches with average ratio %f", 
-           nodes, validity, (int) matches.size(), nn_ratio);
-}
 
-///Used only in matchNodePair
-void edgeFromMatchingResult(const Node* newer_node, const Node* older_node, const Eigen::Matrix4f& final_trafo, MatchingResult& mr){
-  mr.final_trafo = final_trafo;
-  mr.edge.id1 = older_node->id_;//and we have a valid transformation
-  mr.edge.id2 = newer_node->id_; //since there are enough matching features,
-  mr.edge.mean = eigen2G2O(mr.final_trafo.cast<double>());//we insert an edge between the frames
 
-  //Information Matrix
-  mr.edge.informationMatrix = Eigen::Matrix<double,6,6>::Identity()*((1+mr.inlier_matches.size())/(mr.rmse*mr.rmse)); //TODO: What do we do about the information matrix? Scale with inlier_count. Should rmse be integrated?)
-/*
-  Eigen::Affine3f eigen_transform(mr.final_trafo);
-  Eigen::Vector3f translation(mr.final_trafo(0, 3), mr.final_trafo(1, 3), mr.final_trafo(2, 3));
 
-  Eigen::Quaternionf eigen_quat(eigen_transform.rotation());
-  //float rotationnorm = acos(eigen_quat.w()) * 2; //in rad. deg: 360.0 / 3.14159;
-  //rotationnorm = (1.0+rotationnorm);
-  
-  //Experimental: Weight by "traveled distance"
-  //mr.edge.informationMatrix =   Eigen::Matrix<double,6,6>::Identity() * translationnorm*rotationnorm;
-  mr.edge.informationMatrix(0,0) /= 1.0 + translation.x() * translation.x();
-  mr.edge.informationMatrix(1,1) /= 1.0 + translation.y() * translation.y();
-  mr.edge.informationMatrix(2,2) /= 1.0 + translation.z() * translation.z();
-  mr.edge.informationMatrix(3,3) /= 1.0 + eigen_quat.x()  * eigen_quat.x();
-  mr.edge.informationMatrix(4,4) /= 1.0 + eigen_quat.y()  * eigen_quat.y();
-  mr.edge.informationMatrix(5,5) /= 1.0 + eigen_quat.z()  * eigen_quat.z();
-  //mr.edge.informationMatrix = mr.edge.informationMatrix;// * mr.edge.informationMatrix ;
-  ROS_INFO_STREAM("Information Matrix: \n" << mr.edge.informationMatrix);
-  */
-
-}
-
-bool edge_from_icp_alignment(bool found_transformation, Node* newer_node, const Node* older_node, MatchingResult& mr, double ransac_quality)
-{
-    std::string icp_method = ParameterServer::instance()->get<std::string>("icp_method") ;
-    if(ParameterServer::instance()->get<bool>("use_icp"))
-    {   //Apply icp only for adjacent frames, or with initial guess as the initial guess needs to be in the global minimum
-        if((!found_transformation && (((int)newer_node->id_ - (int)older_node->id_) <= 1)) )
-        {
-            ROS_INFO("Applying GICP for Transformation between Nodes %d and %d",newer_node->id_ , older_node->id_);
-            MatchingResult mr_icp;
-#ifdef USE_PCL_ICP
-            if(icp_method == "icp"||icp_method == "icp_nl")
-            {
-              mr_icp.final_trafo = icpAlignment(older_node->filtered_pc_col, newer_node->filtered_pc_col, mr.final_trafo);   
-            }
-#endif  
-#ifdef USE_ICP_CODE
-            if(icp_method == "gicp")
-            {
-              bool converged = newer_node->getRelativeTransformationTo_ICP_code(older_node,mr_icp.final_trafo, mr.final_trafo); 
-              if(!converged) return false; 
-            }
-#endif  
-            ROS_INFO_STREAM("RANSAC Transformation:\n" << mr.final_trafo);
-            ROS_INFO_STREAM("ICP Transformation:\n" << mr_icp.final_trafo);
-
-            //if(getRelativeTransformationTo_ICP_code(older_node,mr_icp.icp_trafo, mr.ransac_trafo) && //converged
-            if(!containsNaN(mr_icp.final_trafo)) 
-            {
-                ROS_INFO("%s for Nodes %u and %u Successful", icp_method.c_str(), newer_node->id_, older_node->id_);
-                double icp_quality;
-                pairwiseObservationLikelihood(newer_node, older_node, mr_icp);
-                if(observation_criterion_met(mr_icp.inlier_points, mr_icp.outlier_points, mr_icp.occluded_points + mr_icp.inlier_points + mr_icp.outlier_points, icp_quality)
-                   && icp_quality >= ransac_quality)
-                { //This signals a valid result:
-                    mr.inlier_matches.clear();
-                    ROS_INFO("Using %s estimate for Nodes %u and %u", icp_method.c_str(), newer_node->id_, older_node->id_);
-                    edgeFromMatchingResult(newer_node, older_node, mr_icp.final_trafo, mr);
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
-}
-
-///Apply Feature based Alignment and/or ICP
 MatchingResult Node::matchNodePair(const Node* older_node)
 {
   MatchingResult mr;
-  ///First check if this node has the information required
-  if(older_node->pc_col->size() == 0 || older_node->feature_locations_2d_.size() == 0){
-    ROS_WARN("Tried to match against a cleared node (%d). Skipping.", older_node->id_); 
-    return mr;
-  }
-  ParameterServer* ps = ParameterServer::instance();
-  if(ps->get<int>("max_connections") > 0 && initial_node_matches_ > ps->get<int>("max_connections")) {
-    return mr; //enough is enough
-  }
-
   try{
-    ///FEATURE MATCHING+RANSAC
     bool found_transformation = false;
+    if(ParameterServer::instance()->get<int>("max_connections") > 0 &&
+       initial_node_matches_ > ParameterServer::instance()->get<int>("max_connections")) 
+      return mr; //enough is enough
     const unsigned int min_matches = (unsigned int) ParameterServer::instance()->get<int>("min_matches");// minimal number of feature correspondences to be a valid candidate for a link
 
     this->featureMatching(older_node, &mr.all_matches); 
 
     double ransac_quality = 0;
+    ROS_DEBUG_NAMED(__FILE__, "found %i inital matches",(int) mr.all_matches.size());
     if (mr.all_matches.size() < min_matches){
         ROS_INFO("Too few inliers between %i and %i for RANSAC method. Only %i correspondences to begin with.",
                  older_node->id_,this->id_,(int)mr.all_matches.size());
@@ -1298,19 +1190,47 @@ MatchingResult Node::matchNodePair(const Node* older_node)
         }
     } 
     
-#if  defined USE_ICP_CODE || defined USE_PCL_ICP
-    ///ICP - This sets the icp transformation in "mr", if the icp alignment is better than the ransac_quality
-    found_transformation = edge_from_icp_alignment(found_transformation, this, older_node, mr, ransac_quality) || found_transformation;
+#ifdef USE_ICP_CODE
+    unsigned int ransac_inlier_points = 0, ransac_outlier_points = 0;
+    if(ParameterServer::instance()->get<bool>("use_icp")){
+        if((!found_transformation && (((int)this->id_ - (int)older_node->id_) <= 1)) //Apply icp only for adjacent frames, as the initial guess needs to be in the global minimum
+            || found_transformation) //Apply icp only for adjacent frames, as the initial guess needs to be in the global minimum
+           //|| (!found_transformation && initial_node_matches_ == 0)) //no matches were found, and frames are not too far apart => identity is a good initial guess.
+        {
+            ROS_INFO("Applying GICP for Transformation between Nodes %d and %d",this->id_ , older_node->id_);
+            MatchingResult mr_icp;
+            if(getRelativeTransformationTo_ICP_code(older_node,mr_icp.icp_trafo, mr.ransac_trafo) && //converged
+               !((mr_icp.icp_trafo.array() != mr_icp.icp_trafo.array()).any())) //No NaNs
+            {
+                ROS_INFO("GICP for Nodes %u and %u Successful", this->id_, older_node->id_);
+                double icp_quality;
+                pairwiseObservationLikelihood(this, older_node, mr_icp);
+                if(observation_criterion_met(mr_icp.inlier_points, mr_icp.outlier_points, mr_icp.occluded_points + mr_icp.inlier_points + mr_icp.outlier_points, icp_quality)
+                   && icp_quality > ransac_quality)
+                {
+                    //This signals a valid result:
+                    found_transformation = true;
+                    mr.edge.id1 = older_node->id_;//and we have a valid transformation
+                    mr.edge.id2 = this->id_; //since there are enough matching features,
+                    mr.final_trafo = mr_icp.icp_trafo;    
+                    mr.edge.informationMatrix = Eigen::Matrix<double,6,6>::Identity()*(1e-2); //TODO: What do we do about the information matrix? 
+                    mr.edge.mean = eigen2G2O(mr.final_trafo.cast<double>());//we insert an edge between the frames
+                }
+            }
+        }
+    }
 #endif  
 
     if(found_transformation) {
         ROS_INFO("Returning Valid Edge");
         ++initial_node_matches_; //trafo is accepted
-    } else {
-        mr.edge.id1 = mr.edge.id2 = -1;
+    }
+    else {
+        mr.edge.id1 = -1;
+        mr.edge.id2 = -1;
     }
   }
-  catch (std::exception e){//Catch exceptions: Unexpected problems shouldn't crash the application
+  catch (std::exception e){
     ROS_ERROR("Caught Exception in comparison of Nodes %i and %i: %s", this->id_, older_node->id_, e.what());
   }
 

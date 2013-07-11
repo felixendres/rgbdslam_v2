@@ -78,22 +78,10 @@ public Q_SLOTS:
     void sendFinished();
 
 private:
-    void resetCmd();
-    void reloadConfig();
-    void sendAll();
-    void setMax(float val);
-    void saveAll();
-    void saveOctomap();
-    void saveFeatures();
-    void saveIndividual();
-    void quickSaveAll();
     void pause(bool);
     void bagRecording(bool);
     void toggleCloudStorage(bool);
-    void getOneFrameCmd();
-    void deleteLastFrameCmd();
 private:
-    void createActions(const char* service_namespace);
     bool pause_on;
     QString filename;
     bool record_on;

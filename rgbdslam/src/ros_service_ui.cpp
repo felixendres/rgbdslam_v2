@@ -32,63 +32,11 @@ RosUi::RosUi(const char* service_namespace) : filename("quicksave.pcd"), record_
     this->pause_on = ParameterServer::instance()->get<bool>("start_paused");
 }
 
-void RosUi::reloadConfig() {
-    ParameterServer::instance()->getValues();
-    ROS_INFO("Reloaded Parameters from Parameter Server");
-}
-
-void RosUi::resetCmd() {
-    ROS_INFO("Graph Reset");
-    Q_EMIT reset();
-    ROS_INFO("A fresh new graph is waiting");
-}
-
-void RosUi::quickSaveAll() {
-    Q_EMIT saveAllClouds(filename);
-    ROS_INFO("Saving Whole Model to %s", qPrintable(filename));
-}
-
-void RosUi::saveFeatures() {
-    Q_EMIT saveAllFeatures(QString("feature_database.yml"));
-    ROS_INFO("Saving Whole Model to %s", qPrintable(filename));
-}
-
-void RosUi::saveOctomap() {
-    Q_EMIT saveOctomapSig("/tmp/rgbdslam_octomap.ot");
-    ROS_INFO("Saving Whole Model to /tmp/rgbdslam_octomap.ot");
-}
-
-void RosUi::saveAll() {
-    Q_EMIT saveAllClouds(filename);
-    ROS_INFO("Saving Whole Model to %s", qPrintable(filename));
-}
-
-void RosUi::saveIndividual() {
-    QString tmpfilename(filename);
-    tmpfilename.remove(".pcd", Qt::CaseInsensitive);
-    tmpfilename.remove(".ply", Qt::CaseInsensitive);
-    Q_EMIT saveIndividualClouds(filename);
-    ROS_INFO("Saving Model Node-Wise");
-}
-
-void RosUi::sendAll() {
-    Q_EMIT sendAllClouds();
-    ROS_INFO("Sending Whole Model");
-}
 
 void RosUi::sendFinished() {
     ROS_INFO("Finished Sending");
 }
 
-void RosUi::getOneFrameCmd() {
-    Q_EMIT getOneFrame();
-    ROS_INFO("Getting a single frame");
-}
-
-void RosUi::deleteLastFrameCmd() {
-    Q_EMIT deleteLastFrame();
-    ROS_INFO("Deleting the last node from the graph");
-}
 
 void RosUi::bagRecording(bool _record_on) {
     if(this->record_on == _record_on){

@@ -24,10 +24,11 @@
 #include "ros_service_ui.h"
 
 //TODO:
-//better potential-edge-selection through flann
+//better potential-edge-selection through flann or place recognition
 //Better separation of function, communication, parameters and gui
-//Is the display of the point clouds without optimization bad, because the transformation to the last_matching_node_ is used but something else is computed?
-//Downsampling in createXYZRGBPointCloud -> Affects the camera calibration data in observationLikelihood
+//Better integration of the calibration data
+//Correct implementation of odometry
+//Multi-Camera-fusion
 
 ///Connect Signals and Slots for the ui control
 void ui_connections(QObject* ui, GraphManager* graph_mgr, OpenNIListener* listener)

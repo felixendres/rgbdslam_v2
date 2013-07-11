@@ -1,6 +1,16 @@
 Last Modification: 2013-02-05 
 
-This file should be roughly the same as the information on:
+WARNING TO USERS OF THE SERVICE CALL INTERFACE: 
+The service definitions have minor changes, which will break existing service
+calls! Most importantly: The field "comand" is now correctly spelled "command" 
+Another service "rgbdslam/ros_ui_s" has been created that expects a string 
+value. Some of the "save" commands of the "rgbdslam/ros_ui" service calls have 
+been moved to the new service: save_cloud,  save_g2o_graph,
+save_trajectory,  save_features,  save_individual. "save_octomap" has been 
+added. The string "value" is the respective filename to save to. See the 
+documentation below, or the file src/ros_service_ui.cpp.
+
+Additional information can be found here:
 http://www.ros.org/wiki/rgbdslam
 
 INSTALLATION ################################################################### 
@@ -72,9 +82,10 @@ USAGE without GUI ##############################################################
 The RosUI is an alternative to the Grapical_UI to run the rgbdslam headless,
 for example on the PR2.  rgbdslam can then be used via service-calls.
 The possible calls are:
-- /rgbdslam/ros_ui {reset, quick_save, save_cloud, save_features, save_individual, save_trajectory, send_all, delete_frame, optimize}
-- /rgbdslam/ros_ui_b {pause, record} {true, false}
-- /rgbdslam/ros_ui_f {set_max} {float}
+ * /rgbdslam/ros_ui   {reset,  quick_save,  send_all,  delete_frame,  optimize,  reload_config, save_trajectory}
+ * /rgbdslam/ros_ui_b {pause, record} {true, false}
+ * /rgbdslam/ros_ui_f {set_max} {float}
+ * /rgbdslam/ros_ui_s {save_octomap,  save_cloud,  save_g2o_graph,  save_trajectory,  save_features,  save_individual} {filename}
 
 To start the rgbdslam headless use the headless.launch: 
 $ roslaunch rgbdslam headless.launch
@@ -91,22 +102,37 @@ $ rosservice call /rgbdslam/ros_ui send_all
 Save data using one of the following:
 
 All pointclouds in one file quicksave.pcd in rgbdslam/bin-directory: 
-$ rosservice call /rgbdslam/ros_ui save_cloud
+$ rosservice call /rgbdslam/ros_ui_s save_cloud
 
 Every pointcloud in its own file in rgbdslam/bin-directory: 
 $ rosservice call /rgbdslam/ros_ui save_individual
 
-/rgbdslam/ros_ui: -reset	resets the graph, delets all nodes (refreshes only when capturing new images) 
-                  -quick_save, save_cloud	saves all pointclouds in one file quicksave.pcd in rgbdslam/bin-directory 
-                  -save_features saves the feature locations and descriptors in a yaml file "feature_database.yml"
-                  -save_individual	saves every scan in its own file in rgbdslam/bin-directory
-                  -send_all	sends all pointclouds to /rgbdslam/transformed_cloud (can be visualized with rviz) 
-                  -delete_frame	delete the last frame from the graph (refreshes only when capturing new images)
+/rgbdslam/ros_ui: 
 	
-/rgbdslam/ros_ui_b: -pause	pauses or resumes the capturing of images 
-                    -record pauses or stops the recording of bag-files, can be found in the rgbdslam/bin-directory
+ * reset	''resets the graph, delets all nodes (refreshes only when capturing new images)''
+ * frame	''capture one frame from the sensor''
+ * optimize	''trigger graph optimizer''
+ * reload_config	''reloads the paramters from the ROS paramter server''
+ * quick_save ''saves all pointclouds in one file quicksave.pcd in rgbdslam/bin-directory''
+ * send_all	''sends all pointclouds to /rgbdslam/transformed_cloud (can be visualized with rviz)''
+ * delete_frame	''delete the last frame from the graph (refreshes only when capturing new images)''
 	
-/rgbdslam/ros_ui_f: -set_max	filters out all datapoints further away than this value (in cm, only for saving to files)
+/rgbdslam/ros_ui_b: 
+
+ * pause <flag>	''pauses or resumes the capturing of images'' 
+ * record <flag>  ''pauses or stops the recording of bag-files, can be found in the rgbdslam/bin-directory''
+	
+/rgbdslam/ros_ui_f: 
+
+ * set_max <float>	''filters out all datapoints further away than this value (in cm, only for saving to files)''
+
+/rgbdslam/ros_ui_s: 
+
+ * save_features <filname> ''saves the feature locations and descriptors in a yaml file with the given filename''
+ * save_cloud	<filename> ''saves the cloud to the given filename (should end with .ply or .pcd)''
+ * save_individual <fileprefix>	''saves every scan in its own file (appending a suffix to the given prefix)''
+ * save_octomap	<filename> ''saves the cloud to the given filename''
+ * save_trajectory	<fileprefix> ''saves the sensor trajectory to the file <fileprefix>_estimate.txt''
 
 
 

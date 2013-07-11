@@ -19,7 +19,7 @@ The main classes are the following:
 <ul>
 <li>Node - Holds the data for a graph node, e.g., the extracted features and their position in the image plane and the local 3D coordinate systems.
 It provides functionality to find the transformation to another node and for publishing the associated pointcloud.</li>
-<li>GraphManager - Decides for each Node, which edges are included in the graph. Stores all Nodes with valid edges and optimizes the camera pose graph globally with HOG-MAN as SLAM backend.
+<li>GraphManager - Decides for each Node, which edges are included in the graph. Stores all Nodes with valid edges and optimizes the camera pose graph globally (or locally) with g2o as SLAM backend.
 Provides functionality to send (ROS-Msgs) or save (to PCD File) the globally consistent whole model.</li>
 </ul>
 The following classes are mainly for communication with ROS and the user:

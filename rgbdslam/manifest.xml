@@ -29,6 +29,7 @@
   <!--rosdep name="gl2ps"/-->
   <rosdep name="eigen"/>
   <rosdep name="libg2o"/>
+  <rosdep name="octomap"/>
   <export>
     <rosdoc config="rosdoc.yaml" />
     <nodelet plugin="${prefix}/nodelet_plugins.xml" />

@@ -639,8 +639,8 @@ void OpenNIListener::processNode(Node* new_node)
         Q_EMIT newDepthImage(cvMat2QImage(depth_mono8_img_, 6)); //show registration
         Q_EMIT newFeatureFlowImage(cvMat2QImage(visualization_img_,visualization_depth_mono8_img_, feature_img, 2)); //show registration
       } else {
-        graph_mgr_->drawFeatureFlow(visualization_img_, cv::Scalar(0,0,255), cv::Scalar(0,128,0) );
         graph_mgr_->drawFeatureFlow(depth_mono8_img_, cv::Scalar(0,0,255), cv::Scalar(0,128,0) );
+        graph_mgr_->drawFeatureFlow(visualization_img_, cv::Scalar(60,255,60), cv::Scalar(0,128,0) );
         Q_EMIT newFeatureFlowImage(cvMat2QImage(visualization_img_, 5)); //show registration
         Q_EMIT newDepthImage(cvMat2QImage(depth_mono8_img_, 6)); //show registration
       }

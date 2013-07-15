@@ -25,6 +25,7 @@
 #include "pcl/io/pcd_io.h"
 //#include <sensor_msgs/PointCloud2.h>
 #include <opencv2/features2d/features2d.hpp>
+#include <opencv2/highgui/highgui.hpp>
 #include <qtconcurrentrun.h>
 #include <QFile>
 #include <utility>
@@ -880,10 +881,11 @@ void publishCloud(Node* node, ros::Time timestamp, ros::Publisher pub){
 void drawFeatureConnectors(cv::Mat& canvas, cv::Scalar line_color, 
                            const std::vector<cv::DMatch> matches,
                            const std::vector<cv::KeyPoint>& newer_keypoints,
-                           const std::vector<cv::KeyPoint>& older_keypoints)
+                           const std::vector<cv::KeyPoint>& older_keypoints,
+                           int line_thickness)
 {
     const double pi_fourth = 3.14159265358979323846 / 4.0;
-    const int line_thickness = 1;
+    //const int line_thickness = 1;
     const int circle_radius = 6;
     const int cv_aa = 16;
     for(unsigned int mtch = 0; mtch < matches.size(); mtch++) {
@@ -904,11 +906,11 @@ void drawFeatureConnectors(cv::Mat& canvas, cv::Scalar line_color,
         }
         if(hypotenuse > 3.0){  //only larger motions larger than this get an arrow tip
             /* Now draw the tips of the arrow.  */
-            p.x =  (q.x + 4 * cos(angle + pi_fourth));
-            p.y =  (q.y + 4 * sin(angle + pi_fourth));
+            p.x =  (q.x + 4 * cos(angle + pi_fourth) * line_thickness);
+            p.y =  (q.y + 4 * sin(angle + pi_fourth) * line_thickness);
             cv::line( canvas, p, q, line_color, line_thickness, cv_aa );
-            p.x =  (q.x + 4 * cos(angle - pi_fourth));
-            p.y =  (q.y + 4 * sin(angle - pi_fourth));
+            p.x =  (q.x + 4 * cos(angle - pi_fourth) * line_thickness);
+            p.y =  (q.y + 4 * sin(angle - pi_fourth) * line_thickness);
             cv::line( canvas, p, q, line_color, line_thickness, cv_aa );
         } 
     }
@@ -958,10 +960,12 @@ void GraphManager::drawFeatureFlow(cv::Mat& canvas, cv::Scalar line_color,
     cv::drawKeypoints(canvas, with_depth, tmpimage, circle_color, 5);
     //Draw depthless keypoints in orange 
     cv::drawKeypoints(canvas, without_depth, tmpimage, cv::Scalar(0,128,255,0), 5);
-    canvas+=tmpimage;
+    canvas+=tmpimage;//+=canvas;
+    //cv::imwrite("keypoints.png", tmpimage);
 
-    drawFeatureConnectors(canvas, cv::Scalar(0.0), curr_best_result_.all_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
-    drawFeatureConnectors(canvas, line_color, curr_best_result_.inlier_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
+    drawFeatureConnectors(canvas, cv::Scalar(0.0), curr_best_result_.all_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_, 1);
+    drawFeatureConnectors(canvas, line_color, curr_best_result_.inlier_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_, 1);
+    //cv::imwrite("visual_odometry.png", canvas);
 
     clock_gettime(CLOCK_MONOTONIC, &finish); elapsed = (finish.tv_sec - starttime.tv_sec); elapsed += (finish.tv_nsec - starttime.tv_nsec) / 1000000000.0; ROS_INFO_STREAM_COND_NAMED(elapsed > ParameterServer::instance()->get<double>("min_time_reported"), "timings", __FUNCTION__ << " runtime: "<< elapsed <<" s");
 }

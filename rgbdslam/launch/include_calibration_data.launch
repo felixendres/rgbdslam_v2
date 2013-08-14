@@ -1,0 +1,13 @@
+<!-- This file demonstrates the use of calibration data. 
+     Note that the calibration data referenced is for the "First-MM" Xtion Pro at the AIS Lab and 
+     should be replaced with calibration data for your camera -->
+<launch>
+  <include file="$(find openni_launch)/launch/openni.launch">
+    <arg name="rgb_camera_info_url" value="file://$(find rgbdslam)/xtion_calibrated/cal.yml" />
+    <arg name="depth_camera_info_url" value="file://$(find rgbdslam)/xtion_calibrated/cal_ir.yml" />
+  </include>
+  <node pkg="dynamic_reconfigure" type="dynparam" 
+        name="setregistration" args="set camera/driver depth_registration True"/>
+
+  <include file="$(find rgbdslam)/launch/rgbdslam.launch"/>
+</launch>

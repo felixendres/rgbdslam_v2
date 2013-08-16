@@ -22,6 +22,7 @@ inline double depth_std_dev(double depth)
   // From Khoselham and Elberink?
   static const double depth_cov_z_factor = 1.425e-3;
   // Previously used 0.0075 from information on http://www.ros.org/wiki/openni_kinect/kinect_accuracy;
+  //static const double depth_cov_z_factor = 0.0075;
   return depth_cov_z_factor * depth * depth;
 }
 //Functions without dependencies

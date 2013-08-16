@@ -62,6 +62,7 @@ public Q_SLOTS:
     void drawToPS(QString filname);
 Q_SIGNALS:
     void cloudRendered(pointcloud_type const *);
+    void clickedPosition(float x,float y,float z);
     //void xRotationChanged(int angle);
     //void yRotationChanged(int angle);
     //void zRotationChanged(int angle);
@@ -94,6 +95,8 @@ protected:
     void pointCloud2GLList(pointcloud_type const * pc);
     void pointCloud2GLPoints(pointcloud_type * pc);
     void pointCloud2GLStrip(pointcloud_type * pc);
+    ///Draw ellipsoids instead of points, that represent the depth std deviation of each point
+    void pointCloud2GLEllipsoids(pointcloud_type * pc);
     QImage renderList(QMatrix4x4 transform, int list_id);
     //! Draw the scene. Xshift allows for a camera shift in x direction for the stereo view
     void drawClouds(float xshift);

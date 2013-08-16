@@ -363,11 +363,9 @@ void GLViewer::mouseDoubleClickEvent(QMouseEvent *event) {
           zTra=-50;
       }
     }
-    /*
     if(!setClickedPosition(event->x(), event->y())){
       ROS_INFO("Clicked into space");
     }
-    */
     clearAndUpdate();
 }
 void GLViewer::toggleStereo(bool flag){
@@ -562,7 +560,7 @@ void GLViewer::updateTransforms(QList<QMatrix4x4>* transforms){
 void GLViewer::addPointCloud(pointcloud_type * pc, QMatrix4x4 transform){
     ROS_DEBUG("pc pointer in addPointCloud: %p (this is %p in thread %d)", pc, this, (unsigned int)QThread::currentThreadId());
     if(!pc->isOrganized() || ParameterServer::instance()->get<double>("squared_meshing_threshold") < 0){
-      pointCloud2GLPoints(pc);
+      pointCloud2GLEllipsoids(pc);
     } else {
       pointCloud2GLStrip(pc);
     }
@@ -590,6 +588,7 @@ void GLViewer::addFeatures(const std::vector<Eigen::Vector4f, Eigen::aligned_all
     }
     glNewList(feature_list_index, GL_COMPILE);
     feature_list_indices.push_back(feature_list_index);
+    glLineWidth(3*ParameterServer::instance()->get<double>("gl_point_size"));
     glBegin(GL_LINES);
     float r = (float)rand()/(float)RAND_MAX;
     float g = (float)rand()/(float)RAND_MAX;
@@ -602,10 +601,11 @@ void GLViewer::addFeatures(const std::vector<Eigen::Vector4f, Eigen::aligned_all
         glVertex3f(ft[0], ft[1], ft[2]);
         glColor4f(r,g,b, 0.0); //inverse of bg color, non transp
         //glColor4f(1-bg_col_[0],bg_col_[1],bg_col_[2],0.0); //inverse of bg color, non transp
-        glVertex3f(ft[0], ft[1], ft[2]-sqrt(depth_covariance(ft[2])));
+        glVertex3f(ft[0], ft[1], ft[2]-20*depth_std_dev(ft[2]));
       }
     }
     glEnd();
+    glLineWidth(1.0);
     glEndList();
 }
 
@@ -754,6 +754,63 @@ void GLViewer::deleteLastNode(){
 	glDeleteLists(ftId,1);
 }
 
+///From http://www.gamedev.net/topic/126624-generating-an-ellipsoid-in-opengl/
+void drawEllipsoid(float fA, float fB, float fC, const point_type& p)
+{
+  unsigned int uiStacks = 4, uiSlices = 4;
+	float tStep = (PI) / (float)uiSlices;
+	float sStep = (PI) / (float)uiStacks;
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	for(float t = -PI/2; t <= (PI/2)+.0001; t += tStep)
+	{
+		glBegin(GL_TRIANGLE_STRIP);
+		for(float s = -PI; s <= PI+.0001; s += sStep)
+		{
+			glVertex3f(p.x + fA * cos(t) * cos(s), 
+                 p.y + fB * cos(t) * sin(s), 
+                 p.z + fC * sin(t));
+			glVertex3f(p.x + fA * cos(t+tStep) * cos(s), 
+                 p.y + fB * cos(t+tStep) * sin(s), 
+                 p.z + fC * sin(t+tStep));
+		}
+		glEnd();
+	}
+}
+
+///Draw ellipsoids instead of points, that represent the depth std deviation of each point
+void GLViewer::pointCloud2GLEllipsoids(pointcloud_type * pc){
+    ScopedTimer s(__FUNCTION__);
+    ROS_DEBUG("Making GL list from point-cloud pointer %p in thread %d", pc, (unsigned int)QThread::currentThreadId());
+    GLuint cloud_list_index = glGenLists(1);
+    if(!cloud_list_index) {
+        ROS_ERROR("No display list could be created");
+        return;
+    }
+    cloud_list_indices.push_back(cloud_list_index);
+    glNewList(cloud_list_index, GL_COMPILE);
+    //ROS_INFO_COND(!pc->is_dense, "Expected dense cloud for opengl drawing");
+    point_type origin;
+    origin.x = 0;
+    origin.y = 0;
+    origin.z = 0;
+
+    float depth;
+    unsigned int w=pc->width, h=pc->height;
+    for(unsigned int x = 0; x < w; x++){
+        for(unsigned int y = 0; y < h; y++){
+            //using namespace pcl;
+            const point_type& p = pc->points[x+y*w]; //current point
+            if(!(validXYZ(p))) continue;
+            setGLColor(p);
+            drawEllipsoid(0.005, 0.005, depth_std_dev(p.z), p);
+        }
+    }
+    glEnd();
+    ROS_DEBUG("Compiled pointcloud into list %i",  cloud_list_index);
+    glEndList();
+    Q_EMIT cloudRendered(pc);
+}
+
 void GLViewer::pointCloud2GLPoints(pointcloud_type * pc){
     ScopedTimer s(__FUNCTION__);
     ROS_DEBUG("Making GL list from point-cloud pointer %p in thread %d", pc, (unsigned int)QThread::currentThreadId());
@@ -762,7 +819,6 @@ void GLViewer::pointCloud2GLPoints(pointcloud_type * pc){
         ROS_ERROR("No display list could be created");
         return;
     }
-    float mesh_thresh = ParameterServer::instance()->get<double>("squared_meshing_threshold");
     cloud_list_indices.push_back(cloud_list_index);
     glNewList(cloud_list_index, GL_COMPILE);
     glBegin(GL_POINTS);
@@ -941,10 +997,11 @@ bool GLViewer::setClickedPosition(int x, int y) {
     glReadPixels( x, int(winY), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &winZ );
     if(winZ != 1){ //default value, where nothing was rendered
       gluUnProject( winX, winY, winZ, modelview, projection, viewport, &posX, &posY, &posZ);
-      ROS_DEBUG_STREAM((float)winZ << ", " << posX << "," << posY << "," << posZ);
+      ROS_INFO_STREAM((float)winZ << ", [" << posX << "," << posY << "," << posZ << "]");
       viewpoint_tf_(0,3) = -posX;
       viewpoint_tf_(1,3) = -posY;
       viewpoint_tf_(2,3) = -posZ;
+      Q_EMIT clickedPosition(posX, posY, posZ);
       return true;
     } else {
       return false;

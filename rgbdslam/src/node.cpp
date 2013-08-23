@@ -582,14 +582,21 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
 
   ScopedTimer s(__FUNCTION__);
 
-  double depth_scaling = ParameterServer::instance()->get<double>("depth_scaling_factor");
-  size_t max_keyp = ParameterServer::instance()->get<int>("max_keypoints");
+  ParameterServer* ps = ParameterServer::instance();
+  double depth_scaling = ps->get<double>("depth_scaling_factor");
+  size_t max_keyp = ps->get<int>("max_keypoints");
   float x,y;//temp point, 
   //principal point and focal lengths:
+  float fx = 1./ (ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : cam_info->K[0]); //(cloud->width >> 1) - 0.5f;
+  float fy = 1./ (ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : cam_info->K[4]); //(cloud->width >> 1) - 0.5f;
+  float cx = ps->get<double>("depth_camera_cx") > 0 ? ps->get<double>("depth_camera_cx") : cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
+  float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") : cam_info->K[5]; //(cloud->width >> 1) - 0.5f;
+  /*
   float cx = 325.1;//cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
   float cy = 249.7;//cam_info->K[5]; //(cloud->height >> 1) - 0.5f;
   float fx = 1.0/521.0;//1.0f / cam_info->K[0]; 
   float fy = 1.0/521.0;//1.0f / cam_info->K[4]; 
+  */
   cv::Point2f p2d;
 
   if(feature_locations_3d.size()){
@@ -1266,7 +1273,7 @@ void Node::reducePointCloud(double vfs){
     ROS_WARN("Point Clouds can't be reduced because of invalid voxelfilter_size");
   }
 }
-long Node::getMemoryFootprint(bool write_to_log)
+long Node::getMemoryFootprint(bool write_to_log) const
 {
   size_t size = 0, tmp = 0;
   tmp = sizeof(Node);
@@ -1384,4 +1391,67 @@ void Node::knnSearch(cv::Mat& query,
                      const cv::flann::SearchParams& params) const
 {
   this->flannIndex->knnSearch(query, indices, dists, knn, params);
+}
+
+void copy_filter_cloud (const Eigen::Vector3f& center, float radius, const Node* old_node, Node* clone)
+{
+  float sq_radius = radius*radius;
+  BOOST_FOREACH(const point_type& p, old_node->pc_col->points)
+  {
+    float sq_distance = (p.getVector3fMap() - center).squaredNorm();
+    if(sq_distance <= sq_radius){
+      clone->pc_col->push_back(p);
+    }
+  }
+  ROS_INFO("Copied %zu/%zu points to Node clone", clone->pc_col->size(), old_node->pc_col->size());
+}
+
+void copy_filter_features (const Eigen::Vector3f& center, float radius, const Node* old_node, Node* clone)
+{
+  assert(old_node->feature_locations_3d_.size() == old_node->feature_locations_2d_.size());
+  float sq_radius = radius*radius;
+
+  ROS_DEBUG_STREAM("Center: " << center);
+  //Determine which features qualify
+  std::list<size_t> featuresToCopy;
+  for(size_t i = 0; i < old_node->feature_locations_3d_.size(); i++){
+    float sq_distance = (old_node->feature_locations_3d_.at(i).head<3>() - center).squaredNorm();
+    ROS_DEBUG("Sq. distance of feature %zu: %f/%f", i, sq_distance, sq_radius);
+    if(sq_distance <= sq_radius){
+      featuresToCopy.push_back(i);
+    }
+  }
+  ROS_INFO("Copying %zu/%zu features to Node clone", featuresToCopy.size(), old_node->feature_locations_3d_.size());
+
+  //Copy qualified features
+  size_t size = featuresToCopy.size();
+  clone->feature_locations_3d_.reserve(size);
+  clone->feature_locations_2d_.reserve(size);
+  clone->feature_matching_stats_.reserve(size);
+  clone->feature_descriptors_ = cv::Mat(size, 128, CV_32F);
+  clone->siftgpu_descriptors.resize(size * 128);
+  size_t i = 0; // the index in the clone
+  BOOST_FOREACH(size_t usedFeatureIndex, featuresToCopy)
+  {
+      clone->feature_locations_3d_[i] = old_node->feature_locations_3d_[usedFeatureIndex];
+      clone->feature_locations_2d_[i] = old_node->feature_locations_2d_[usedFeatureIndex];
+      clone->feature_matching_stats_[i] = old_node->feature_matching_stats_[usedFeatureIndex];
+      clone->feature_descriptors_.row(i) = old_node->feature_descriptors_.row(usedFeatureIndex);
+      for(int j = 0; j < 128; j++){
+        clone->siftgpu_descriptors[j+i]  = old_node->siftgpu_descriptors[j+usedFeatureIndex];
+      }
+      i++;
+  }
+}
+
+Node* Node::copy_filtered(const Eigen::Vector3f& center, float radius) const
+{
+  Node* clone = new Node();
+  //Copy-filter point cloud
+  clone->pc_col = pointcloud_type::Ptr(new pointcloud_type());
+  copy_filter_cloud(center, radius, this, clone);
+  copy_filter_features(center, radius, this, clone);
+  this->getMemoryFootprint(true);
+  clone->getMemoryFootprint(true);
+  return clone;
 }

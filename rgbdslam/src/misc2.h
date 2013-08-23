@@ -15,15 +15,16 @@
  * You should have received a copy of the GNU General Public License
  * along with RGBDSLAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-
+#include "parameter_server.h"
 
 inline double depth_std_dev(double depth)
 {
   // From Khoselham and Elberink?
-  static const double depth_cov_z_factor = 1.425e-3;
-  // Previously used 0.0075 from information on http://www.ros.org/wiki/openni_kinect/kinect_accuracy;
-  //static const double depth_cov_z_factor = 0.0075;
-  return depth_cov_z_factor * depth * depth;
+  double depth_std_dev = ParameterServer::instance()->get<double>("sigma_depth");
+  // Previously used 0.006 from information on http://www.ros.org/wiki/openni_kinect/kinect_accuracy;
+  // ...using 2sigma = 95%ile
+  //static const double depth_std_dev  = 0.006;
+  return depth_std_dev * depth * depth;
 }
 //Functions without dependencies
 inline double depth_covariance(double depth)

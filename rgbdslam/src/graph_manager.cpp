@@ -1315,3 +1315,13 @@ void GraphManager::sanityCheck(float thresh){
   }
 }
 
+void GraphManager::filterNodesByPosition(float x, float y, float z)
+{
+  ROS_WARN("filtering Nodes");
+    Eigen::Vector3f center(x,y,z);
+    float radius = 0.5;
+    for (graph_it it = graph_.begin(); it !=graph_.end(); ++it){
+          Node *node = it->second;
+          Node* clone = node->copy_filtered(center, radius);
+    }
+}

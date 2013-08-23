@@ -1146,3 +1146,20 @@ void getColor(const point_type& p, unsigned char& r, unsigned char& g, unsigned 
     r = *(2+(unsigned char*)&(p.data[3]));
 #endif
 }
+
+///Overlay the monochrom edges and depth jumps
+void overlay_edges(cv::Mat visual, cv::Mat depth, cv::Mat& visual_edges, cv::Mat& depth_edges)
+{
+  if(visual.type() != CV_8UC1){
+    visual_edges = cv::Mat( visual.rows, visual.cols, CV_8UC1); 
+    cv::cvtColor(visual, visual_edges, CV_RGB2GRAY);
+  }
+  else 
+  {
+    visual_edges = visual;
+  }
+  cv::blur( visual_edges, visual_edges, cv::Size(3,3) );
+  cv::Canny(visual_edges, visual_edges, 10, 30);
+  cv::Canny(depth, depth_edges, 100, 300);
+}
+

@@ -405,6 +405,7 @@ void GraphManager::saveAllCloudsToFile(QString filename){
     //fill message
     //rgbdslam::CloudTransforms msg;
     QString message;
+    ///FIXME: Should transform to <fixed_frame_name>
     tf::Transform cam2rgb;
     cam2rgb.setRotation(tf::createQuaternionFromRPY(-1.57,0,-1.57));
     cam2rgb.setOrigin(tf::Point(0,-0.04,0));

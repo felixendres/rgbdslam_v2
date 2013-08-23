@@ -464,7 +464,7 @@ void OpenNIListener::noCloudCallback (const sensor_msgs::ImageConstPtr& visual_i
 
   if(ps->get<bool>("use_gui")){
     Q_EMIT newVisualImage(cvMat2QImage(visual_img, 0)); //visual_idx=0
-    //Q_EMIT newDepthImage (cvMat2QImage(depth_mono8_img_,1));//overwrites last cvMat2QImage
+    Q_EMIT newDepthImage (cvMat2QImage(depth_mono8_img_,1));//overwrites last cvMat2QImage
   }
   if(pause_ && !getOneFrame_) return;
 
@@ -538,8 +538,26 @@ void OpenNIListener::kinectCallback (const sensor_msgs::ImageConstPtr& visual_im
   }
 
   if(ParameterServer::instance()->get<bool>("use_gui")){
-    Q_EMIT newVisualImage(cvMat2QImage(visual_img, 0)); //visual_idx=0
-    Q_EMIT newDepthImage (cvMat2QImage(depth_mono8_img_,1));//overwrites last cvMat2QImage
+    if(ParameterServer::instance()->get<bool>("visualize_mono_depth_overlay")){
+      cv::Mat visual_edges = cv::Mat( visualization_img_.rows, visualization_img_.cols, CV_8UC1); 
+      cv::Mat depth_edges  = cv::Mat( depth_mono8_img_.rows, depth_mono8_img_.cols, CV_8UC1); 
+      overlay_edges(visual_img, depth_mono8_img_, visual_edges, depth_edges);
+      Q_EMIT newDepthImage(cvMat2QImage(depth_mono8_img_,depth_edges, visual_edges, 1)); //show registration by edge overlay
+      cv::Mat monochrome; 
+      if(visual_img.type() != CV_8UC1) {
+        monochrome = cv::Mat( visual_img.rows, visual_img.cols, CV_8UC1); 
+        cv::cvtColor(visual_img, monochrome, CV_RGB2GRAY);
+      } else {
+        monochrome = visual_img; 
+      }
+      Q_EMIT newVisualImage(cvMat2QImage(monochrome + depth_edges, 0)); //visual_idx=0
+    }
+    else 
+    {
+      Q_EMIT newDepthImage (cvMat2QImage(depth_mono8_img_,1));//overwrites last cvMat2QImage
+      Q_EMIT newVisualImage(cvMat2QImage(visual_img, 0)); //visual_idx=0
+    }
+
   }
 
   if(pause_ && !getOneFrame_) { return; }//Visualization and nothing else
@@ -598,10 +616,9 @@ void OpenNIListener::noCloudCameraCallback(cv::Mat visual_img,
 //Call function either regularly or as background thread
 void OpenNIListener::callProcessing(cv::Mat visual_img, Node* node_ptr)
 {
-  std::clock_t parallel_wait_time=std::clock();
   if(!future_.isFinished()){
+    ScopedTimer s("New Node is ready, waiting for graph manager.");
     future_.waitForFinished(); //Wait if GraphManager ist still computing. 
-    ROS_INFO_STREAM_NAMED("timings", "waiting time: "<< ( std::clock() - parallel_wait_time ) / (double)CLOCKS_PER_SEC  <<"sec"); 
   }
 
   //update for visualization of the feature flow
@@ -624,6 +641,7 @@ void OpenNIListener::callProcessing(cv::Mat visual_img, Node* node_ptr)
   }
 }
 
+
 void OpenNIListener::processNode(Node* new_node)
 {
   ScopedTimer s(__FUNCTION__);
@@ -634,10 +652,18 @@ void OpenNIListener::processNode(Node* new_node)
   if(ParameterServer::instance()->get<bool>("use_gui")){
     if(has_been_added){
       if(ParameterServer::instance()->get<bool>("visualize_mono_depth_overlay")){
+        //Edge channels
+        cv::Mat visual_edges = cv::Mat( visualization_img_.rows, visualization_img_.cols, CV_8UC1); 
+        cv::Mat depth_edges  = cv::Mat( visualization_img_.rows, visualization_img_.cols, CV_8UC1); 
+        overlay_edges(visualization_img_, depth_mono8_img_, visual_edges, depth_edges);
+
+        //Feature channel
         cv::Mat feature_img = cv::Mat::zeros( visualization_img_.rows, visualization_img_.cols, CV_8UC1); 
         graph_mgr_->drawFeatureFlow(feature_img);
-        Q_EMIT newDepthImage(cvMat2QImage(depth_mono8_img_, 6)); //show registration
-        Q_EMIT newFeatureFlowImage(cvMat2QImage(visualization_img_,visualization_depth_mono8_img_, feature_img, 2)); //show registration
+
+        //Q_EMIT newDepthImage(cvMat2QImage(depth_mono8_img_, 6)); //show registration
+        Q_EMIT newFeatureFlowImage(cvMat2QImage(feature_img,depth_edges, visual_edges, 6)); //show registration by edge overlay
+        //Q_EMIT newFeatureFlowImage(cvMat2QImage(visualization_img_,visualization_depth_mono8_img_, feature_img, 2)); //show registration by color overlay
       } else {
         graph_mgr_->drawFeatureFlow(visualization_img_, cv::Scalar(0,0,255), cv::Scalar(0,128,0) );
         graph_mgr_->drawFeatureFlow(depth_mono8_img_, cv::Scalar(0,0,255), cv::Scalar(0,128,0) );
@@ -655,7 +681,10 @@ void OpenNIListener::processNode(Node* new_node)
       }
     }
   }
-  if(!has_been_added) delete new_node;
+  if(!has_been_added) {
+    delete new_node; 
+    new_node = NULL;
+  }
 }
 
 

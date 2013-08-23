@@ -21,6 +21,8 @@
 #include <sensor_msgs/CameraInfo.h>
 #include <cv.h>
 
+///Overlay the monochrom edges and depth jumps
+void overlay_edges(cv::Mat visual, cv::Mat depth, cv::Mat& visual_edges, cv::Mat& depth_edges);
 #include "g2o/types/slam3d/vertex_se3.h"
 void printTransform(const char* name, const tf::Transform t) ;
 ///Write Transformation to textstream

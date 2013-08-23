@@ -130,6 +130,9 @@ public:
   public:
 #endif
 
+  ///Center needs to be in the coordinate frame of the node (i.e. the camera is 0,0,0)
+  Node* copy_filtered(const Eigen::Vector3f& center, float radius) const;
+
   void clearFeatureInformation();
   void addPointCloud(pointcloud_type::Ptr pc_col);
 
@@ -168,7 +171,7 @@ public:
   std::map<int, int> kpt_to_landmark;
 #endif
 
-  long getMemoryFootprint(bool print);
+  long getMemoryFootprint(bool print) const;
   void knnSearch(cv::Mat& query,
                  cv::Mat& indices,
                  cv::Mat& dists,

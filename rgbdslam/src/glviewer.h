@@ -136,4 +136,5 @@ private:
     unsigned int fast_rendering_step_;
 };
 
+void drawEllipsoid(float fA, float fB, float fC, const Eigen::Vector4f& p);
 #endif

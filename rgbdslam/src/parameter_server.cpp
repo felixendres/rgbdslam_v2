@@ -42,6 +42,7 @@ void ParameterServer::defaultConfig() {
   addOption("depth_camera_fy",               static_cast<double> (-1.0),                "Focal length w.r.t. vertical pixel size. Use negative value to get from CameraInfo");
   addOption("depth_camera_cx",               static_cast<double> (-1.0),                "Horizontal image center. Use negative value to get from CameraInfo");
   addOption("depth_camera_cy",               static_cast<double> (-1.0),                "Vertical image center. Use negative value to get from CameraInfo");
+  addOption("sigma_depth",                   static_cast<double> (0.01),                "Factor c for the standard deviation of depth measurements: sigma_Z = c * depth * depth. Khoshelham 2012 (0.001425) seems to be a bit overconfident.");
 
   // Output data settings
   addOption("store_pointclouds",             static_cast<bool> (true),                  "If the point clouds are not needed online, setting this to false saves lots of memory ");
@@ -85,10 +86,10 @@ void ParameterServer::defaultConfig() {
   // Frontend settings 
   addOption("max_translation_meter",         static_cast<double> (1e10),                "Sanity check for smooth motion.");
   addOption("max_rotation_degree",           static_cast<int> (360),                    "Sanity check for smooth motion.");
-  addOption("min_translation_meter",         static_cast<double> (0.05),                "Frames with motion less than this, will be omitted ");
-  addOption("min_rotation_degree",           static_cast<double> (2.5),                 "Frames with motion less than this, will be omitted ");
+  addOption("min_translation_meter",         static_cast<double> (0.0),                "Frames with motion less than this, will be omitted ");
+  addOption("min_rotation_degree",           static_cast<double> (0.0),                 "Frames with motion less than this, will be omitted ");
   addOption("max_dist_for_inliers",          static_cast<double> (3),                   "Mahalanobis distance for matches to be considered inliers by ransac");
-  addOption("ransac_iterations",             static_cast<int> (100),                   "These are fast, so high values are ok ");
+  addOption("ransac_iterations",             static_cast<int> (500),                   "These are fast, so high values are ok ");
   addOption("ransac_termination_inlier_pct", static_cast<double> (60.0),                "Percentage of matches that need to be inliers to succesfully terminate ransac before the 'ransac_iterations' have been reached");
   addOption("g2o_transformation_refinement", static_cast<int> (0),                     "Use g2o to refine the ransac result for that many iterations, i.e. optimize the Mahalanobis distance in a final step. Use zero to disable.");
   addOption("max_connections",               static_cast<int> (-1),                     "Stop frame comparisons after this many succesfully found spation relations. Negative value: No limit.");
@@ -135,7 +136,7 @@ void ParameterServer::defaultConfig() {
   addOption("concurrent_edge_construction",  static_cast<bool> (true),                  "Compare current frame to many predecessors in parallel. Note that SIFTGPU matcher and GICP are mutex'ed for thread-safety");
   addOption("concurrent_io",                 static_cast<bool> (true),                  "Whether saving/sending should be done in background threads.");
   addOption("voxelfilter_size",              static_cast<double> (-1.0),                "In meter voxefilter displayed and stored pointclouds, useful to reduce the time for, e.g., octomap generation. Set negative to disable");
-  addOption("nn_distance_ratio",             static_cast<double> (0.6),                 "Feature correspondence is valid if distance to nearest neighbour is smaller than this parameter times the distance to the 2nd neighbour. This needs to be 0.9-1.0 for SIFTGPU w/ FLANN, since SIFTGPU Features are normalized");
+  addOption("nn_distance_ratio",             static_cast<double> (0.99),                 "Feature correspondence is valid if distance to nearest neighbour is smaller than this parameter times the distance to the 2nd neighbour. This needs to be 0.9-1.0 for SIFTGPU w/ FLANN, since SIFTGPU Features are normalized");
   addOption("keep_all_nodes",                static_cast<bool> (false),                 "Keep all nodes with 'no motion' assumption");
   addOption("keep_good_nodes",               static_cast<bool> (false),                 "Keep nodes without transformation estimation but enough features (according to min_keypoints) with 'no motion' assumption. These are not rendered in visualization.");
   addOption("clear_non_keyframes",           static_cast<bool> (false),                 "Remove the net data of nodes when it becomes clear that they will not be used as keyframe. However, this makes matching against them impossible.");

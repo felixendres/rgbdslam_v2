@@ -116,6 +116,7 @@ class GraphManager : public QObject {
       unsigned int pruneEdgesWithErrorAbove(float);
       void sanityCheck(float);
       void toggleMapping(bool);
+      void filterNodesByPosition(float x, float y, float z);
 
       //The following SLOT methods are in graph_mgr_io.cpp:
       ///iterate over all Nodes, sending their transform and pointcloud

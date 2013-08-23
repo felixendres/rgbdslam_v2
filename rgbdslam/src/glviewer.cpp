@@ -596,12 +596,11 @@ void GLViewer::addFeatures(const std::vector<Eigen::Vector4f, Eigen::aligned_all
     BOOST_FOREACH(const Eigen::Vector4f& ft, *feature_locations_3d)
     {
       if(std::isfinite(ft[2])){
-        glColor4f(r,g,b, 1.0); //inverse of bg color, non transp
-        //glColor4f(1-bg_col_[0],bg_col_[1],bg_col_[2],1.0); //inverse of bg color, non transp
+        glColor4f(r,g,b, 1.0); // color, non transp
+        //drawEllipsoid(0.001*ft[2], 0.001*ft[2], depth_std_dev(ft[2]), ft);
         glVertex3f(ft[0], ft[1], ft[2]);
-        glColor4f(r,g,b, 0.0); //inverse of bg color, non transp
-        //glColor4f(1-bg_col_[0],bg_col_[1],bg_col_[2],0.0); //inverse of bg color, non transp
-        glVertex3f(ft[0], ft[1], ft[2]-20*depth_std_dev(ft[2]));
+        glColor4f(r,g,b, 0.0); // color, fully transp
+        glVertex3f(ft[0], ft[1], ft[2]-depth_std_dev(ft[2]));
       }
     }
     glEnd();
@@ -754,29 +753,6 @@ void GLViewer::deleteLastNode(){
 	glDeleteLists(ftId,1);
 }
 
-///From http://www.gamedev.net/topic/126624-generating-an-ellipsoid-in-opengl/
-void drawEllipsoid(float fA, float fB, float fC, const point_type& p)
-{
-  unsigned int uiStacks = 4, uiSlices = 4;
-	float tStep = (PI) / (float)uiSlices;
-	float sStep = (PI) / (float)uiStacks;
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	for(float t = -PI/2; t <= (PI/2)+.0001; t += tStep)
-	{
-		glBegin(GL_TRIANGLE_STRIP);
-		for(float s = -PI; s <= PI+.0001; s += sStep)
-		{
-			glVertex3f(p.x + fA * cos(t) * cos(s), 
-                 p.y + fB * cos(t) * sin(s), 
-                 p.z + fC * sin(t));
-			glVertex3f(p.x + fA * cos(t+tStep) * cos(s), 
-                 p.y + fB * cos(t+tStep) * sin(s), 
-                 p.z + fC * sin(t+tStep));
-		}
-		glEnd();
-	}
-}
-
 ///Draw ellipsoids instead of points, that represent the depth std deviation of each point
 void GLViewer::pointCloud2GLEllipsoids(pointcloud_type * pc){
     ScopedTimer s(__FUNCTION__);
@@ -802,7 +778,7 @@ void GLViewer::pointCloud2GLEllipsoids(pointcloud_type * pc){
             const point_type& p = pc->points[x+y*w]; //current point
             if(!(validXYZ(p))) continue;
             setGLColor(p);
-            drawEllipsoid(0.005, 0.005, depth_std_dev(p.z), p);
+            drawEllipsoid(0.001*p.z, 0.001*p.z, depth_std_dev(p.z), p.getVector4fMap());
         }
     }
     glEnd();
@@ -1056,3 +1032,27 @@ void GLViewer::drawToPS(QString filename){
 inline void GLViewer::clearAndUpdate(){
   updateGL();
 }
+
+///From http://www.gamedev.net/topic/126624-generating-an-ellipsoid-in-opengl/
+void drawEllipsoid(float fA, float fB, float fC, const Eigen::Vector4f& p)
+{
+  unsigned int uiStacks = 4, uiSlices = 4;
+	float tStep = (PI) / (float)uiSlices;
+	float sStep = (PI) / (float)uiStacks;
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	for(float t = -PI/2; t <= (PI/2)+.0001; t += tStep)
+	{
+		glBegin(GL_TRIANGLE_STRIP);
+		for(float s = -PI; s <= PI+.0001; s += sStep)
+		{
+			glVertex3f(p[0] + fA * cos(t) * cos(s), 
+                 p[1] + fB * cos(t) * sin(s), 
+                 p[2] + fC * sin(t));
+			glVertex3f(p[0] + fA * cos(t+tStep) * cos(s), 
+                 p[1] + fB * cos(t+tStep) * sin(s), 
+                 p[2] + fC * sin(t+tStep));
+		}
+		glEnd();
+	}
+}
+

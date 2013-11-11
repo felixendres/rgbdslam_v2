@@ -29,6 +29,7 @@
 #include "g2o/types/slam3d/vertex_se3.h"
 
 #include <pcl_ros/transforms.h>
+#include "pcl/common/io.h"
 
 #if CV_MAJOR_VERSION > 2 || CV_MINOR_VERSION >= 4
 #include "opencv2/core/core.hpp"
@@ -39,6 +40,7 @@
 
 #include <omp.h>
 #include "misc2.h"
+#include "point_types.h"
 
 //For the observability test
 #include <boost/math/distributions/chi_squared.hpp>
@@ -90,13 +92,59 @@ tf::Transform g2o2TF(const g2o::SE3Quat se3) {
     //printTransform("from conversion", result);
     return result;
 }
+
+void transformAndAppendPointCloud (const pointcloud_type &cloud_in, 
+                                   pcl::PointCloud<hema::PointXYZRGBCamSL> &cloud_to_append_to,
+                                   const tf::Transform transformation, float max_Depth, int idx)
+{
+    Eigen::Matrix4f eigen_transform;
+    pcl_ros::transformAsMatrix(transformation, eigen_transform);
+    size_t original_size = cloud_to_append_to.size();
+    cloud_to_append_to.points.reserve(cloud_in.size()+original_size);
+
+    if(cloud_to_append_to.points.size() ==0){
+        cloud_to_append_to.header   = cloud_in.header;
+        cloud_to_append_to.width    = 0;
+        cloud_to_append_to.height   = 0;
+        cloud_to_append_to.is_dense = false;
+    }
+
+    Eigen::Matrix3f rot   = eigen_transform.block<3, 3> (0, 0);
+    Eigen::Vector3f trans = eigen_transform.block<3, 1> (0, 3);
+    size_t i = 0;
+    for (; i < cloud_in.points.size (); ++i)
+    { 
+      const point_type& in_pt = cloud_in[i];
+      const Eigen::Map<Eigen::Vector3f> vec_in (const_cast<float*>(&in_pt.x), 3, 1);
+      hema::PointXYZRGBCamSL out_pt;
+      Eigen::Map<Eigen::Vector3f> vec_out (&out_pt.x, 3, 1);
+      //filter out points with a range greater than the given Parameter or do nothing if negativ
+      float distance = vec_in.norm();
+      out_pt.distance = distance;
+      out_pt.cameraIndex = idx;
+      out_pt.segment = 0;
+      out_pt.label = 0;
+#ifndef RGB_IS_4TH_DIM
+      out_pt.rgb = in_pt.rgb;
+#else
+      out_pt.data[3] = in_pt.data[3];
+#endif
+      if(max_Depth >= 0 && max_Depth > distance){//Erase coordinates high-noise points if desired
+         vec_out[0]= vec_out[1]= vec_out[2]= std::numeric_limits<float>::quiet_NaN();
+      }
+      vec_out = rot * vec_in + trans;//Might be nan, but whatever
+      cloud_to_append_to.push_back(out_pt);
+    }
+}
+
+
 //From: /opt/ros/unstable/stacks/perception_pcl/pcl/src/pcl/registration/transforms.hpp
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /** \brief Apply an affine transform defined by an Eigen Transform
   * \param cloud_in the input point cloud
   * \param cloud_to_append_to the transformed cloud will be appended to this one
   * \param transform a tf::Transform stating the transformation of cloud_to_append_to relative to cloud_in
-  * \note The density of the point cloud is lost, since density implies that the origin is the point of view
+  * \note The density of the point cloud is lost, if parameter preserve_raster_on_save is set, as NaNs will be copied to keep raster structure
   * \note Can not(?) be used with cloud_in equal to cloud_to_append_to
   */
 //template <typename PointT> void
@@ -120,7 +168,7 @@ void transformAndAppendPointCloud (const pointcloud_type &cloud_in,
     ROS_DEBUG("max_Depth = %f", max_Depth);
     ROS_DEBUG("cloud_to_append_to_original_size = %i", cloud_to_append_to_original_size);
 
-    //Append all points untransformed
+    //Append all points untransformed. This also copies other fields, e.g rgb
     cloud_to_append_to += cloud_in;
 
     Eigen::Matrix3f rot   = eigen_transform.block<3, 3> (0, 0);

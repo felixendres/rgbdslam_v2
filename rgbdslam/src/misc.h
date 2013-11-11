@@ -20,6 +20,7 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <cv.h>
+#include "point_types.h"
 
 ///Overlay the monochrom edges and depth jumps
 void overlay_edges(cv::Mat visual, cv::Mat depth, cv::Mat& visual_edges, cv::Mat& depth_edges);
@@ -85,6 +86,10 @@ pointcloud_type* createXYZRGBPointCloud (const cv::Mat& depth_msg, const cv::Mat
 void transformAndAppendPointCloud (const pointcloud_type &cloud_in, pointcloud_type &cloud_to_append_to,
                                    const tf::Transform transformation, float Max_Depth);
 
+///Same as other but different output cloud type
+void transformAndAppendPointCloud (const pointcloud_type &cloud_in, 
+                                   pcl::PointCloud<hema::PointXYZRGBCamSL> &cloud_to_append_to,
+                                   const tf::Transform transformation, float max_Depth, int idx);
 
 //geometry_msgs::Point pointInWorldFrame(const Eigen::Vector4f& point3d, g2o::SE3Quat transf);
 geometry_msgs::Point pointInWorldFrame(const Eigen::Vector4f& point3d, const g2o::VertexSE3::EstimateType& transf);

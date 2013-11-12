@@ -256,6 +256,10 @@ bool isBigTrafo(const Eigen::Matrix4f& t){
 }
 
 bool isSmallTrafo(const g2o::SE3Quat& t, double seconds){
+    if(seconds <= 0.0){
+      ROS_WARN("Time delta invalid: %f. Skipping test for small transformation", seconds);
+      return true;
+    }
     float angle_around_axis = 2.0*acos(t.rotation().w()) *180.0 / M_PI;
     float dist = t.translation().norm();
     QString infostring;
@@ -1173,6 +1177,7 @@ double rejectionSignificance(const Eigen::Matrix4f& proposed_transformation,//ne
 bool observation_criterion_met(unsigned int inliers, unsigned int outliers, unsigned int all, double& quality)
 {
   double obs_thresh = ParameterServer::instance()->get<double>("observability_threshold");
+  if(obs_thresh < 0) return true;
   quality = inliers/static_cast<double>(inliers+outliers);
   double certainty = inliers/static_cast<double>(all);
   bool criterion1_met = quality > obs_thresh; //TODO: parametrice certainty (and use meaningful statistic)

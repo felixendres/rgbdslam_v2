@@ -325,7 +325,44 @@ void OpenNIListener::loadBag(const std::string &filename)
   std::cerr << "15\n";
 }
 
-void OpenNIListener::stereoCallback(const sensor_msgs::ImageConstPtr& visual_img_msg, const sensor_msgs::PointCloud2ConstPtr& point_cloud)
+void calculateDepthMask(cv::Mat_<uchar>& depth_img, const pointcloud_type::Ptr point_cloud)
+{
+    //calculate depthMask
+    float value;
+    for(unsigned int y = 0; y < depth_img.rows; y++){
+        for(unsigned int x = 0; x < depth_img.cols; x++){
+            value = point_cloud->at(x,y).z; 
+            if(value != value){//isnan
+                depth_img.at<uchar>(y,x) = 0;
+            }else{
+                depth_img.at<uchar>(y,x) = static_cast<uchar>(value*50.0); //Full white at ~5 meter
+            }
+        }
+    }
+}
+
+void OpenNIListener::pcdCallback(const sensor_msgs::ImageConstPtr visual_img_msg, 
+                                 pointcloud_type::Ptr pcl_cloud)
+{
+    ScopedTimer s(__FUNCTION__);
+    ROS_INFO("Received data from pcd file reader");
+    ROS_WARN_ONCE_NAMED("eval", "First RGBD-Data Received");
+
+    //Get images into OpenCV format
+    cv::Mat visual_img =  cv_bridge::toCvCopy(visual_img_msg)->image;
+    cv::Mat_<uchar> depth_img(visual_img_msg->height, visual_img_msg->width);
+    calculateDepthMask(depth_img, pcl_cloud);
+    depth_mono8_img_ = depth_img;
+
+    if(ParameterServer::instance()->get<bool>("use_gui")){
+      Q_EMIT newVisualImage(cvMat2QImage(visual_img, 0)); //visual_idx=0
+      Q_EMIT newDepthImage (cvMat2QImage(depth_img,1));//overwrites last cvMat2QImage
+    }
+    cameraCallback(visual_img, pcl_cloud, depth_img);
+}
+
+void OpenNIListener::stereoCallback(const sensor_msgs::ImageConstPtr& visual_img_msg, 
+                                    const sensor_msgs::PointCloud2ConstPtr& point_cloud)
 {
     ScopedTimer s(__FUNCTION__);
     ROS_INFO("Received data from stereo cam");
@@ -337,21 +374,10 @@ void OpenNIListener::stereoCallback(const sensor_msgs::ImageConstPtr& visual_img
     };
 
     //calculate depthMask
+    pointcloud_type::Ptr pc_col(new pointcloud_type());//will belong to node
+    pcl::fromROSMsg(*point_cloud,*pc_col);
     cv::Mat_<uchar> depth_img(visual_img_msg->height, visual_img_msg->width);
-    float value;
-    unsigned int pt_ctr = 0;
-    for(unsigned int y = 0; y < visual_img_msg->height; y++){
-        for(unsigned int x = 0; x < visual_img_msg->width; x++){
-            const uchar* value_ch_ptr = &(point_cloud->data[pt_ctr]);
-            value = *((const float*)value_ch_ptr);
-            pt_ctr += point_cloud->point_step;
-            if(value != value){//isnan
-                depth_img(y,x) = 0;
-            }else{
-                depth_img(y,x) = (char)(value*100.0); //Full white at 2.55 meter
-            }
-        }
-    }
+    calculateDepthMask(depth_img, pc_col);
 
     //Get images into OpenCV format
     //sensor_msgs::CvBridge bridge;
@@ -372,12 +398,10 @@ void OpenNIListener::stereoCallback(const sensor_msgs::ImageConstPtr& visual_img
        bagfile_mutex.unlock();
        if(pause_) return;
     }
-    pointcloud_type::Ptr pc_col(new pointcloud_type());//will belong to node
     if(ParameterServer::instance()->get<bool>("use_gui")){
       Q_EMIT newVisualImage(cvMat2QImage(visual_img, 0)); //visual_idx=0
       Q_EMIT newDepthImage (cvMat2QImage(depth_img,1));//overwrites last cvMat2QImage
     }
-    pcl::fromROSMsg(*point_cloud,*pc_col);
     cameraCallback(visual_img, pc_col, depth_img);
 }
 
@@ -472,7 +496,7 @@ void OpenNIListener::noCloudCallback (const sensor_msgs::ImageConstPtr& visual_i
 }
 
 
-void OpenNIListener::kinectCallback (const sensor_msgs::ImageConstPtr& visual_img_msg,//got to be mono?
+void OpenNIListener::kinectCallback (const sensor_msgs::ImageConstPtr& visual_img_msg,
                                      const sensor_msgs::ImageConstPtr& depth_img_msg,   
                                      const sensor_msgs::PointCloud2ConstPtr& point_cloud) 
 {
@@ -852,3 +876,47 @@ void OpenNIListener::retrieveTransformations(std_msgs::Header depth_header, Node
   }
   // End: Fill in Transformation -----------------------------------------------------------------------
 }
+
+
+
+bool readOneFile(const QString& qfilename, pointcloud_type& cloud)
+{
+    if (pcl::io::loadPCDFile<point_type> (qPrintable(qfilename), cloud) == -1) 
+    {
+      ROS_ERROR ("Couldn't read file %s", qPrintable(qfilename));
+      return false;
+    } 
+    for(size_t i = 0; i < cloud.size(); i++)
+    {
+      float x = cloud.at(i).x;
+      cloud.at(i).x = -cloud.at(i).y;
+      cloud.at(i).y = -cloud.at(i).z;
+      cloud.at(i).z = x;
+    }
+
+    return true;
+}
+
+
+void OpenNIListener::loadPCDFiles(QStringList file_list)
+{
+    QStringList filelist(file_list);
+    for (int i = 0; i < filelist.size(); i++){
+      ROS_INFO_STREAM(qPrintable(filelist.at(i)));
+    }
+    QtConcurrent::run(this, &OpenNIListener::loadPCDFilesAsync, filelist);
+}
+
+void OpenNIListener::loadPCDFilesAsync(QStringList file_list)
+{
+  for (int i = 0; i < file_list.size(); i++)
+  {
+    ROS_INFO("Processing file %s", qPrintable(file_list.at(i))); 
+    sensor_msgs::Image::Ptr sm_img(new sensor_msgs::Image());
+    pointcloud_type::Ptr current_cloud(new pointcloud_type());
+    if (!readOneFile(file_list.at(i), *current_cloud)) continue;
+    pcl::toROSMsg(*current_cloud, *sm_img);
+    pcdCallback(sm_img, current_cloud);
+  }
+}
+

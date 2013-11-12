@@ -30,6 +30,7 @@
 #include "graph_manager.h"
 #include <qtconcurrentrun.h>
 #include <QImage> //for cvMat2QImage not listet here but defined in cpp file
+#include <QStringList> 
 #include <rosbag/bag.h>
 
 //forward-declare to avoid including tf
@@ -84,8 +85,6 @@ class OpenNIListener : public QObject {
     void newFeatureFlowImage(QImage);
     ///Connect to this signal to get up-to-date depth images from the listener
     void newDepthImage(QImage);
-    ///Connect to this signal to get the transformation matrix from the last frame as QString
-    void newTransformationMatrix(QString);
     //void pauseStatus(bool is_paused);
     ///Set the info label on the right side in the statusbar of the GUI
     void setGUIInfo(QString message);
@@ -99,6 +98,7 @@ class OpenNIListener : public QObject {
     void toggleBagRecording();
     ///Process a single incomming frame. Useful in pause-mode for getting one snapshot at a time
     void getOneFrame();
+    void loadPCDFiles(QStringList);
 
   public:
     //!Ctor: setup synced listening to ros topics (kinect/stereo data) and prepare the feature handling
@@ -124,6 +124,7 @@ class OpenNIListener : public QObject {
                           const sensor_msgs::CameraInfoConstPtr& cam_info_msg) ;
     //! No depth image but pointcloud, e.g., for stereo cameras
     void stereoCallback(const sensor_msgs::ImageConstPtr& visual_img_msg, const sensor_msgs::PointCloud2ConstPtr& point_cloud);
+    void pcdCallback(const sensor_msgs::ImageConstPtr visual_img_msg, pointcloud_type::Ptr point_cloud);
 
     void loadBag(const std::string &filename);
   protected:
@@ -151,6 +152,8 @@ class OpenNIListener : public QObject {
                                cv::Mat depth_mono8_img,
                                std_msgs::Header depth_header,
                                const sensor_msgs::CameraInfoConstPtr& cam_info);
+    //!Load files in Background to not deadlock
+    void loadPCDFilesAsync(QStringList);
     ///The GraphManager uses the Node objects to do the actual SLAM
     ///Public, s.t. the qt signals can be connected to by the holder of the OpenNIListener
     GraphManager* graph_mgr_;

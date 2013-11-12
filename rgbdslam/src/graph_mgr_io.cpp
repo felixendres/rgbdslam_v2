@@ -391,8 +391,14 @@ void GraphManager::saveAllFeaturesToFile(QString filename)
 
 void GraphManager::saveAllCloudsToFile(QString filename){
     ScopedTimer s(__FUNCTION__);
+    if(graph_.size() < 1){
+      ROS_WARN("Cannot save empty graph. Aborted");
+      return;
+    }
 
-    pointcloud_type aggregate_cloud; ///will hold all other clouds
+    pcl::PointCloud<hema::PointXYZRGBCamSL> aggregate_cloud; ///will hold all other clouds
+    //Make big enough to hold all other clouds. This might be too much if NaNs are filtered. They are filtered according to the parameter preserve_raster_on_save
+    aggregate_cloud.reserve(graph_.size() * graph_.begin()->second->pc_col->size()); 
     ROS_INFO("Saving all clouds to %s, this may take a while as they need to be transformed to a common coordinate frame.", qPrintable(filename));
     batch_processing_runs_ = true;
 
@@ -422,22 +428,17 @@ void GraphManager::saveAllCloudsToFile(QString filename){
       }
       tf::Transform transform = eigenTransf2TF(v->estimate());
       world2cam = cam2rgb*transform;
-      transformAndAppendPointCloud (*(node->pc_col), aggregate_cloud, world2cam, ParameterServer::instance()->get<double>("maximum_depth"));
+      transformAndAppendPointCloud (*(node->pc_col), aggregate_cloud, world2cam, ParameterServer::instance()->get<double>("maximum_depth"), node->id_);
 
       if(ParameterServer::instance()->get<bool>("batch_processing"))
         node->clearPointCloud(); //saving all is the last thing to do, so these are not required anymore
       Q_EMIT setGUIStatus(message.sprintf("Saving to %s: Transformed Node %i/%i", qPrintable(filename), it->first, (int)camera_vertices.size()));
     }
     aggregate_cloud.header.frame_id = base_frame;
-    if(filename.endsWith(".ply", Qt::CaseInsensitive))
-      pointCloud2MeshFile(filename, aggregate_cloud);
-    if(filename.endsWith(".pcd", Qt::CaseInsensitive))
-      pcl::io::savePCDFile(qPrintable(filename), aggregate_cloud, true); //Last arg is binary mode
-    else {
-      ROS_WARN("Filename misses correct extension (.pcd or .ply) using .pcd");
+    if(!filename.endsWith(".pcd", Qt::CaseInsensitive)){
       filename.append(".pcd");
-      pcl::io::savePCDFile(qPrintable(filename), aggregate_cloud, true); //Last arg is binary mode
     }
+    pcl::io::savePCDFile(qPrintable(filename), aggregate_cloud, true); //Last arg is binary mode
     Q_EMIT setGUIStatus(message.sprintf("Saved %d data points to %s", (int)aggregate_cloud.points.size(), qPrintable(filename)));
     ROS_INFO ("Saved %d data points to %s", (int)aggregate_cloud.points.size(), qPrintable(filename));
 

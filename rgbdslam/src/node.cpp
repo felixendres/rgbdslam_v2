@@ -1183,8 +1183,12 @@ MatchingResult Node::matchNodePair(const Node* older_node)
           mr.edge.id1 = older_node->id_;//and we have a valid transformation
           mr.edge.id2 = this->id_; //since there are enough matching features,
           mr.edge.mean = eigen2G2O(mr.final_trafo.cast<double>());//we insert an edge between the frames
-          pairwiseObservationLikelihood(this, older_node, mr);
-          found_transformation = observation_criterion_met(mr.inlier_points, mr.outlier_points, mr.occluded_points + mr.inlier_points + mr.outlier_points, ransac_quality);
+          if(ParameterServer::instance()->get<double>("observability_threshold") > 0){
+            pairwiseObservationLikelihood(this, older_node, mr);
+            found_transformation = observation_criterion_met(mr.inlier_points, mr.outlier_points, mr.occluded_points + mr.inlier_points + mr.outlier_points, ransac_quality);
+          } else {
+            found_transformation = true;
+          }
 
           ROS_INFO("RANSAC found a %s transformation with %d inliers matches with average ratio %f", found_transformation? "valid" : "invalid", (int) mr.inlier_matches.size(), nn_ratio);
 
@@ -1211,9 +1215,12 @@ MatchingResult Node::matchNodePair(const Node* older_node)
             {
                 ROS_INFO("GICP for Nodes %u and %u Successful", this->id_, older_node->id_);
                 double icp_quality;
+
+                bool no_obs_test = (ParameterServer::instance()->get<double>("observability_threshold") < 0);
                 pairwiseObservationLikelihood(this, older_node, mr_icp);
-                if(observation_criterion_met(mr_icp.inlier_points, mr_icp.outlier_points, mr_icp.occluded_points + mr_icp.inlier_points + mr_icp.outlier_points, icp_quality)
-                   && icp_quality > ransac_quality)
+                if(no_obs_test || 
+                    (observation_criterion_met(mr_icp.inlier_points, mr_icp.outlier_points, mr_icp.occluded_points + mr_icp.inlier_points + mr_icp.outlier_points, icp_quality)
+                     && icp_quality > ransac_quality))
                 {
                     //This signals a valid result:
                     found_transformation = true;

@@ -40,6 +40,7 @@ class MatchingResult {
         Eigen::Matrix4f final_trafo;
         Eigen::Matrix4f icp_trafo;
         unsigned int inlier_points, outlier_points, occluded_points, all_points;
+        const char* toString();
     public:
       EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };

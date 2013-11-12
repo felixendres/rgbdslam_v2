@@ -190,6 +190,17 @@ void Graphical_UI::quickSaveAll() {
     //infoLabel->setText(message);
 }
 
+void Graphical_UI::openPCDFilesDialog() {
+    QStringList filenamelist = QFileDialog::getOpenFileNames(this, "Open PCD Files", ".", tr("PCD (*.pcd)"));
+    QString message = tr("Opening PCD Files");
+    statusBar()->showMessage(message);
+    for(int i=0; i < filenamelist.size(); i++){
+      std::cout << qPrintable(filenamelist.at(i)) << std::endl;
+    }
+    Q_EMIT openPCDFiles(filenamelist);
+    message = tr("Finished opening PCD Files");
+    statusBar()->showMessage(message);
+}
 void Graphical_UI::saveFeatures() {
     filename = QFileDialog::getSaveFileName(this, "Save Features to File", filename, tr("YAML (*.yml);;XML (*.xml)"));
     Q_EMIT saveAllFeatures(filename);
@@ -474,7 +485,6 @@ void Graphical_UI::set3DDisplay(bool is_on) {
 }
 */
 
-
 void Graphical_UI::createMenus() {
     //these are the menus created here
     QMenu *dataMenu;
@@ -486,6 +496,15 @@ void Graphical_UI::createMenus() {
 
     //Graph Menu
     dataMenu = menuBar()->addMenu(tr("&Data"));
+
+    QAction *openPCDFilesAct = new QAction(tr("&Open PCD files"), this);
+    openPCDFilesAct->setShortcuts(QKeySequence::Open);
+    openPCDFilesAct->setStatusTip(tr("Open one or more pcd files to process"));
+    openPCDFilesAct->setIcon(QIcon::fromTheme("document-open"));//doesn't work for gnome
+    connect(openPCDFilesAct, SIGNAL(triggered()), this, SLOT(openPCDFilesDialog()));
+    dataMenu->addAction(openPCDFilesAct);
+    this->addAction(openPCDFilesAct);
+
 
     QAction *quickSaveAct = new QAction(tr("&Save"), this);
     quickSaveAct->setShortcuts(QKeySequence::Save);

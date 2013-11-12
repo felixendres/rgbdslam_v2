@@ -427,18 +427,16 @@ bool GraphManager::nodeComparisons(Node* new_node,
         return false;
     }
 
-    //set the node id only if the node is actually added to the graph
-    //needs to be done here as the graph size can change inside this function
+    //setting of the node id needs to be done here as the graph size can change inside this method
     new_node->id_ = graph_.size();
     new_node->seq_id_ = next_seq_id++; // allways incremented, even if node is not added
 
 
     earliest_loop_closure_node_ = new_node->id_;
     unsigned int num_edges_before = cam_cam_edges.size();
-    edge_to_keyframe = false;
-
-    ROS_DEBUG("Graphsize: %d Nodes", (int) graph_.size());
+    edge_to_keyframe = false; //not yet found
     marker_id_ = 0; //overdraw old markers
+    ROS_DEBUG("Graphsize: %d Nodes", (int) graph_.size());
 
     //Odometry Stuff
     int sequentially_previous_id = graph_.rbegin()->second->id_; 
@@ -466,7 +464,8 @@ bool GraphManager::nodeComparisons(Node* new_node,
       if(localization_only_ && curr_best_result_.edge.id1 > 0){ prev_frame =  graph_[curr_best_result_.edge.id1]; }
       ROS_INFO("Comparing new node (%i) with previous node %i", new_node->id_, prev_frame->id_);
       mr = new_node->matchNodePair(prev_frame);
-      if(mr.edge.id1 > 0 && mr.edge.id2 > 0) {//Found trafo
+      ROS_INFO("Node comparison result: %s", mr.toString());
+      if(mr.edge.id1 >= 0 && mr.edge.id2 >= 0) {//Found trafo
         ros::Time time1 = prev_frame->pc_col->header.stamp;
         ros::Time time2 = new_node->pc_col->header.stamp;
         ros::Duration delta_time =  time2 - time1;
@@ -499,6 +498,7 @@ bool GraphManager::nodeComparisons(Node* new_node,
             //addOutliers(Node* new_node, mr.inlier_matches);
 
           } else {
+            ROS_INFO("Edge not added");
             process_node_runs_ = false;
             return false;
           }
@@ -506,6 +506,7 @@ bool GraphManager::nodeComparisons(Node* new_node,
         predecessor_matched = true;
       }
       else {
+        ROS_WARN("Found no transformation to predecessor (edge ids are negative)");
       // No transformation to predecessor. No other choice than try other candidates. This is done below 
       }
     }//end: Initial Comparison ######################################################################
@@ -547,9 +548,8 @@ bool GraphManager::nodeComparisons(Node* new_node,
         for (int i = 0; i < results.size(); i++) 
         {
             MatchingResult& mr = results[i];
+            ROS_INFO("Result of comparison %d: %s", i, mr.toString());
             if (mr.edge.id1 >= 0 ) {
-              //mr.edge.informationMatrix *= geodesicDiscount(hypdij, mr);
-              //ROS_INFO_STREAM("XY Information Matrix for Edge (" << mr.edge.id1 << "<->" << mr.edge.id2 << ") \n" << mr.edge.informationMatrix);
 
               ROS_INFO("new node has id %i", new_node->id_);
               assert(graph_[mr.edge.id1]);
@@ -581,10 +581,9 @@ bool GraphManager::nodeComparisons(Node* new_node,
             Node* node_to_compare = graph_[vertices_to_comp[id_of_id]];
             ROS_INFO("Comparing new node (%i) with node %i / %i", new_node->id_, vertices_to_comp[id_of_id], node_to_compare->id_);
             MatchingResult mr = new_node->matchNodePair(node_to_compare);
+            ROS_INFO("Result of comparison: %s", mr.toString());
 
             if (mr.edge.id1 >= 0) {
-                //mr.edge.informationMatrix *= geodesicDiscount(hypdij, mr);
-              //ROS_INFO_STREAM("XX Information Matrix for Edge (" << mr.edge.id1 << "<->" << mr.edge.id2 << "\n" << mr.edge.informationMatrix);
 
               ros::Duration delta_time = new_node->pc_col->header.stamp - graph_[mr.edge.id1]->pc_col->header.stamp;
               if (isSmallTrafo(mr.edge.mean, delta_time.toSec()) &&
@@ -603,6 +602,13 @@ bool GraphManager::nodeComparisons(Node* new_node,
                 }
                 if(keyframe_ids_.contains(mr.edge.id1)) edge_to_keyframe = true;
               }
+              else {
+                ROS_INFO("Matching result rejected for being too big? Time Delta: %f", delta_time.toSec());
+              }
+            }
+            else 
+            {
+              ROS_INFO("Matching result rejected for edge.id1");
             }
         }
     }
@@ -732,17 +738,17 @@ bool GraphManager::addNode(Node* new_node)
   bool found_match = nodeComparisons(new_node, motion_estimate, edge_to_last_keyframe_found);
 
   if (found_match) 
- { //Success
-
-   if(localization_only_)
-   {
+  { //Success
+    if(localization_only_)
+    {
+      ROS_INFO("Localizing (only)");
       localizationUpdate(new_node, motion_estimate);
-   }
+    }
     else //Mapping
-   {
+    {
       ParameterServer* ps = ParameterServer::instance();
       //This needs to be done before rendering, so deleting the cloud always works
-     graph_[new_node->id_] = new_node; //Node->id_ == Graph_ Index
+      graph_[new_node->id_] = new_node; //Node->id_ == Graph_ Index
       //First render the cloud with the best frame-to-frame estimate
       //The transform will get updated when optimizeGraph finishes
       pointcloud_type* cloud_to_visualize = new_node->pc_col.get();
@@ -751,50 +757,50 @@ bool GraphManager::addNode(Node* new_node)
         cloud_to_visualize = new pointcloud_type();
         features_to_visualize = new std_vector_of_eigen_vector4f();
       }
-     ROS_INFO("Adding node with id %i and seq id %i to the graph", new_node->id_, new_node->seq_id_);
+      ROS_INFO("Adding node with id %i and seq id %i to the graph", new_node->id_, new_node->seq_id_);
       if(!edge_to_last_keyframe_found && earliest_loop_closure_node_ > keyframe_ids_.back()) {
         this->addKeyframe(new_node->id_-1);//use the id of the node before, because that one is still localized w.r.t. a keyframe. So keyframes are connected
       } else {
         if(ps->get<bool>("visualize_keyframes_only")){
           cloud_to_visualize = new pointcloud_type();
           features_to_visualize = new std_vector_of_eigen_vector4f();
-     }
+        }
       }
       if(ps->get<bool>("glwidget_without_clouds")){
-          cloud_to_visualize = new pointcloud_type();
-          features_to_visualize = new std_vector_of_eigen_vector4f();
+        cloud_to_visualize = new pointcloud_type();
+        features_to_visualize = new std_vector_of_eigen_vector4f();
       }
 
       Q_EMIT setPointCloud(cloud_to_visualize, motion_estimate);
       Q_EMIT setFeatures(features_to_visualize);
-     ROS_INFO("Added Node, new graphsize: %i nodes", (int) graph_.size());
-     if(ps->get<int>("optimizer_skip_step") > 0 && 
-        (camera_vertices.size() % ps->get<int>("optimizer_skip_step")) == 0)
-     { 
-       optimizeGraph();
-     }
+      ROS_INFO("Added Node, new graphsize: %i nodes", (int) graph_.size());
+      if(ps->get<int>("optimizer_skip_step") > 0 && 
+          (camera_vertices.size() % ps->get<int>("optimizer_skip_step")) == 0)
+      { 
+        optimizeGraph();
+      }
 
       //This is old stuff for visualization via rviz - not tested in a long time, would be safe to delete _if_ nobody uses it
-     visualizeGraphEdges();
-     visualizeGraphNodes();
-     visualizeFeatureFlow3D(marker_id_++);
+      visualizeGraphEdges();
+      visualizeGraphNodes();
+      visualizeFeatureFlow3D(marker_id_++);
 
-   } 
- }
- else //Unsuccesful 
- { 
-   if(graph_.size() == 1){//if there is only one node which has less features, replace it by the new one
-     ROS_WARN("Choosing new initial node, because it has more features");
-     if(new_node->feature_locations_2d_.size() > graph_[0]->feature_locations_2d_.size()){
-       this->resetGraph();
-       process_node_runs_ = false;
+    } 
+  }
+  else //Unsuccesful 
+  { 
+    if(graph_.size() == 1){//if there is only one node which has less features, replace it by the new one
+      ROS_WARN("Choosing new initial node, because it has more features");
+      if(new_node->feature_locations_2d_.size() > graph_[0]->feature_locations_2d_.size()){
+        this->resetGraph();
+        process_node_runs_ = false;
         firstNode(new_node);
         return true;
-     }
-   } else { //delete new_node; //is now  done by auto_ptr
-     ROS_WARN("Did not add as Node");
-   }
- }
+      }
+    } else { //delete new_node; //is now  done by auto_ptr
+      ROS_WARN("Did not add as Node");
+    }
+  }
 
  //Info output
  QString message;

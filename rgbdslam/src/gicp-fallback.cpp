@@ -28,6 +28,7 @@
 #include <sstream>
 #include <iostream>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/impl/voxel_grid.hpp>
 using namespace std;
 
 void saveCloud(const char* filename, const pointcloud_type& pc, const int max_cnt, const bool color){

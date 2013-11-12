@@ -165,6 +165,10 @@ public:
   std::vector<std::pair<float, float> > feature_depth_stats_;
   ///Contains how often a feature has been an (inlier) match
   std::vector<unsigned char> feature_matching_stats_;
+#ifdef HEMACLOUDS
+  ///Contains a weight derived from external information in the clouds (i.e. only used for hemas clouds)
+  std::vector<float> feature_weights_;
+#endif
 
 #ifdef  DO_FEATURE_OPTIMIZATION
 

@@ -15,6 +15,7 @@
  */
 
 
+#include "parameter_server.h"
 //Documentation see header file
 #include "pcl/ros/conversions.h"
 #include <pcl/io/io.h>
@@ -40,7 +41,6 @@
 #include <boost/foreach.hpp>
 
 
-#include "parameter_server.h"
 #include "scoped_timer.h"
 //for comparison with ground truth from mocap and movable cameras on robots
 #include <tf/transform_listener.h>
@@ -67,6 +67,9 @@ OpenNIListener::OpenNIListener(GraphManager* graph_mgr)
 {
   ParameterServer* ps = ParameterServer::instance();
   int q = ps->get<int>("subscriber_queue_size");
+  if(ps->get<bool>("encoding_bgr")){
+    image_encoding_ = "bgr8";//used in conversion to qimage. exact value does not matter, just not rgb8
+  }
   std::string bagfile_name = ps->get<std::string>("bagfile_name");
   std::string visua_tpc = ps->get<std::string>("topic_image_mono");
   std::string depth_tpc = ps->get<std::string>("topic_image_depth");
@@ -878,6 +881,34 @@ void OpenNIListener::retrieveTransformations(std_msgs::Header depth_header, Node
 }
 
 
+/*
+#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/kdtree/impl/kdtree_flann.hpp>
+#include <pcl/surface/mls.h>
+#include <pcl/surface/impl/mls.hpp>
+#include <pcl/search/impl/organized.hpp>
+void smooth(pointcloud_type& cloud){
+    // Create a KD-Tree
+    pcl::search::KdTree<point_type>::Ptr tree (new pcl::search::KdTree<point_type>);
+
+    // Output has the PointNormal type in order to store the normals calculated by MLS
+    pcl::PointCloud<point_type> mls_points;
+
+    // Init object (second point type is for the normals, even if unused)
+    pcl::MovingLeastSquares<point_type, pcl::PointNormal> mls;
+   
+    //mls.setComputeNormals (false);
+
+    // Set parameters
+    mls.setInputCloud (cloud.makeShared());
+    mls.setPolynomialFit (true);
+    mls.setSearchMethod (tree);
+    mls.setSearchRadius (0.03);
+
+    // Reconstruct
+    mls.reconstruct (cloud);
+}
+*/
 
 bool readOneFile(const QString& qfilename, pointcloud_type& cloud)
 {

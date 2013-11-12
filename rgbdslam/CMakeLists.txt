@@ -99,6 +99,7 @@ ADD_DEFINITIONS(-DDO_FEATURE_OPTIMIZATION)
 #Only possible when not subscribing to point cloud topic. Possibly dangerous anyway, but halves storage space per point cloud
 #ADD_DEFINITIONS(-DRGB_IS_4TH_DIM) 
 #ADD_DEFINITIONS(-DDO_FEATURE_OPTIMIZATION)
+ADD_DEFINITIONS(-DHEMACLOUDS) 
 
 
 #############################

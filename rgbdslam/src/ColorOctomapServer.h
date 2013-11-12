@@ -1,10 +1,10 @@
 #ifndef COLOR_OCTOMAP_SERVER_RGBDSLAM
 #define COLOR_OCTOMAP_SERVER_RGBDSLAM
 
+#include "parameter_server.h"
 #include <octomap_server/OctomapServer.h>
 #include <octomap/ColorOcTree.h>
 #include <octomap_ros/OctomapROS.h>
-#include "parameter_server.h"
 #include <qtconcurrentrun.h>
 
 

@@ -1,9 +1,13 @@
 #include <iostream>
+#include "parameter_server.h"
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/registration/icp_nl.h>
 #include <pcl/registration/icp.h>
-#include "parameter_server.h"
+#include <pcl/registration/impl/icp_nl.hpp>
+#include <pcl/registration/impl/icp.hpp>
+#include </opt/ros/fuerte/include/pcl-1.5/pcl/kdtree/impl/kdtree_flann.hpp>
+//#include <pcl/registration/impl/gicp.hpp>
 #include <pcl/filters/filter.h>
 #include "scoped_timer.h"
 

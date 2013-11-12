@@ -19,15 +19,22 @@
 #include <ros/ros.h>
 #include <boost/any.hpp>
 
+#ifdef HEMACLOUDS
+#define PCL_NO_PRECOMPILE
+#endif
+
 //this is a global definition of the points to be used
 //changes to omit color would need adaptations in 
 //the visualization too
 #include "pcl/point_cloud.h"
 #include "pcl/point_types.h"
-#ifndef RGB_IS_4TH_DIM
-typedef pcl::PointXYZRGB point_type;
-#else
+#include "point_types.h"
+#ifdef RGB_IS_4TH_DIM
 typedef pcl::PointXYZ point_type;
+#elif defined(HEMACLOUDS)
+typedef hema::PointXYZRGBCamSL point_type;
+#else
+typedef pcl::PointXYZRGB point_type;
 #endif
 typedef pcl::PointCloud<point_type> pointcloud_type;
 //#define CONCURRENT_EDGE_COMPUTATION

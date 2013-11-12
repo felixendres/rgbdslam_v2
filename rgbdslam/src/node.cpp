@@ -705,8 +705,11 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
       p3d.y = (p2d.y - point_cloud->height/2 - 0.5) / 521.0;
     }
 
-    feature_locations_3d.push_back(Eigen::Vector4f(p3d.x, p3d.y, p3d.z, 1.0));
+    feature_locations_3d.push_back(Eigen::Vector4f(p3d.x, p3d.y, p3d.z, (p3d.segment != 0) + 0.5));
     featuresUsed.push_back(index);  //save id for constructing the descriptor matrix
+#ifdef HEMACLOUDS
+    feature_weights_.push_back(0.1 + (p3d.segment != 0));
+#endif
     i++; //Only increment if no element is removed from vector
     if(feature_locations_3d.size() > max_keyp) break;
   }

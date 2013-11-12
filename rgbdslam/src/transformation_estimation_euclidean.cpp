@@ -17,6 +17,8 @@ Eigen::Matrix4f getTransformFromMatches(const Node* newer_node,
   {
     Eigen::Vector3f from = newer_node->feature_locations_3d_[m.queryIdx].head<3>();
     Eigen::Vector3f to = earlier_node->feature_locations_3d_[m.trainIdx].head<3>();
+    float weight = earlier_node->feature_locations_3d_[m.trainIdx][3] \  
+                   + newer_node->feature_locations_3d_[m.queryIdx][3];
     if(isnan(from(2)) || isnan(to(2)))
       continue;
     //Validate that 3D distances are corresponding
@@ -35,7 +37,7 @@ Eigen::Matrix4f getTransformFromMatches(const Node* newer_node,
       t.push_back(to);    
     }
 
-    tfc.add(from, to,1.0);// 1.0/(to(2)*to(2)));//the further, the less weight b/c of quadratic accuracy decay
+    tfc.add(from, to,weight);// 1.0/(to(2)*to(2)));//the further, the less weight b/c of quadratic accuracy decay
   }
 
   // get relative movement from samples

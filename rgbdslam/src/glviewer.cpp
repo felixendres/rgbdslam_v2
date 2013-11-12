@@ -48,14 +48,26 @@ inline bool validXYZ(const PointType& p){
 template <typename PointType>
 inline void setGLColor(const PointType& p){
     unsigned char b,g,r;
-#ifndef RGB_IS_4TH_DIM
-    b = *(  (unsigned char*)(&p.rgb));
-    g = *(1+(unsigned char*)(&p.rgb));
-    r = *(2+(unsigned char*)(&p.rgb));
-#else
+#ifdef RGB_IS_4TH_DIM
     b = *(  (unsigned char*)(&p.data[3]));
     g = *(1+(unsigned char*)(&p.data[3]));
     r = *(2+(unsigned char*)(&p.data[3]));
+#elif defined(HEMACLOUDS)
+    switch(p.segment & 7){
+      case 0 : r = 128; g = 128; b = 128; break;
+      case 1 : r = 255; g = 255; b = 0;   break;
+      case 2 : r = 255; g = 0;   b = 0;   break;
+      case 3 : r = 255; g = 0;   b = 255; break;
+      case 4 : r = 0;   g = 255; b = 255; break;
+      case 5 : r = 0;   g = 255; b = 0;   break;
+      case 6 : r = 0;   g = 0;   b = 255; break;
+      case 7 : r = 255; g = 255; b = 255; break;
+      default: ROS_ERROR("Impossible value %d", p.segment % 8);
+    }
+#else
+    b = *(  (unsigned char*)(&p.rgb));
+    g = *(1+(unsigned char*)(&p.rgb));
+    r = *(2+(unsigned char*)(&p.rgb));
 #endif
     glColor3ub(r,g,b); //glColor3f(1.0,1.0,1.0);
 };

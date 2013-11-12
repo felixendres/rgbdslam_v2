@@ -11,6 +11,8 @@
 
 #include "ColorOctomapServer.h"
 #include "scoped_timer.h"
+#include <pcl_ros/transforms.h>
+#include <pcl_ros/impl/transforms.hpp>
 
 ColorOctomapServer::ColorOctomapServer() :  octomap_server::OctomapServer(), m_octoMap(0.05)
 { 

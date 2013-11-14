@@ -39,11 +39,9 @@ class QMenu;
 class GLViewer;
 class QSplitter;
 class QProgressBar;
-
-//TODO:
-//Choice between Binary and ASCII outputfiles
-//Buttons for start/stop
-//GUI/Commandline options for switching on/off the individual visualizations
+class Graphical_UI;
+///see http://www.parashift.com/c++-faq/typedef-for-ptr-to-memfn.html
+typedef  void (Graphical_UI::*GUIMethod)();
 
 //!Constructs a QT GUI for easy control of RGBD-SLAM
 /** Small GUI Class to visualize and control rgbdslam
@@ -135,6 +133,22 @@ private Q_SLOTS:
 private:
     //!Menus and Menu elements are defined here
     void createMenus();
+    QAction* makeAction(const char* menu_item_string, 
+                        GUIMethod slot,
+                        const char* status_tip, 
+                        QIcon icon = QIcon());
+
+    QAction* makeAction(const char* menu_item_string, 
+                        GUIMethod slot,
+                        const char* status_tip, 
+                        QKeySequence::StandardKey key,
+                        QIcon icon = QIcon());
+
+    QAction* makeAction(const char* menu_item_string, 
+                        GUIMethod slot,
+                        const char* status_tip, 
+                        QKeySequence key,
+                        QIcon icon = QIcon());
 
     //QString *menuHelpText;
     QString *mouseHelpText;

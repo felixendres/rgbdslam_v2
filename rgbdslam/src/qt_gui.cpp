@@ -191,7 +191,7 @@ void Graphical_UI::quickSaveAll() {
 }
 
 void Graphical_UI::openPCDFilesDialog() {
-    QStringList filenamelist = QFileDialog::getOpenFileNames(this, "Open PCD Files", ".", tr("PCD (*.pcd)"));
+    QStringList filenamelist = QFileDialog::getOpenFileNames(this, "Open PCD Files", "", tr("PCD (*.pcd)"));
     QString message = tr("Opening PCD Files");
     statusBar()->showMessage(message);
     for(int i=0; i < filenamelist.size(); i++){
@@ -485,6 +485,40 @@ void Graphical_UI::set3DDisplay(bool is_on) {
 }
 */
 
+QAction* Graphical_UI::makeAction(const char* menu_item_string, 
+                                  GUIMethod slot,
+                                  const char* status_tip, 
+                                  QIcon icon)
+{
+    QAction *someAction = new QAction(tr(menu_item_string), this);
+    someAction->setStatusTip(tr(status_tip));
+    someAction->setIcon(icon);//doesn't work for gnome
+    connect(someAction, SIGNAL(triggered()), this, SLOT(slot));
+    this->addAction(someAction);
+}
+
+QAction* Graphical_UI::makeAction(const char* menu_item_string, 
+                                  GUIMethod slot,
+                                  const char* status_tip, 
+                                  QKeySequence key,
+                                  QIcon icon)
+{
+    QAction *someAction = makeAction(menu_item_string, slot, status_tip, icon);
+    someAction->setShortcut(key);
+    return someAction;
+}
+
+QAction* Graphical_UI::makeAction(const char* menu_item_string, 
+                                  GUIMethod slot,
+                                  const char* status_tip, 
+                                  QKeySequence::StandardKey key,
+                                  QIcon icon)
+{
+    QAction *someAction = makeAction(menu_item_string, slot, status_tip, icon);
+    someAction->setShortcuts(key);
+    return someAction;
+}
+
 void Graphical_UI::createMenus() {
     //these are the menus created here
     QMenu *dataMenu;
@@ -497,76 +531,59 @@ void Graphical_UI::createMenus() {
     //Graph Menu
     dataMenu = menuBar()->addMenu(tr("&Data"));
 
-    QAction *openPCDFilesAct = new QAction(tr("&Open PCD files"), this);
-    openPCDFilesAct->setShortcuts(QKeySequence::Open);
-    openPCDFilesAct->setStatusTip(tr("Open one or more pcd files to process"));
-    openPCDFilesAct->setIcon(QIcon::fromTheme("document-open"));//doesn't work for gnome
-    connect(openPCDFilesAct, SIGNAL(triggered()), this, SLOT(openPCDFilesDialog()));
-    dataMenu->addAction(openPCDFilesAct);
-    this->addAction(openPCDFilesAct);
+    dataMenu->addAction(makeAction("&Open PCD files", 
+                                   &Graphical_UI::openPCDFilesDialog, 
+                                   "Open one or more pcd files to process.", 
+                                   QKeySequence::Open,
+                                   QIcon::fromTheme("document-open")));
 
+    dataMenu->addAction(makeAction("&Save",
+                                   &Graphical_UI::quickSaveAll,
+                                   "Save all stored point clouds with common coordinate frame to a pcd file",
+                                   QKeySequence::Save,
+                                   QIcon::fromTheme("document-save")));
 
-    QAction *quickSaveAct = new QAction(tr("&Save"), this);
-    quickSaveAct->setShortcuts(QKeySequence::Save);
-    quickSaveAct->setStatusTip(tr("Save all stored point clouds with common coordinate frame to a pcd file"));
-    quickSaveAct->setIcon(QIcon::fromTheme("document-save"));//doesn't work for gnome
-    connect(quickSaveAct, SIGNAL(triggered()), this, SLOT(quickSaveAll()));
-    dataMenu->addAction(quickSaveAct);
-    this->addAction(quickSaveAct);
+    dataMenu->addAction(makeAction("Save &Feature Map",
+                                   &Graphical_UI::saveFeatures,
+                                   "Save all feature positions and descriptions in a common coordinate frame to a yaml or xml file",
+                                   QString("Ctrl+F"),
+                                   QIcon::fromTheme("document-save")));
 
-    QAction *saveFeaturesAct = new QAction(tr("Save &Feature Map"), this);
-    saveFeaturesAct->setShortcut(QString("Ctrl+F"));
-    saveFeaturesAct->setStatusTip(tr("Save all feature positions and descriptions in a common coordinate frame to a yaml or xml file"));
-    saveFeaturesAct->setIcon(QIcon::fromTheme("document-save"));//doesn't work for gnome
-    connect(saveFeaturesAct, SIGNAL(triggered()), this, SLOT(saveFeatures()));
-    dataMenu->addAction(saveFeaturesAct);
-    this->addAction(saveFeaturesAct);
+    //Will be added to data and octomap menu;
+    QAction* saveOcto = makeAction("Save Octomap",
+                                   &Graphical_UI::saveOctomap,
+                                   "Create octomap from stored point clouds",
+                                   QIcon::fromTheme("document-save-as"));
 
-    QAction *saveOctoAct = new QAction(tr("Save Octomap"), this);
-    //saveOctoAct->setShortcuts(QKeySequence::SaveAs);
-    saveOctoAct->setStatusTip(tr("Create octomap from stored point clouds"));
-    saveOctoAct->setIcon(QIcon::fromTheme("document-save-as"));//doesn't work for gnome
-    connect(saveOctoAct, SIGNAL(triggered()), this, SLOT(saveOctomap()));
-    dataMenu->addAction(saveOctoAct);
-    this->addAction(saveOctoAct);
+    dataMenu->addAction(saveOcto);
 
-    QAction *saveAct = new QAction(tr("&Save PC as..."), this);
-    saveAct->setShortcuts(QKeySequence::SaveAs);
-    saveAct->setStatusTip(tr("Save all stored point clouds with common coordinate frame"));
-    saveAct->setIcon(QIcon::fromTheme("document-save-as"));//doesn't work for gnome
-    connect(saveAct, SIGNAL(triggered()), this, SLOT(saveAll()));
-    dataMenu->addAction(saveAct);
-    this->addAction(saveAct);
+    dataMenu->addAction(makeAction("&Save PC as...",
+                                   &Graphical_UI::saveAll,
+                                   "Save all stored point clouds with common coordinate frame",
+                                   QKeySequence::SaveAs,
+                                   QIcon::fromTheme("document-save-as")));
 
-    QAction *saveIndiAct = new QAction(tr("&Save PC Node-Wise..."), this);
-    saveIndiAct->setShortcut(QString("Ctrl+N"));
-    saveIndiAct->setStatusTip(tr("Save stored point clouds in individual files"));
-    saveAct->setIcon(QIcon::fromTheme("document-save-all"));//doesn't work for gnome
-    connect(saveIndiAct, SIGNAL(triggered()), this, SLOT(saveIndividual()));
-    dataMenu->addAction(saveIndiAct);
-    this->addAction(saveIndiAct);
+    dataMenu->addAction(makeAction("&Save PC Node-Wise...",
+                                   &Graphical_UI::saveIndividual,
+                                   "Save stored point clouds in individual files",
+                                   QString("Ctrl+N"),
+                                   QIcon::fromTheme("document-save-all")));
 
-    QAction *saveG2OGraphAct = new QAction(tr("Save &G2O Graph"), this);
-    saveG2OGraphAct->setStatusTip(tr("Save G2O graph (e.g. for use with the g2o viewer or external optimization)"));
-    saveG2OGraphAct->setIcon(QIcon::fromTheme("document-save"));//doesn't work for gnome
-    connect(saveG2OGraphAct, SIGNAL(triggered()), this, SLOT(saveG2OGraphDialog()));
-    dataMenu->addAction(saveG2OGraphAct);
-    this->addAction(saveG2OGraphAct);
+    dataMenu->addAction(makeAction("Save &G2O Graph",
+                                   &Graphical_UI::saveG2OGraphDialog,
+                                   "Save G2O graph (e.g. for use with the g2o viewer or external optimization)"));
 
-    QAction *saveTrajectoryAct = new QAction(tr("Save Trajectory &Estimate"), this);
-    saveTrajectoryAct->setShortcut(QString("Ctrl+E"));
-    saveTrajectoryAct->setStatusTip(tr("Save trajectory estimate (and ground truth trajectory if available) for external evaluation."));
-    connect(saveTrajectoryAct, SIGNAL(triggered()), this, SLOT(saveTrajectoryDialog()));
-    dataMenu->addAction(saveTrajectoryAct);
-    this->addAction(saveTrajectoryAct);
+    dataMenu->addAction(makeAction("Save Trajectory &Estimate",
+                                   &Graphical_UI::saveTrajectoryDialog,
+                                   "Save trajectory estimate (and ground truth trajectory if available) for external evaluation.",
+                                   QString("Ctrl+E"),
+                                   QIcon::fromTheme("document-save-as")));
 
-    QAction *sendAct = new QAction(tr("&Send Model"), this);
-    sendAct->setShortcut(QString("Ctrl+M"));
-    sendAct->setStatusTip(tr("Send out all stored point clouds with corrected transform"));
-    sendAct->setIcon(QIcon::fromTheme("document-send"));//doesn't work for gnome
-    connect(sendAct, SIGNAL(triggered()), this, SLOT(sendAll()));
-    dataMenu->addAction(sendAct);
-    this->addAction(sendAct);
+    dataMenu->addAction(makeAction("&Send Model",
+                                   &Graphical_UI::sendAll,
+                                   "Send out all stored point clouds with corrected transform",
+                                   QString("Ctrl+M"),
+                                   QIcon::fromTheme("document-send")));
 
     dataMenu->addSeparator();
 
@@ -599,21 +616,18 @@ void Graphical_UI::createMenus() {
     dataMenu->addAction(clearDisplayAct);
     this->addAction(clearDisplayAct);
 
-    QAction *clearCloudsAct = new QAction(tr("Clear Cloud Storage"), this);
-    clearCloudsAct->setStatusTip(tr("Remove Point Clouds from Memory"));
-    clearDisplayAct->setIcon(QIcon::fromTheme("edit-delete"));//doesn't work (for gnome
-    connect(clearCloudsAct, SIGNAL(triggered()), this, SIGNAL(clearClouds()));
-    dataMenu->addAction(clearCloudsAct);
-    this->addAction(clearCloudsAct);
+    dataMenu->addAction(makeAction("Clear Cloud Storage",
+                                   &Graphical_UI::clearClouds,
+                                   "Remove Point Clouds from Memory",
+                                   QIcon::fromTheme("edit-delete")));
+
 
     dataMenu->addSeparator();
 
-    QAction *optimizeAct = new QAction(tr("Optimize Trajectory &Estimate"), this);
-    optimizeAct->setShortcut(QString("O"));
-    optimizeAct->setStatusTip(tr("Compute optimized pose graph with g2o"));
-    connect(optimizeAct, SIGNAL(triggered()), this, SLOT(optimizeGraphTrig()));
-    dataMenu->addAction(optimizeAct);
-    this->addAction(optimizeAct);
+    dataMenu->addAction(makeAction("Optimize Trajectory &Estimate",
+                                   &Graphical_UI::optimizeGraphTrig,
+                                   "Compute optimized pose graph with g2o",
+                                   QString("O")));
 
     dataMenu->addSeparator();
 
@@ -626,14 +640,11 @@ void Graphical_UI::createMenus() {
     this->addAction(exitAct);
 
     octoMapMenu = menuBar()->addMenu(tr("&OctoMap"));
-    octoMapMenu->addAction(saveOctoAct);
+    octoMapMenu->addAction(saveOcto);
 
-    QAction *setOctoMapResolutionAct = new QAction(tr("Octomap Resolution"), this);
-    //setOctoMapResolutionAct->setShortcuts(QKeySequence::SaveAs);
-    setOctoMapResolutionAct->setStatusTip(tr("Change the octomap resolution. Clears previously created maps on next update."));
-    connect(setOctoMapResolutionAct, SIGNAL(triggered()), this, SLOT(setOctoMapResolution()));
-    octoMapMenu->addAction(setOctoMapResolutionAct);
-    this->addAction(setOctoMapResolutionAct);
+    dataMenu->addAction(makeAction("Octomap Resolution",
+                                   &Graphical_UI::setOctoMapResolution,
+                                   "Change the octomap resolution. Clears previously created maps on next update."));
 
     QAction *toggleOnlineVoxelMappingAct = new QAction(tr("&Online OctoMapping"), this);
     toggleOnlineVoxelMappingAct->setCheckable(true);

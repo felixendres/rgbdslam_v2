@@ -70,6 +70,7 @@ Q_SIGNALS:
     ///User wants the current world model to be saved to a pcd-file or ply file
     void saveAllClouds(QString filename);
     void openPCDFiles(QStringList filenamelist);
+    void openBagFile(QString filename);
     ///User wants the g2o graph saved 
     void saveG2OGraph(QString filename);
     void saveAllFeatures(QString filename);
@@ -118,6 +119,7 @@ private Q_SLOTS:
 //    void set3DDisplay(bool is_on);
     void set2DStream(bool is_on);
     void saveTrajectoryDialog();
+    void openBagFileDialog();
     void openPCDFilesDialog();
     void saveG2OGraphDialog();
     void optimizeGraphTrig();

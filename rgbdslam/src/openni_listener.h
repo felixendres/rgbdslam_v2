@@ -99,6 +99,7 @@ class OpenNIListener : public QObject {
     ///Process a single incomming frame. Useful in pause-mode for getting one snapshot at a time
     void getOneFrame();
     void loadPCDFiles(QStringList);
+    void loadBagFileFromGUI(QString);
 
   public:
     //!Ctor: setup synced listening to ros topics (kinect/stereo data) and prepare the feature handling
@@ -126,7 +127,7 @@ class OpenNIListener : public QObject {
     void stereoCallback(const sensor_msgs::ImageConstPtr& visual_img_msg, const sensor_msgs::PointCloud2ConstPtr& point_cloud);
     void pcdCallback(const sensor_msgs::ImageConstPtr visual_img_msg, pointcloud_type::Ptr point_cloud);
 
-    void loadBag(const std::string &filename);
+    void loadBag(std::string filename);
   protected:
     //! Create a QImage from one image. 
     ///The QImage stores its data in the rgba_buffers_ indexed by idx (reused/overwritten each call)
@@ -173,6 +174,7 @@ class OpenNIListener : public QObject {
     BagSubscriber<sensor_msgs::Image>* rgb_img_sub_;
     BagSubscriber<sensor_msgs::Image>* depth_img_sub_;
     BagSubscriber<sensor_msgs::CameraInfo>* cam_info_sub_;
+    BagSubscriber<sensor_msgs::PointCloud2>* pc_sub_;
 
     cv::Mat depth_mono8_img_;
     ///The depth mono img is stored here for visualization purposes

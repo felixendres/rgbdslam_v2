@@ -190,6 +190,13 @@ void Graphical_UI::quickSaveAll() {
     //infoLabel->setText(message);
 }
 
+void Graphical_UI::openBagFileDialog() {
+    QString filename = QFileDialog::getOpenFileName(this, "Open Bag File", "", tr("BAG (*.bag)"));
+    QString message = tr("Opening Bag File");
+    statusBar()->showMessage(message);
+    Q_EMIT openBagFile(filename);
+}
+
 void Graphical_UI::openPCDFilesDialog() {
     QStringList filenamelist = QFileDialog::getOpenFileNames(this, "Open PCD Files", "", tr("PCD (*.pcd)"));
     QString message = tr("Opening PCD Files");
@@ -506,6 +513,14 @@ void Graphical_UI::createMenus() {
     connect(openPCDFilesAct, SIGNAL(triggered()), this, SLOT(openPCDFilesDialog()));
     dataMenu->addAction(openPCDFilesAct);
     this->addAction(openPCDFilesAct);
+
+    QAction *openBagFileAct = new QAction(tr("Open ROS &bag file"), this);
+    openBagFileAct->setStatusTip(tr("Open a bag file to process"));
+    openBagFileAct->setShortcut(QString("Ctrl+B"));
+    openBagFileAct->setIcon(QIcon::fromTheme("document-open"));//doesn't work for gnome
+    connect(openBagFileAct, SIGNAL(triggered()), this, SLOT(openBagFileDialog()));
+    dataMenu->addAction(openBagFileAct);
+    this->addAction(openBagFileAct);
 
 
     QAction *quickSaveAct = new QAction(tr("&Save"), this);

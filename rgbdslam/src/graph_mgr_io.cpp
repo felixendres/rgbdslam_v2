@@ -251,7 +251,7 @@ void GraphManager::saveIndividualCloudsToFile(QString file_basename)
 {
   ScopedTimer s(__FUNCTION__);
 
-  ROS_INFO("Saving all clouds to %sxxxx.pcd", qPrintable(file_basename));
+  ROS_INFO("Saving all clouds to %s_xxxx.pcd", qPrintable(file_basename));
   std::string gt = ParameterServer::instance()->get<std::string>("ground_truth_frame_name");
   ROS_INFO_COND(!gt.empty(), "Saving all clouds with ground truth sensor position to gt_%sxxxx.pcd", qPrintable(file_basename));
 

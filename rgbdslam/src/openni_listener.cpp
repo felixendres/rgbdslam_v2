@@ -124,19 +124,6 @@ OpenNIListener::OpenNIListener(GraphManager* graph_mgr)
   } 
   else //Bagfile given
   {
-    tf_pub_ = nh.advertise<tf::tfMessage>("/tf", 10);
-    //All information from Kinect
-    if(!visua_tpc.empty() && !depth_tpc.empty() && !cinfo_tpc.empty())
-    {   
-      // Set up fake subscribers to capture images
-      depth_img_sub_ = new BagSubscriber<sensor_msgs::Image>();
-      rgb_img_sub_ = new BagSubscriber<sensor_msgs::Image>();
-      cam_info_sub_ = new BagSubscriber<sensor_msgs::CameraInfo>();
-      no_cloud_sync_ = new message_filters::Synchronizer<NoCloudSyncPolicy>(NoCloudSyncPolicy(q),  *rgb_img_sub_, *depth_img_sub_, *cam_info_sub_);
-      no_cloud_sync_->registerCallback(boost::bind(&OpenNIListener::noCloudCallback, this, _1, _2, _3));
-      ROS_INFO_STREAM("Listening to " << visua_tpc << " and " << depth_tpc);
-    } 
-
     detector_ = createDetector(ps->get<std::string>("feature_detector_type"));
     extractor_ = createDescriptorExtractor(ps->get<std::string>("feature_extractor_type"));
   }
@@ -146,11 +133,51 @@ OpenNIListener::OpenNIListener(GraphManager* graph_mgr)
 //! Load data from bag file
 /**This function reads the sensor input from a bagfile specified in the parameter bagfile_name.
  * It is meant for offline processing of each frame */
-void OpenNIListener::loadBag(const std::string &filename)
+void OpenNIListener::loadBag(std::string filename)
 {
   ScopedTimer s(__FUNCTION__);
-  bool eval_landmarks = ParameterServer::instance()->get<bool>("optimize_landmarks");
-  ParameterServer::instance()->set<bool>("optimize_landmarks", false);
+
+  ros::NodeHandle nh;
+  ParameterServer* ps = ParameterServer::instance();
+  std::string visua_tpc = ps->get<std::string>("topic_image_mono");
+  std::string depth_tpc = ps->get<std::string>("topic_image_depth");
+  std::string points_tpc = ps->get<std::string>("topic_points");
+  std::string cinfo_tpc = ps->get<std::string>("camera_info_topic");
+  int q = ps->get<int>("subscriber_queue_size");
+  std::string tf_tpc = std::string("/tf");
+
+  tf_pub_ = nh.advertise<tf::tfMessage>(tf_tpc, 10);
+  //All information from Kinect
+  if(!visua_tpc.empty() && !depth_tpc.empty() && !cinfo_tpc.empty() && points_tpc.empty())
+  {   
+    // Set up fake subscribers to capture images
+    depth_img_sub_ = new BagSubscriber<sensor_msgs::Image>();
+    rgb_img_sub_ = new BagSubscriber<sensor_msgs::Image>();
+    cam_info_sub_ = new BagSubscriber<sensor_msgs::CameraInfo>();
+    no_cloud_sync_ = new message_filters::Synchronizer<NoCloudSyncPolicy>(NoCloudSyncPolicy(q),  *rgb_img_sub_, *depth_img_sub_, *cam_info_sub_);
+    no_cloud_sync_->registerCallback(boost::bind(&OpenNIListener::noCloudCallback, this, _1, _2, _3));
+    ROS_INFO_STREAM("Listening to " << visua_tpc << ", " << depth_tpc << " and " << cinfo_tpc);
+  } 
+  else if(!visua_tpc.empty() && !depth_tpc.empty() && !points_tpc.empty())
+  {   
+    // Set up fake subscribers to capture images
+    depth_img_sub_ = new BagSubscriber<sensor_msgs::Image>();
+    rgb_img_sub_ = new BagSubscriber<sensor_msgs::Image>();
+    pc_sub_ = new BagSubscriber<sensor_msgs::PointCloud2>();
+    kinect_sync_ = new message_filters::Synchronizer<KinectSyncPolicy>(KinectSyncPolicy(q),  *rgb_img_sub_, *depth_img_sub_, *pc_sub_);
+    kinect_sync_->registerCallback(boost::bind(&OpenNIListener::kinectCallback, this, _1, _2, _3));
+    ROS_INFO_STREAM("Listening to " << visua_tpc << ", " << depth_tpc << " and " << points_tpc);
+  } 
+  else {
+    ROS_ERROR("Missing required information: Topic names.");
+    ROS_ERROR_STREAM("Visual: " << visua_tpc);
+    ROS_ERROR_STREAM("Camera Info (Optional if Points given): " << cinfo_tpc);
+    ROS_ERROR_STREAM("Depth: " << depth_tpc);
+    ROS_ERROR_STREAM("Points (Optional if Cam Info given): " << points_tpc);
+  }
+
+  bool eval_landmarks = ps->get<bool>("optimize_landmarks");
+  ps->set<bool>("optimize_landmarks", false);
 
   ROS_INFO("Loading Bagfile %s", filename.c_str());
   { //bag will be destructed after this block (hopefully frees memory for the optimizer)
@@ -164,17 +191,15 @@ void OpenNIListener::loadBag(const std::string &filename)
     }
     ROS_INFO("Opened Bagfile %s", filename.c_str());
 
-    ParameterServer* ps = ParameterServer::instance();
-    std::string visua_tpc = ps->get<std::string>("topic_image_mono");
-    std::string depth_tpc = ps->get<std::string>("topic_image_depth");
-    std::string cinfo_tpc = ps->get<std::string>("camera_info_topic");
-    std::string tf_tpc = std::string("/tf");
-
     // Image topics to load for bagfiles
     std::vector<std::string> topics;
     topics.push_back(visua_tpc);
     topics.push_back(depth_tpc);
-    topics.push_back(cinfo_tpc);
+    if(points_tpc.empty()){
+      topics.push_back(cinfo_tpc);
+    } else {
+      topics.push_back(points_tpc);
+    }
     topics.push_back(tf_tpc);
 
     rosbag::View view(bag, rosbag::TopicQuery(topics));
@@ -183,7 +208,9 @@ void OpenNIListener::loadBag(const std::string &filename)
     std::deque<sensor_msgs::Image::ConstPtr> vis_images;
     std::deque<sensor_msgs::Image::ConstPtr> dep_images;
     std::deque<sensor_msgs::CameraInfo::ConstPtr> cam_infos;
-    ros::Time last_tf=ros::Time(0);
+    std::deque<sensor_msgs::PointCloud2::ConstPtr> pointclouds;
+    //ros::Time last_tf=ros::Time(0);
+    ros::Time last_tf=ros::Time::now();
     BOOST_FOREACH(rosbag::MessageInstance const m, view)
     {
     //  if(lc++ > 1000) break;
@@ -196,7 +223,7 @@ void OpenNIListener::loadBag(const std::string &filename)
       {
         sensor_msgs::Image::ConstPtr rgb_img = m.instantiate<sensor_msgs::Image>();
         if (rgb_img) vis_images.push_back(rgb_img);
-        ROS_DEBUG("Found Message of %s", visua_tpc.c_str());
+        ROS_INFO("Found Message of %s", visua_tpc.c_str());
       }
       
       if (m.getTopic() == depth_tpc || ("/" + m.getTopic() == depth_tpc))
@@ -204,14 +231,21 @@ void OpenNIListener::loadBag(const std::string &filename)
         sensor_msgs::Image::ConstPtr depth_img = m.instantiate<sensor_msgs::Image>();
         //if (depth_img) depth_img_sub_->newMessage(depth_img);
         if (depth_img) dep_images.push_back(depth_img);
-        ROS_DEBUG("Found Message of %s", depth_tpc.c_str());
+        ROS_INFO("Found Message of %s", depth_tpc.c_str());
+      }
+      if (m.getTopic() == points_tpc || ("/" + m.getTopic() == points_tpc))
+      {
+        sensor_msgs::PointCloud2::ConstPtr pointcloud = m.instantiate<sensor_msgs::PointCloud2>();
+        //if (cam_info) cam_info_sub_->newMessage(cam_info);
+        if (pointcloud) pointclouds.push_back(pointcloud);
+        ROS_INFO("Found Message of %s", points_tpc.c_str());
       }
       if (m.getTopic() == cinfo_tpc || ("/" + m.getTopic() == cinfo_tpc))
       {
         sensor_msgs::CameraInfo::ConstPtr cam_info = m.instantiate<sensor_msgs::CameraInfo>();
         //if (cam_info) cam_info_sub_->newMessage(cam_info);
         if (cam_info) cam_infos.push_back(cam_info);
-        ROS_DEBUG("Found Message of %s", cinfo_tpc.c_str());
+        ROS_INFO("Found Message of %s", cinfo_tpc.c_str());
       }
       if (m.getTopic() == tf_tpc|| ("/" + m.getTopic() == tf_tpc)){
         tf::tfMessage::ConstPtr tf_msg = m.instantiate<tf::tfMessage>();
@@ -221,7 +255,7 @@ void OpenNIListener::loadBag(const std::string &filename)
           boost::shared_ptr<std::map<std::string, std::string> > msg_header_map = tf_msg->__connection_header;
           (*msg_header_map)["callerid"] = "rgbdslam";
           tf_pub_.publish(tf_msg);
-          ROS_DEBUG("Found Message of %s", tf_tpc.c_str());
+          ROS_INFO("Found Message of %s", tf_tpc.c_str());
           last_tf = tf_msg->transforms[0].header.stamp;
           last_tf -= ros::Duration(1.0);
         }
@@ -237,6 +271,10 @@ void OpenNIListener::loadBag(const std::string &filename)
       while(!cam_infos.empty() && cam_infos.front()->header.stamp < last_tf){
           cam_info_sub_->newMessage(cam_infos.front());
           cam_infos.pop_front();
+      }
+      while(!pointclouds.empty() && pointclouds.front()->header.stamp < last_tf){
+          pc_sub_->newMessage(pointclouds.front());
+          pointclouds.pop_front();
       }
 
     }
@@ -994,10 +1032,8 @@ void OpenNIListener::loadPCDFilesAsync(QStringList file_list)
 
 }
 
-/*
 void OpenNIListener::loadBagFileFromGUI(QString file)
 {
-    QtConcurrent::run(this, &OpenNIListener::loadBag, file);
+    QtConcurrent::run(this, &OpenNIListener::loadBag, file.toStdString());
 }
-*/
 

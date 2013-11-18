@@ -26,6 +26,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
 #include <sstream>
+#include <algorithm> // std::min
 #include <string>
 #include <cv.h>
 //#include <ctime>
@@ -909,7 +910,34 @@ void smooth(pointcloud_type& cloud){
     mls.reconstruct (cloud);
 }
 */
-
+#ifdef HEMACLOUDS
+int nearest_segment(const pointcloud_type& cloud, int pt_index){
+  if(cloud.at(pt_index).segment != 0) return cloud.at(pt_index).segment;
+  int x = pt_index % cloud.width;
+  int y = pt_index / cloud.width;
+  int size = 10; //arbitrary neighborhood size
+  int minx = std::max(0,x-size);
+  int miny = std::max(0,y-size);
+  int maxx = std::min((int)cloud.width,x+size);
+  int maxy = std::min((int)cloud.height,y+size);
+  float min_distance = 0.2;
+  int nearest_segment_number = 0;
+  for(int iy = miny; iy < maxy; iy++){
+    for(int ix = minx; ix < maxx; ix++){
+      if(cloud.at(ix, iy).segment != 0)
+      {
+        float distance = pcl::squaredEuclideanDistance(cloud.at(x,y), cloud.at(ix, iy));
+        if(distance < min_distance)
+        {
+            nearest_segment_number = cloud.at(ix,iy).segment;
+            min_distance = distance;
+        }
+      }
+    }
+  }
+  return nearest_segment_number;
+}
+#endif
 bool readOneFile(const QString& qfilename, pointcloud_type& cloud)
 {
     if (pcl::io::loadPCDFile<point_type> (qPrintable(qfilename), cloud) == -1) 
@@ -917,37 +945,59 @@ bool readOneFile(const QString& qfilename, pointcloud_type& cloud)
       ROS_ERROR ("Couldn't read file %s", qPrintable(qfilename));
       return false;
     } 
+#ifdef HEMACLOUDS
+    pointcloud_type tmp_pc(cloud);
+#pragma omp parallel for
     for(size_t i = 0; i < cloud.size(); i++)
     {
       float x = cloud.at(i).x;
-      cloud.at(i).x = -cloud.at(i).y;
-      cloud.at(i).y = -cloud.at(i).z;
-      cloud.at(i).z = x;
+      if(x==x){//not nan
+        cloud.at(i).x = -cloud.at(i).y;
+        cloud.at(i).y = -cloud.at(i).z;
+        cloud.at(i).z = x;
+        cloud.at(i).segment = nearest_segment(tmp_pc, i);
+      }
     }
-
+#endif
     return true;
 }
 
 
 void OpenNIListener::loadPCDFiles(QStringList file_list)
 {
-    QStringList filelist(file_list);
-    for (int i = 0; i < filelist.size(); i++){
-      ROS_INFO_STREAM(qPrintable(filelist.at(i)));
-    }
-    QtConcurrent::run(this, &OpenNIListener::loadPCDFilesAsync, filelist);
+    QtConcurrent::run(this, &OpenNIListener::loadPCDFilesAsync, file_list);
 }
 
 void OpenNIListener::loadPCDFilesAsync(QStringList file_list)
 {
+  bool prior_state = pause_;
+  pause_ = false;
+
   for (int i = 0; i < file_list.size(); i++)
   {
+    do{ 
+      usleep(150);
+      if(!ros::ok()) return;
+    } while(pause_);
+
     ROS_INFO("Processing file %s", qPrintable(file_list.at(i))); 
     sensor_msgs::Image::Ptr sm_img(new sensor_msgs::Image());
     pointcloud_type::Ptr current_cloud(new pointcloud_type());
     if (!readOneFile(file_list.at(i), *current_cloud)) continue;
     pcl::toROSMsg(*current_cloud, *sm_img);
+    sm_img->encoding = "bgr8";
+    this->image_encoding_ = "bgr8";
     pcdCallback(sm_img, current_cloud);
   }
+
+  pause_ = prior_state;
+
 }
+
+/*
+void OpenNIListener::loadBagFileFromGUI(QString file)
+{
+    QtConcurrent::run(this, &OpenNIListener::loadBag, file);
+}
+*/
 

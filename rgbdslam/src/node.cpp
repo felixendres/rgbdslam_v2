@@ -704,11 +704,17 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
       p3d.x = (p2d.x - point_cloud->width/2 - 0.5)  / 521.0; //Focal length of kinect
       p3d.y = (p2d.y - point_cloud->height/2 - 0.5) / 521.0;
     }
-
-    feature_locations_3d.push_back(Eigen::Vector4f(p3d.x, p3d.y, p3d.z, (p3d.segment != 0) + 0.5));
+    
     featuresUsed.push_back(index);  //save id for constructing the descriptor matrix
-#ifdef HEMACLOUDS
-    feature_weights_.push_back(0.1 + (p3d.segment != 0));
+#ifndef HEMACLOUDS
+    feature_locations_3d.push_back(Eigen::Vector4f(p3d.x, p3d.y, p3d.z, 1));
+#else
+    int target_segment = ParameterServer::instance()->get<int>("segment_to_optimize");
+    if(target_segment >= 0){ // Optimize transformation estimation specifically for features in segment
+      feature_locations_3d.push_back(Eigen::Vector4f(p3d.x, p3d.y, p3d.z, (p3d.segment == target_segment) + 0.5));
+    } else {
+      feature_locations_3d.push_back(Eigen::Vector4f(p3d.x, p3d.y, p3d.z, 1));
+    }
 #endif
     i++; //Only increment if no element is removed from vector
     if(feature_locations_3d.size() > max_keyp) break;

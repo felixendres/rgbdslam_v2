@@ -269,8 +269,10 @@ void Graphical_UI::saveIndividual() {
     QString tmpfilename(filename);
     tmpfilename.remove(".pcd", Qt::CaseInsensitive);
     tmpfilename.remove(".ply", Qt::CaseInsensitive);
-    filename = QFileDialog::getSaveFileName(this, "Save point cloud to one file per node", tmpfilename, tr("PCD (*.pcd)"));
-    Q_EMIT saveIndividualClouds(filename);
+
+    tmpfilename = QFileDialog::getSaveFileName(this, "Save point cloud to one file per node", tmpfilename, tr("PCD (*.pcd)"));
+    tmpfilename.remove(".pcd", Qt::CaseInsensitive);
+    Q_EMIT saveIndividualClouds(tmpfilename);
     QString message = tr("Saving Model Node-Wise");
     statusBar()->showMessage(message);
     //infoLabel->setText(message);

@@ -702,8 +702,8 @@ double errorFunction(const Eigen::Vector4f& x1, const double x1_depth_cov,
   const double raster_cov_x = raster_stddev_x * raster_stddev_x;
   const double raster_cov_y = raster_stddev_y * raster_stddev_y;
 
-  ROS_WARN_COND(x1(3) != 1.0, "4th element of x1 should be 1.0, is %f", x1(3));
-  ROS_WARN_COND(x2(3) != 1.0, "4th element of x2 should be 1.0, is %f", x2(3));
+  ROS_DEBUG_COND(x1(3) != 1.0, "4th element of x1 should be 1.0, is %f", x1(3));
+  ROS_DEBUG_COND(x2(3) != 1.0, "4th element of x2 should be 1.0, is %f", x2(3));
   
   Eigen::Vector3d mu_1 = x1.head<3>().cast<double>();
   Eigen::Vector3d mu_2 = x2.head<3>().cast<double>();
@@ -761,8 +761,8 @@ double errorFunction2(const Eigen::Vector4f& x1,
   static const double raster_cov_x = raster_stddev_x * raster_stddev_x;
   static const double raster_cov_y = raster_stddev_y * raster_stddev_y;/*}}}*/
 
-  ROS_WARN_COND(x1(3) != 1.0, "4th element of x1 should be 1.0, is %f", x1(3));
-  ROS_WARN_COND(x2(3) != 1.0, "4th element of x2 should be 1.0, is %f", x2(3));
+  ROS_DEBUG_COND(x1(3) != 1.0, "4th element of x1 should be 1.0, is %f", x1(3));
+  ROS_DEBUG_COND(x2(3) != 1.0, "4th element of x2 should be 1.0, is %f", x2(3));
 
   bool nan1 = isnan(x1(2));
   bool nan2 = isnan(x2(2));

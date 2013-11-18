@@ -47,22 +47,44 @@ inline bool validXYZ(const PointType& p){
 
 template <typename PointType>
 inline void setGLColor(const PointType& p){
+    static int previous_segment = -1;
     unsigned char b,g,r;
 #ifdef RGB_IS_4TH_DIM
     b = *(  (unsigned char*)(&p.data[3]));
     g = *(1+(unsigned char*)(&p.data[3]));
     r = *(2+(unsigned char*)(&p.data[3]));
 #elif defined(HEMACLOUDS)
-    switch(p.segment & 7){
-      case 0 : r = 128; g = 128; b = 128; break;
-      case 1 : r = 255; g = 255; b = 0;   break;
-      case 2 : r = 255; g = 0;   b = 0;   break;
-      case 3 : r = 255; g = 0;   b = 255; break;
-      case 4 : r = 0;   g = 255; b = 255; break;
-      case 5 : r = 0;   g = 255; b = 0;   break;
-      case 6 : r = 0;   g = 0;   b = 255; break;
-      case 7 : r = 255; g = 255; b = 255; break;
-      default: ROS_ERROR("Impossible value %d", p.segment % 8);
+    if(p.segment == 0 || ParameterServer::instance()->get<int>("segment_to_optimize") < 0) {//No segment: original color
+      b = *(  (unsigned char*)(&p.rgb));
+      g = *(1+(unsigned char*)(&p.rgb));
+      r = *(2+(unsigned char*)(&p.rgb));
+    } else if(ParameterServer::instance()->get<int>("segment_to_optimize") != 0) {
+      if(p.segment == ParameterServer::instance()->get<int>("segment_to_optimize")) {
+        r = 0;   g = 255; b = 0;//right segment: green
+      } else {
+        r = 255; g = 0;   b = 0; //wrong segment: red
+      }
+    } else {  //segment_to_optimize == 0
+      switch(p.segment & 15){
+        case 0 : r = 0;   g = 0;   b = 0;   ROS_INFO_COND(p.segment != previous_segment, "%d is black      ", p.segment); break;//black          
+        case 1 : r = 128; g = 128; b = 0;   ROS_INFO_COND(p.segment != previous_segment, "%d is yellow     ", p.segment); break;//yellow         
+        case 2 : r = 128; g = 0;   b = 0;   ROS_INFO_COND(p.segment != previous_segment, "%d is red        ", p.segment); break;//red         
+        case 3 : r = 128; g = 0;   b = 128; ROS_INFO_COND(p.segment != previous_segment, "%d is magenta    ", p.segment); break;//magenta         
+        case 4 : r = 0;   g = 128; b = 128; ROS_INFO_COND(p.segment != previous_segment, "%d is cyan       ", p.segment); break;//cyan         
+        case 5 : r = 0;   g = 128; b = 0;   ROS_INFO_COND(p.segment != previous_segment, "%d is green      ", p.segment); break;//green         
+        case 6 : r = 0;   g = 0;   b = 128; ROS_INFO_COND(p.segment != previous_segment, "%d is blue       ", p.segment); break;//blue         
+        case 7 : r = 255; g = 255; b = 255; ROS_INFO_COND(p.segment != previous_segment, "%d is white      ", p.segment); break;//white         
+        case 8 : r = 128; g = 128; b = 128; ROS_INFO_COND(p.segment != previous_segment, "%d is gray       ", p.segment); break;//gray         
+        case 9 : r = 255; g = 255; b = 128; ROS_INFO_COND(p.segment != previous_segment, "%d is yellowish  ", p.segment); break;//yellowish         
+        case 10: r = 255; g = 128; b = 128; ROS_INFO_COND(p.segment != previous_segment, "%d is redish     ", p.segment); break;//redish         
+        case 11: r = 255; g = 128; b = 255; ROS_INFO_COND(p.segment != previous_segment, "%d is magentaish ", p.segment); break;//magentaish         
+        case 12: r = 128; g = 255; b = 255; ROS_INFO_COND(p.segment != previous_segment, "%d is cyanish    ", p.segment); break;//cyanish         
+        case 13: r = 128; g = 255; b = 128; ROS_INFO_COND(p.segment != previous_segment, "%d is greenish   ", p.segment); break;//greenish         
+        case 14: r = 128; g = 128; b = 255; ROS_INFO_COND(p.segment != previous_segment, "%d is blueish    ", p.segment); break;//blueish         
+        case 15: r = 255; g = 255; b = 255; ROS_INFO_COND(p.segment != previous_segment, "%d is white      ", p.segment); break;//white         
+        default: ROS_ERROR("Impossible value %d", p.segment % 8);
+      }
+      previous_segment = p.segment;
     }
 #else
     b = *(  (unsigned char*)(&p.rgb));

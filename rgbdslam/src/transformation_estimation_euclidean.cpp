@@ -2,6 +2,7 @@
 #include "node.h"
 #include <pcl/common/transformation_from_correspondences.h>
 #include <Eigen/Geometry>
+#include "parameter_server.h"
 
 Eigen::Matrix4f getTransformFromMatches(const Node* newer_node,
                                         const Node* earlier_node,
@@ -17,10 +18,19 @@ Eigen::Matrix4f getTransformFromMatches(const Node* newer_node,
   {
     Eigen::Vector3f from = newer_node->feature_locations_3d_[m.queryIdx].head<3>();
     Eigen::Vector3f to = earlier_node->feature_locations_3d_[m.trainIdx].head<3>();
-    float weight = earlier_node->feature_locations_3d_[m.trainIdx][3] \  
-                   + newer_node->feature_locations_3d_[m.queryIdx][3];
     if(isnan(from(2)) || isnan(to(2)))
       continue;
+    float weight = 1.0;
+    ParameterServer* ps = ParameterServer::instance();
+
+    //Create point cloud inf necessary
+    if(ps->get<int>("segment_to_optimize") > 0){
+      weight =1/( earlier_node->feature_locations_3d_[m.trainIdx][3] \  
+                + newer_node->feature_locations_3d_[m.queryIdx][3]);
+    } else {
+      weight =1/( earlier_node->feature_locations_3d_[m.trainIdx][2] \  
+                + newer_node->feature_locations_3d_[m.queryIdx][2]);
+    }
     //Validate that 3D distances are corresponding
     if (max_dist_m > 0) {  //storing is only necessary, if max_dist is given
       if(f.size() >= 1)
@@ -37,7 +47,7 @@ Eigen::Matrix4f getTransformFromMatches(const Node* newer_node,
       t.push_back(to);    
     }
 
-    tfc.add(from, to,weight);// 1.0/(to(2)*to(2)));//the further, the less weight b/c of quadratic accuracy decay
+    tfc.add(from, to, weight);// 1.0/(to(2)*to(2)));//the further, the less weight b/c of quadratic accuracy decay
   }
 
   // get relative movement from samples

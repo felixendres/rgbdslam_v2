@@ -143,6 +143,7 @@ void ParameterServer::defaultConfig() {
   addOption("min_time_reported",             static_cast<double> (-1.0),                "For easy profiling. Negative: nothing should be reported");
   addOption("preserve_raster_on_save",       static_cast<bool> (false),                 "Filter NaNs when saving clouds, destroying the image raster");
   addOption("skip_first_n_frames",           static_cast<int> (0),                      "Useful to skip start of a bagfile");
+  addOption("segment_to_optimize",           static_cast<int> (-1),                     "If segment information is available, optimize with higher weights on this segment (set negative to disable)");
 }
 
 

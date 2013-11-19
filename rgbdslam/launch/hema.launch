@@ -1,0 +1,28 @@
+<launch>
+  <arg name="debug" default="false"/>
+  <arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/xterm -rv -e gdb -ex run -args"/>
+  <arg unless="$(arg debug)" name="launch_prefix" value=""/>
+
+  <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" cwd="node" required="true" output="screen"  launch-prefix="$(arg launch_prefix)"> 
+    <!-- Input data settings-->
+    <param name="config/topic_image_mono"              value="/camera/rgb/image_mono"/> <!--could also be color -->
+    <param name="config/topic_image_depth"             value="/camera/depth/image"/>
+    <param name="config/topic_points"                  value="/camera/rgb/points"/> <!--if empty, poincloud will be reconstructed from image and depth -->
+    <param name="config/base_frame_name"               value="/openni_link"/> <!--if empty, poincloud will be reconstructed from image and depth -->
+    <!-- Geht nicht, weil die camera infos fehlen: param name="config/bagfile_name"                 value="/home/endres/Phd/data/hema/rawBags/data_upson_328_1.bag"/> -->
+    <param name="config/feature_detector_type"         value="SIFTGPU"/><!-- If SIFTGPU is enabled in CMakeLists.txt, use SURF here -->
+    <param name="config/feature_extractor_type"        value="SIFTGPU"/><!-- If SIFTGPU is enabled in CMakeLists.txt, use SURF here -->
+    <param name="config/nn_distance_ratio"             value="0.90"/> <!-- Feature correspondence is valid if distance to nearest neighbour is smaller than this parameter times the distance to the 2nd neighbour -->
+    <param name="config/max_keypoints"                 value="600"/><!-- Extract no more than this many keypoints (not honored by SIFTGPU)-->
+    <param name="config/observability_threshold"       value="0.0"/><!-- Extract no more than this many keypoints (not honored by SIFTGPU)-->
+
+    <!-- Algortithm settings -->
+    <param name="config/backend_solver"                value="csparse"/> <!-- Which solver to use in g2o for matrix inversion: "csparse" , "cholmod" or "pcg"  -->
+    <param name="config/visualize_mono_depth_overlay"  value="false"/> <!-- Show Depth and Monochrome image as overlay in featureflow -->
+    <param name="config/squared_meshing_threshold"     value="0.0009"/> <!-- Show Depth and Monochrome image as overlay in featureflow -->
+    <param name="config/cloud_creation_skip_step"      value="2"/> <!-- Show Depth and Monochrome image as overlay in featureflow -->
+    <param name="config/use_feature_min_depth"         value="false"/> <!-- Show Depth and Monochrome image as overlay in featureflow -->
+    <param name="config/data_skip_step"                value="2"/> <!-- Show Depth and Monochrome image as overlay in featureflow -->
+    <param name="config/start_paused"                  value="false"/> <!-- Show Depth and Monochrome image as overlay in featureflow -->
+  </node>
+</launch>

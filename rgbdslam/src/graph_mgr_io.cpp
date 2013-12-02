@@ -30,6 +30,7 @@
 #include <utility>
 #include <fstream>
 #include <boost/foreach.hpp>
+#include <rosbag/bag.h>
 
 #include "g2o/types/slam3d/se3quat.h"
 //#include "g2o/types/slam3d/edge_se3_quat.h"
@@ -37,6 +38,7 @@
 #include "g2o/core/optimizable_graph.h"
 
 #include <pcl_ros/point_cloud.h>
+#include <pcl_ros/transforms.h>
 
 // If QT Concurrent is available, run the saving in a seperate thread
 void GraphManager::sendAllClouds(bool threaded){
@@ -85,6 +87,54 @@ tf::StampedTransform GraphManager::computeFixedToBaseTransform(Node* node, bool 
     }
 }
 
+void GraphManager::saveBagfile(QString filename)
+{
+  ScopedTimer s(__FUNCTION__);
+  if(filename.isEmpty()){
+    ROS_ERROR("Filename empty. Cannot save to bagfile.");
+    return;
+  }
+
+  rosbag::Bag bag;
+  bag.open(qPrintable(filename), rosbag::bagmode::Write);
+  if(ParameterServer::instance()->get<bool>("compress_output_bagfile"))
+  {
+    bag.setCompression(rosbag::compression::BZ2); 
+  }
+  geometry_msgs::TransformStamped geom_msg;
+
+  for (graph_it it = graph_.begin(); it != graph_.end(); ++it)
+  {
+    Node* node = it->second;
+    if(!node->valid_tf_estimate_) {
+      ROS_INFO("Skipping node %i: No valid estimate", node->id_);
+      continue;
+    }
+
+    tf::tfMessage tfmsg;
+
+    tf::StampedTransform base_to_fixed = this->computeFixedToBaseTransform(node, true);
+    base_to_fixed.stamp_ = node->pc_col->header.stamp;
+    tf::transformStampedTFToMsg(base_to_fixed, geom_msg);
+    tfmsg.transforms.push_back(geom_msg);
+
+    tf::StampedTransform base_to_points = node->getBase2PointsTransform();
+    base_to_points.stamp_ = node->pc_col->header.stamp;
+    tf::transformStampedTFToMsg(base_to_points, geom_msg);
+    tfmsg.transforms.push_back(geom_msg);
+
+    //tfmsg.set_transforms_size(2);
+
+    bag.write("/tf", node->pc_col->header.stamp, tfmsg);
+    bag.write("/rgbdslam/batch_clouds", node->pc_col->header.stamp, node->pc_col);
+
+    QString message;
+    Q_EMIT setGUIInfo(message.sprintf("Writing pointcloud and map transform (%i/%i) to bagfile %s", it->first, (int)graph_.size(), qPrintable(filename)));
+  }
+  bag.close();
+}
+
+
 void GraphManager::sendAllCloudsImpl()
 {
   ScopedTimer s(__FUNCTION__);
@@ -98,9 +148,8 @@ void GraphManager::sendAllCloudsImpl()
   batch_processing_runs_ = true;
   ros::Rate r(ParameterServer::instance()->get<double>("send_clouds_rate")); //slow down a bit, to allow for transmitting to and processing in other nodes
 
-
   for (graph_it it = graph_.begin(); it != graph_.end(); ++it)
-{
+  {
 
     Node* node = it->second;
     if(!node->valid_tf_estimate_) {
@@ -283,18 +332,32 @@ void GraphManager::saveIndividualCloudsToFile(QString file_basename)
       cam2rgb.setOrigin(tf::Point(0,-0.04,0));
       world2base = cam2rgb*transform;
       */
-    tf::Transform pose = eigenTransf2TF(v->estimate());
-    tf::StampedTransform base2points =  node->getBase2PointsTransform();//get pose of base w.r.t current pc at capture time
-    world2base = init_base_pose_*base2points*pose*base2points.inverse();
+    if(ParameterServer::instance()->get<bool>("transform_individual_clouds")){
 
-    Eigen::Vector4f sensor_origin(world2base.getOrigin().x(),world2base.getOrigin().y(),world2base.getOrigin().z(),world2base.getOrigin().w());
-    Eigen::Quaternionf sensor_orientation(world2base.getRotation().w(),world2base.getRotation().x(),world2base.getRotation().y(),world2base.getRotation().z());
+      Eigen::Matrix4f m = v->estimate().matrix().cast<float>();
+      pcl::transformPointCloud(*(node->pc_col), *(node->pc_col), m);
+      Eigen::Vector4f sensor_origin(0,0,0,0);
+      Eigen::Quaternionf sensor_orientation(0,0,0,1);
 
-    node->pc_col->sensor_origin_ = sensor_origin;
-    node->pc_col->sensor_orientation_ = sensor_orientation;
-    node->pc_col->header.frame_id = fixed_frame_id;
+      node->pc_col->sensor_origin_ = sensor_origin;
+      node->pc_col->sensor_orientation_ = sensor_orientation;
+      node->pc_col->header.frame_id = fixed_frame_id;
+    }
+    else {
+      tf::Transform pose = eigenTransf2TF(v->estimate());
+      tf::StampedTransform base2points =  node->getBase2PointsTransform();//get pose of base w.r.t current pc at capture time
+      world2base = pose.inverse(); //init_base_pose_*base2points*pose*base2points.inverse();
+
+      Eigen::Vector4f sensor_origin(world2base.getOrigin().x(),world2base.getOrigin().y(),world2base.getOrigin().z(),world2base.getOrigin().w());
+      Eigen::Quaternionf sensor_orientation(world2base.getRotation().w(),world2base.getRotation().x(),world2base.getRotation().y(),world2base.getRotation().z());
+
+      node->pc_col->sensor_origin_ = sensor_origin;
+      node->pc_col->sensor_orientation_ = sensor_orientation;
+      node->pc_col->header.frame_id = fixed_frame_id;
+    }
 
     filename.sprintf("%s_%04d.pcd", qPrintable(file_basename), it->first);
+    ROS_INFO("Saving %s", qPrintable(filename));
     Q_EMIT setGUIStatus(message.sprintf("Saving to %s: Transformed Node %i/%i", qPrintable(filename), it->first, (int)camera_vertices.size()));
     pcl::io::savePCDFile(qPrintable(filename), *(node->pc_col), true); //Last arg: true is binary mode. ASCII mode drops color bits
 

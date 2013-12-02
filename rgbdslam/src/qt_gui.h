@@ -67,6 +67,7 @@ Q_SIGNALS:
     ///User wants the last node to be removed from the graph
     void deleteLastFrame();
     void sendAllClouds(); ///< Signifies the sending of the whole model
+    void saveBagfile(QString filename); ///< Signifies the sending of the whole model
     ///User wants the current world model to be saved to a pcd-file or ply file
     void saveAllClouds(QString filename);
     void openPCDFiles(QStringList filenamelist);
@@ -120,6 +121,7 @@ private Q_SLOTS:
     void set2DStream(bool is_on);
     void saveTrajectoryDialog();
     void openBagFileDialog();
+    void saveBagDialog();
     void openPCDFilesDialog();
     void saveG2OGraphDialog();
     void optimizeGraphTrig();

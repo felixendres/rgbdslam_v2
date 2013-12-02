@@ -176,8 +176,14 @@ void Graphical_UI::setInfo(QString message){
 
 void Graphical_UI::saveG2OGraphDialog() {
     QString graph_filename = QFileDialog::getSaveFileName(this, "Save G2O Graph to File", "graph.g2o", tr("G2O (*.g2o)"));
-    Q_EMIT saveG2OGraph(graph_filename);
-    statusBar()->showMessage(tr("Saving Graph"));
+    QString message;
+    if(graph_filename.isEmpty()){
+      message = tr("Filename empty. Aborting save");
+    } else {
+      Q_EMIT saveG2OGraph(graph_filename);
+      message = tr("Saving Graph");
+    }
+    statusBar()->showMessage(message);
     //infoLabel->setText(message);
 }
 
@@ -192,36 +198,53 @@ void Graphical_UI::quickSaveAll() {
 
 void Graphical_UI::openBagFileDialog() {
     QString filename = QFileDialog::getOpenFileName(this, "Open Bag File", "", tr("BAG (*.bag)"));
-    QString message = tr("Opening Bag File");
+    QString message;
+    if(filename.isEmpty()){
+      message = tr("Filename empty. Aborting.");
+    } else {
+      message = tr("Opening Bagfile ");
+      message += filename;
+      Q_EMIT openBagFile(filename);
+    }
     statusBar()->showMessage(message);
-    Q_EMIT openBagFile(filename);
 }
 
 void Graphical_UI::openPCDFilesDialog() {
     QStringList filenamelist = QFileDialog::getOpenFileNames(this, "Open PCD Files", "", tr("PCD (*.pcd)"));
-    QString message = tr("Opening PCD Files");
-    statusBar()->showMessage(message);
-    for(int i=0; i < filenamelist.size(); i++){
-      std::cout << qPrintable(filenamelist.at(i)) << std::endl;
+    QString message;
+    if(filenamelist.isEmpty()){
+      message =  tr("Empty file list. Aborting");
+    } else {
+      for(int i=0; i < filenamelist.size(); i++){
+        std::cout << qPrintable(filenamelist.at(i)) << std::endl;
+      }
+      Q_EMIT openPCDFiles(filenamelist);
+      message =  tr("Opening PCD Files");
     }
-    Q_EMIT openPCDFiles(filenamelist);
-    message = tr("Finished opening PCD Files");
     statusBar()->showMessage(message);
 }
 void Graphical_UI::saveFeatures() {
     filename = QFileDialog::getSaveFileName(this, "Save Features to File", filename, tr("YAML (*.yml);;XML (*.xml)"));
-    Q_EMIT saveAllFeatures(filename);
-    QString message = tr("Saving Features");
+    QString message;
+    if(filename.isEmpty()){
+      message = tr("Filename empty. Aborting.");
+    } else {
+      message = tr("Saving Features to ");
+      message += filename;
+      Q_EMIT saveAllFeatures(filename);
+    }
     statusBar()->showMessage(message);
 }
 void Graphical_UI::saveOctomap() {
     filename = QFileDialog::getSaveFileName(this, "Create and Save Octomap to File", filename, tr("OcTree (*.ot)"));
-    if(filename.size() > 0){
+    QString message;
+    if(filename.isEmpty()){
+      message = tr("Filename empty. Aborting.");
+    } else {
       Q_EMIT saveOctomapSig(filename);
       QString message = tr("Creating Octomap");
-      statusBar()->showMessage(message);
     }
-    //infoLabel->setText(message);
+    statusBar()->showMessage(message);
 }
 
 void Graphical_UI::saveAll() {
@@ -229,8 +252,8 @@ void Graphical_UI::saveAll() {
     Q_EMIT saveAllClouds(filename);
     QString message = tr("Saving Whole Model");
     statusBar()->showMessage(message);
-    //infoLabel->setText(message);
 }
+
 void Graphical_UI::showEdgeErrors() {
     QString myfilename = QFileDialog::getSaveFileName(this, "Save Current Trajectory Estimate", "trajectory", tr("All Files (*.*)"));
     Q_EMIT printEdgeErrors(myfilename);
@@ -285,6 +308,13 @@ void Graphical_UI::saveIndividual() {
     //infoLabel->setText(message);
 }
 
+void Graphical_UI::saveBagDialog() {
+    QString filename = QFileDialog::getSaveFileName(this, "Save Clouds to Bag File", "", tr("BAG (*.bag)"));
+    Q_EMIT saveBagfile(filename);
+    QString message = tr("Writing Whole Model to Bagfile");
+    statusBar()->showMessage(message);
+    //infoLabel->setText(message);
+}
 void Graphical_UI::sendAll() {
     Q_EMIT sendAllClouds();
     QString message = tr("Sending Whole Model");
@@ -569,6 +599,13 @@ void Graphical_UI::createMenus() {
     connect(saveG2OGraphAct, SIGNAL(triggered()), this, SLOT(saveG2OGraphDialog()));
     dataMenu->addAction(saveG2OGraphAct);
     this->addAction(saveG2OGraphAct);
+
+    QAction *saveBagAct = new QAction(tr("Save Clouds to &Bag"), this);
+    saveBagAct->setShortcut(QString("Ctrl+Shift+B"));
+    saveBagAct->setStatusTip(tr("Save clouds and transforms to bagfile"));
+    connect(saveBagAct, SIGNAL(triggered()), this, SLOT(saveBagDialog()));
+    dataMenu->addAction(saveBagAct);
+    this->addAction(saveBagAct);
 
     QAction *saveTrajectoryAct = new QAction(tr("Save Trajectory &Estimate"), this);
     saveTrajectoryAct->setShortcut(QString("Ctrl+E"));

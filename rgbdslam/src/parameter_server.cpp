@@ -62,6 +62,8 @@ void ParameterServer::defaultConfig() {
   addOption("octomap_prob_miss",             static_cast<double> (0.4),                 "Octomap sensor model: Probability value for miss.");
   addOption("octomap_online_creation",       static_cast<bool> (false),                 "Create the octomap during mapping. If using this, every node will be rendered to the octomap directly after they have been added to the graph (and graph optimization, if not skipped b/c of optimizer_skip_step).");
   addOption("screencast_path_prefix",        std::string(""),                           "If set: capture frames for a screencast with this path as filename-prefix.");
+  addOption("transform_individual_clouds",   static_cast<bool> (false),                 "If set: Transform individually saved pcds into common coordinate frame.");
+  addOption("compress_output_bagfile",       static_cast<bool> (true),                  "Whether to enable bz2 compression when saving bagfiles");
 
   // TF information settings 
   addOption("fixed_frame_name",              std::string("/map"),                       "The computed camera transforms are with respect to this frame. It is set to the identity for the first frame processed or, if ground truth is available, to the ground truth of the first frame");

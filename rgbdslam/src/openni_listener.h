@@ -127,8 +127,9 @@ class OpenNIListener : public QObject {
     void stereoCallback(const sensor_msgs::ImageConstPtr& visual_img_msg, const sensor_msgs::PointCloud2ConstPtr& point_cloud);
     void pcdCallback(const sensor_msgs::ImageConstPtr visual_img_msg, pointcloud_type::Ptr point_cloud);
 
-    void loadBag(std::string filename);
   protected:
+    void loadBag(std::string filename);
+    void evaluation(std::string filename);
     //! Create a QImage from one image. 
     ///The QImage stores its data in the rgba_buffers_ indexed by idx (reused/overwritten each call)
     QImage cvMat2QImage(const cv::Mat& image, unsigned int idx); 

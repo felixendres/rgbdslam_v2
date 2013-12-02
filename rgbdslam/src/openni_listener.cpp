@@ -112,21 +112,9 @@ OpenNIListener::OpenNIListener(GraphManager* graph_mgr)
       stereo_sync_->registerCallback(boost::bind(&OpenNIListener::stereoCallback, this, _1, _2));
       ROS_INFO_STREAM("Listening to " << widev_tpc << " and " << widec_tpc );
     } 
-
-    detector_ = createDetector(ps->get<std::string>("feature_detector_type"));
-    extractor_ = createDescriptorExtractor(ps->get<std::string>("feature_extractor_type"));
-
-    if(ps->get<bool>("concurrent_node_construction")){
-      ROS_DEBUG("Threads used by QThreadPool on this Computer %i. Will increase this by one, b/c the QtRos Thread is very lightweight", QThread::idealThreadCount());
-      //QThreadPool::globalInstance()->setMaxThreadCount(QThread::idealThreadCount()*2+2);
-    }
-
   } 
-  else //Bagfile given
-  {
-    detector_ = createDetector(ps->get<std::string>("feature_detector_type"));
-    extractor_ = createDescriptorExtractor(ps->get<std::string>("feature_extractor_type"));
-  }
+  detector_ = createDetector(ps->get<std::string>("feature_detector_type"));
+  extractor_ = createDescriptorExtractor(ps->get<std::string>("feature_extractor_type"));
 }
 
  
@@ -289,8 +277,22 @@ void OpenNIListener::loadBag(std::string filename)
     if(!ros::ok()) return;
     ROS_WARN("Waiting for processing to finish.");
   } while(graph_mgr_->isBusy());
-
+  
   if(ParameterServer::instance()->get<bool>("batch_processing")){
+    evaluation(filename);
+  }
+  //If the bag hasn't been load by the GUI, i.e. supposibly by a script
+  //automatically save the result in a bagfile.
+  //FIXME: The above assumption might not hold. Another parameter "save_bagfilename?"
+  if(!ParameterServer::instance()->get<bool>("use_gui")){
+    graph_mgr_->saveBagfile((filename + "-reconstruction.bag").c_str());
+    Q_EMIT bagFinished();
+    usleep(10000000);//10sec to allow all threads to finish (don't know how much is required)
+  }
+}
+
+void OpenNIListener::evaluation(std::string filename)
+{
     graph_mgr_->saveTrajectory(QString(filename.c_str()) + "iteration_" + QString::number(0));
     ROS_WARN_NAMED("eval", "Finished with optimization iteration %i.", 0);
 
@@ -324,7 +326,7 @@ void OpenNIListener::loadBag(std::string filename)
     graph_mgr_->saveTrajectory(QString(filename.c_str()) + "iteration_" + QString::number(4));
     ROS_WARN_NAMED("eval", "Finished with optimization iteration %i.", 4);
 
-    if(eval_landmarks){ //LANDMARK OPTIMIZATION
+    if(ParameterServer::instance()->get<bool>("optimize_landmarks")){ //LANDMARK OPTIMIZATION
       ParameterServer::instance()->set<bool>("optimize_landmarks", true);
       graph_mgr_->optimizeGraph(-100, true, QString(filename.c_str())+"_landmark_optimized_");//Non threaded call
       graph_mgr_->saveTrajectory(QString(filename.c_str()) + "iteration_" + QString::number(3));
@@ -356,15 +358,8 @@ void OpenNIListener::loadBag(std::string filename)
     if(!ParameterServer::instance()->get<bool>("use_gui")){
       Q_EMIT bagFinished();
       usleep(10000000);//10sec to allow all threads to finish (don't know how much is required)
-      std::cerr << "8\n";
-      /*if(ros::ok()){
-        ROS_ERROR("ROS Ok, but should have shutdown meanwhile");
-        exit(1);
-      }*/
-      std::cerr << "9\n";
     }
-  }
-  std::cerr << "15\n";
+  std::cerr << "Evaluation Done\n";
 }
 
 void calculateDepthMask(cv::Mat_<uchar>& depth_img, const pointcloud_type::Ptr point_cloud)
@@ -876,6 +871,8 @@ void OpenNIListener::retrieveTransformations(std_msgs::Header depth_header, Node
     base2points.setRotation(tf::createQuaternionFromRPY(-1.57,0,-1.57));
     base2points.setOrigin(tf::Point(0,-0.04,0));
     base2points.stamp_ = depth_time;
+    base2points.frame_id_ = base_frame;
+    base2points.child_frame_id_ = depth_frame_id;
   }
   node_ptr->setBase2PointsTransform(base2points);
 

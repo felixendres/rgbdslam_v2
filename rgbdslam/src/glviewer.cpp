@@ -593,12 +593,23 @@ void GLViewer::updateTransforms(QList<QMatrix4x4>* transforms){
 
 void GLViewer::addPointCloud(pointcloud_type * pc, QMatrix4x4 transform){
     ROS_DEBUG("pc pointer in addPointCloud: %p (this is %p in thread %d)", pc, this, (unsigned int)QThread::currentThreadId());
-    if(!pc->isOrganized() || ParameterServer::instance()->get<double>("squared_meshing_threshold") < 0){
-      pointCloud2GLEllipsoids(pc);
+    ParameterServer* ps = ParameterServer::instance();
+    std::string display_type = ps->get<std::string>("cloud_display_type");
+    if(!pc->isOrganized() || ps->get<double>("squared_meshing_threshold") < 0){
+      pointCloud2GLPoints(pc);
     } else {
-      pointCloud2GLStrip(pc);
+      if(display_type == "TRIANGLES"){
+        pointCloud2GLTriangleList(pc);
+      } else if(display_type == "POINTS"){
+        pointCloud2GLPoints(pc);
+      } else if(display_type == "ELLIPSOIDS"){
+        pointCloud2GLEllipsoids(pc);
+      } else { //TRIANGLE_STRIP is default, because it is generated fastest. It is also displayed the smoothes (timings seem worse than for POINTS, yet "perceived" fps are much better)
+        pointCloud2GLStrip(pc);
+      }
     }
     cloud_matrices->push_back(transform); //keep for later
+    Q_EMIT cloudRendered(pc);
     clearAndUpdate();
     //QApplication::processEvents(QEventLoop::ExcludeSocketNotifiers);
     /*
@@ -771,7 +782,6 @@ void GLViewer::pointCloud2GLStrip(pointcloud_type * pc){
     //pc_empty.points.swap(pc->points);
     //pc->width = 0;
     //pc->height = 0;
-    Q_EMIT cloudRendered(pc);
 }
 
 void GLViewer::deleteLastNode(){
@@ -818,7 +828,6 @@ void GLViewer::pointCloud2GLEllipsoids(pointcloud_type * pc){
     glEnd();
     ROS_DEBUG("Compiled pointcloud into list %i",  cloud_list_index);
     glEndList();
-    Q_EMIT cloudRendered(pc);
 }
 
 void GLViewer::pointCloud2GLPoints(pointcloud_type * pc){
@@ -852,10 +861,9 @@ void GLViewer::pointCloud2GLPoints(pointcloud_type * pc){
     glEnd();
     ROS_DEBUG("Compiled pointcloud into list %i",  cloud_list_index);
     glEndList();
-    Q_EMIT cloudRendered(pc);
 }
 
-void GLViewer::pointCloud2GLList(pointcloud_type const * pc){
+void GLViewer::pointCloud2GLTriangleList(pointcloud_type const * pc){
     ScopedTimer s(__FUNCTION__);
     ROS_DEBUG("Making GL list from point-cloud pointer %p in thread %d", pc, (unsigned int)QThread::currentThreadId());
     GLuint cloud_list_index = glGenLists(1);

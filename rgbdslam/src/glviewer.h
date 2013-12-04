@@ -61,7 +61,7 @@ public Q_SLOTS:
     void toggleTriangulation();
     void drawToPS(QString filname);
 Q_SIGNALS:
-    void cloudRendered(pointcloud_type const *);
+    void cloudRendered(pointcloud_type *);
     void clickedPosition(float x,float y,float z);
     //void xRotationChanged(int angle);
     //void yRotationChanged(int angle);
@@ -91,9 +91,11 @@ protected:
     ///Assumes gl mode for triangles
     void drawTriangle(const point_type& p1, const point_type& p2, const point_type& p3);
     //bool startTriangleStrip(pointcloud_type const * pc, int x, int y, int w, int h, bool& flip);
-    ///Compile the pointcloud to a GL Display List
-    void pointCloud2GLList(pointcloud_type const * pc);
+    ///Compile the pointcloud to a GL Display List using GL_TRIANGLES
+    void pointCloud2GLTriangleList(pointcloud_type const * pc);
+    ///Compile the pointcloud to a GL Display List using GL_POINT 
     void pointCloud2GLPoints(pointcloud_type * pc);
+    ///Compile the pointcloud to a GL Display List using GL_TRIANGLE_STRIPs
     void pointCloud2GLStrip(pointcloud_type * pc);
     ///Draw ellipsoids instead of points, that represent the depth std deviation of each point
     void pointCloud2GLEllipsoids(pointcloud_type * pc);

@@ -54,6 +54,7 @@ class Graphical_UI: public QMainWindow
 
 public:
     Graphical_UI();
+    Graphical_UI(QString title);
     GLViewer* getGLViewer();
 Q_SIGNALS:
     ///User selected to reset the graph
@@ -94,6 +95,7 @@ public Q_SLOTS:
     void showOptions();
     void showBusy(int id, const char* message, int max);
     void setBusy(int id, const char* message, int val);
+    void set2DStream(bool is_on);
 
 private Q_SLOTS:
     void saveVectorGraphic();
@@ -118,7 +120,6 @@ private Q_SLOTS:
     void getOneFrameCmd();
     void deleteLastFrameCmd();
 //    void set3DDisplay(bool is_on);
-    void set2DStream(bool is_on);
     void saveTrajectoryDialog();
     void openBagFileDialog();
     void saveBagDialog();
@@ -137,6 +138,7 @@ private Q_SLOTS:
     void setParam(QString param_name);
     void setOctoMapResolution();
 private:
+    void setup();
     //!Menus and Menu elements are defined here
     void createMenus();
 

@@ -36,6 +36,17 @@
 ///Constructs a QT GUI for easy control of RGBDSLAM
 Graphical_UI::Graphical_UI() : filename("quicksave.pcd"), glviewer(NULL)
 {
+  setup();
+  setWindowTitle(tr("RGBDSLAM"));
+}
+///Constructs a QT GUI for easy control of RGBDSLAM
+Graphical_UI::Graphical_UI(QString title) : filename("quicksave.pcd"), glviewer(NULL)
+{
+  setup();
+  setWindowTitle(title);
+}
+
+void Graphical_UI::setup(){
     infoText = new QString(tr(
                 "<p><b>RGBDSLAM</b> uses visual features to identify corresponding 3D locations "
                 "in RGBD data. The correspondences are used to reconstruct the camera motion. "
@@ -122,7 +133,6 @@ Graphical_UI::Graphical_UI() : filename("quicksave.pcd"), glviewer(NULL)
     infoLabel->setAlignment(Qt::AlignRight);
     statusBar()->addPermanentWidget(infoLabel, 0);
 
-    setWindowTitle(tr("RGBDSLAM"));
     setMinimumSize(790, 290);
     resize(1000, 700);
 }

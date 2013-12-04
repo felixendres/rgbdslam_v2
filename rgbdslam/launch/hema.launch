@@ -30,8 +30,8 @@
     <param name="config/use_feature_min_depth"         value="false"/> 
     <param name="config/data_skip_step"                value="1"/> 
     <param name="config/start_paused"                  value="false"/> 
-    <param name="config/use_glwidget"                  value="false"/>
-    <param name="config/use_gui"                       value="false"/>
-    <param name="config/compress_output_bagfile"       value="false"/>
+    <param name="config/use_glwidget"                  value="true"/>
+    <param name="config/use_gui"                       value="true"/>
+    <param name="config/compress_output_bagfile"       value="true"/>
   </node>
 </launch>

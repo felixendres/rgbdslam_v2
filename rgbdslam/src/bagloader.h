@@ -52,6 +52,7 @@ class BagLoader : public QObject {
     void setPointCloud(pointcloud_type * pc, QMatrix4x4 transformation);
     ///Set the info label on the right side in the statusbar of the GUI
     void setGUIInfo(QString message);
+    void setGUIInfo2(QString message);
     ///Set the temporary status-message in the GUI
     void setGUIStatus(QString message);
     void bagFinished();

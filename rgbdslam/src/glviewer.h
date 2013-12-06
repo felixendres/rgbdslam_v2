@@ -100,9 +100,13 @@ protected:
     ///Draw ellipsoids instead of points, that represent the depth std deviation of each point
     void pointCloud2GLEllipsoids(pointcloud_type * pc);
     QImage renderList(QMatrix4x4 transform, int list_id);
+    ///Draw one of the clouds with the given list index
+    void drawOneCloud(int i) ;
     //! Draw the scene. Xshift allows for a camera shift in x direction for the stereo view
     void drawClouds(float xshift);
     float bg_col_[4];
+    ///Only switch to own context if necessary
+    void makeCurrent();
 
 private:
     void clearAndUpdate();

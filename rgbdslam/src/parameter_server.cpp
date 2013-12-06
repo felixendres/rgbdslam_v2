@@ -130,7 +130,7 @@ void ParameterServer::defaultConfig() {
   addOption("squared_meshing_threshold",     static_cast<double> (0.0009),              "Don't triangulate over depth jumps. Should be increased with increasing visualization_skip_step");
   addOption("show_axis",                     static_cast<bool> (true),                  "Do/don't visualize the pose graph in glwidget");
   addOption("scalable_2d_display",           static_cast<bool> (false),                 "Whether the input images are expanded. Consumes CPU time");
-  addOption("cloud_display_type",            static_cast<std::string>("TRIANGLE_STRIP"),"Better not change at runtime. GL_xxx type of compiled list GL_TRIANGLES, GL_TRIANGLE_STRIP, GL_POINTS or ELLIPSOIDS");
+  addOption("cloud_display_type",            static_cast<std::string>("POINTS"),        "Drastically affects rendering time. GL_xxx type of compiled list GL_TRIANGLE_STRIP (fastest processing of new clouds), GL_POINTS (fastest display) GL_TRIANGLES (no good), or ELLIPSOIDS (very slow, but visualizes standard deviation)");
 
   // Misc 
   addOption("start_paused",                  static_cast<bool> (true),                  "Whether to directly start mapping with the first input image, or to wait for the user to start manually");
@@ -147,6 +147,8 @@ void ParameterServer::defaultConfig() {
   addOption("preserve_raster_on_save",       static_cast<bool> (false),                 "Filter NaNs when saving clouds, destroying the image raster");
   addOption("skip_first_n_frames",           static_cast<int> (0),                      "Useful to skip start of a bagfile");
   addOption("segment_to_optimize",           static_cast<int> (-1),                     "If segment information is available, optimize with higher weights on this segment (set negative to disable)");
+  //Debug
+  addOption("show_cloud_with_id",            static_cast<int> (-1),                     "Show only one cloud (namely that perceived at the respective node id");
 }
 
 

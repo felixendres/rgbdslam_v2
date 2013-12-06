@@ -88,6 +88,7 @@ class OpenNIListener : public QObject {
     //void pauseStatus(bool is_paused);
     ///Set the info label on the right side in the statusbar of the GUI
     void setGUIInfo(QString message);
+    void setGUIInfo2(QString message);
     ///Set the temporary status-message in the GUI
     void setGUIStatus(QString message);
     void bagFinished();
@@ -198,6 +199,7 @@ class OpenNIListener : public QObject {
     tf::TransformBroadcaster tf_br_;
     ros::Publisher tf_pub_;
     int data_id_;
+    int num_processed_;
     std::string image_encoding_;
 };
 

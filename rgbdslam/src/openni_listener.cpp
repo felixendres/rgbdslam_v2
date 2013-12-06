@@ -64,6 +64,7 @@ OpenNIListener::OpenNIListener(GraphManager* graph_mgr)
   getOneFrame_(false),
   first_frame_(true),
   data_id_(0),
+  num_processed_(0),
   image_encoding_("rgb8")
 {
   ParameterServer* ps = ParameterServer::instance();
@@ -708,6 +709,8 @@ void OpenNIListener::processNode(Node* new_node)
   ScopedTimer s(__FUNCTION__);
   Q_EMIT setGUIStatus("Adding Node to Graph");
   bool has_been_added = graph_mgr_->addNode(new_node);
+  ++num_processed_;
+  Q_EMIT setGUIInfo2(QString("Frames processed: ")+QString::number(num_processed_));
 
   //######### Visualization code  #############################################
   if(ParameterServer::instance()->get<bool>("use_gui")){

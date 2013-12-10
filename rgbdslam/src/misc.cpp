@@ -752,6 +752,7 @@ double errorFunction2(const Eigen::Vector4f& x1,
                       const Eigen::Vector4f& x2,
                       const Eigen::Matrix4f& tf_1_to_2)
 {
+  //FIXME: Take from paramter_server or cam info
   static const double cam_angle_x = 58.0/180.0*M_PI;/*{{{*/
   static const double cam_angle_y = 45.0/180.0*M_PI;
   static const double cam_resol_x = 640;

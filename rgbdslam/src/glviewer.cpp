@@ -627,6 +627,8 @@ void GLViewer::addPointCloud(pointcloud_type * pc, QMatrix4x4 transform){
         pointCloud2GLPoints(pc);
       } else if(display_type == "ELLIPSOIDS"){
         pointCloud2GLEllipsoids(pc);
+      } else if(display_type == "NONE"){
+        cloud_list_indices.push_back(0);
       } else { //TRIANGLE_STRIP is default, because it is generated fastest. It is also displayed the smoothes (timings seem worse than for POINTS, yet "perceived" fps are much better)
         pointCloud2GLStrip(pc);
       }

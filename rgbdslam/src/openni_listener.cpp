@@ -983,9 +983,13 @@ bool readOneFile(const QString& qfilename, pointcloud_type& cloud)
       ROS_ERROR ("Couldn't read file %s", qPrintable(qfilename));
       return false;
     } 
+    if(cloud.size() == 640*480){
+      cloud.width = 640;
+      cloud.height = 480;
+    }
 #ifdef HEMACLOUDS
     pointcloud_type tmp_pc(cloud);
-#pragma omp parallel for
+//#pragma omp parallel for
     for(size_t i = 0; i < cloud.size(); i++)
     {
       float x = cloud.at(i).x;
@@ -993,7 +997,7 @@ bool readOneFile(const QString& qfilename, pointcloud_type& cloud)
         cloud.at(i).x = -cloud.at(i).y;
         cloud.at(i).y = -cloud.at(i).z;
         cloud.at(i).z = x;
-        cloud.at(i).segment = nearest_segment(tmp_pc, i);
+        //cloud.at(i).segment = nearest_segment(tmp_pc, i);
       }
     }
 #endif

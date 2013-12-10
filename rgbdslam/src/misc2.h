@@ -33,4 +33,15 @@ inline double depth_covariance(double depth)
   return stddev * stddev;
 }
 
+inline Eigen::Matrix3d point_information_matrix(double distance)
+{
+  Eigen::Matrix3d inf_mat = Eigen::Matrix3d::Identity();
+  /* Std dev of 1 pixel in xy boils down to identity for 0,0 and 1,1:
+  inf_mat(0,0) = 1.0/1.0;//-> 1/pixel_dist*pixel_dist
+  inf_mat(1,1) = 1.0/1.0; 
+  */
+  inf_mat(2,2) = 1.0/depth_covariance(distance);
+
+  return inf_mat;
+}
 #endif

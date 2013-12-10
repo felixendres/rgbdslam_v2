@@ -75,7 +75,7 @@ void ParameterServer::defaultConfig() {
   // Visual Features, to activate GPU-based features see CMakeLists.txt 
   addOption("feature_detector_type",         std::string("SURF"),                       "SURF, SIFT or ORB");
   addOption("feature_extractor_type",        std::string("SURF"),                       "SURF, SIFT or ORB");
-  addOption("matcher_type",                  std::string("FLANN"),                      "SIFTGPU or FLANN or BRUTEFORCE");
+  addOption("matcher_type",                  std::string("FLANN"),                      "SIFTGPU (matching on the gpu) or FLANN or BRUTEFORCE");
   addOption("max_keypoints",                 static_cast<int> (1000),                   "Extract no more than this many keypoints ");
   addOption("min_keypoints",                 static_cast<int> (000),                    "Extract no less than this many keypoints ");
   addOption("min_matches",                   static_cast<int> (20),                     "Don't try RANSAC if less than this many matches (if using SiftGPU and GLSL you should use max. 60 matches)");
@@ -147,6 +147,8 @@ void ParameterServer::defaultConfig() {
   addOption("preserve_raster_on_save",       static_cast<bool> (false),                 "Filter NaNs when saving clouds, destroying the image raster");
   addOption("skip_first_n_frames",           static_cast<int> (0),                      "Useful to skip start of a bagfile");
   addOption("segment_to_optimize",           static_cast<int> (-1),                     "If segment information is available, optimize with higher weights on this segment (set negative to disable)");
+  addOption("send_clouds_delay",             static_cast<double> (-10.0),                "If set, wait with sending clouds until they are x seconds old (uses the clouds timestamp).");
+  addOption("save_octomap_delay",            static_cast<double> (10.0),                "If set, wait with sending clouds until they are x seconds old (uses the clouds timestamp).");
   //Debug
   addOption("show_cloud_with_id",            static_cast<int> (-1),                     "Show only one cloud (namely that perceived at the respective node id");
 }

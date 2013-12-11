@@ -89,7 +89,7 @@ void SiftGPUWrapper::destroyInstance() {
 }
 SiftGPUWrapper* SiftGPUWrapper::getInstance() {
     if (instance == NULL) {
-        ROS_INFO("Create Instance");
+        ROS_DEBUG("Creating SiftGPU Instance");
         instance = new SiftGPUWrapper();
     }
     return instance;
@@ -118,7 +118,7 @@ void SiftGPUWrapper::detect(const cv::Mat& image, cv::vector<cv::KeyPoint>& keyp
     ROS_DEBUG("SIFTGPU: cols: %d, rows: %d", image.cols, image.rows);
     if (siftgpu->RunSIFT(image.cols, image.rows, data, GL_LUMINANCE, GL_UNSIGNED_BYTE)) {
         num_features = siftgpu->GetFeatureNum();
-        ROS_INFO("Number of features found: %i", num_features);
+        ROS_DEBUG("Number of features found: %i", num_features);
         keys = new SiftGPU::SiftKeypoint[num_features];
         descriptors.resize(128 * num_features);
         //descriptors = new float[128 * num_features];

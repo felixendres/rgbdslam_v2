@@ -87,7 +87,7 @@ GraphManager::~GraphManager() {
     graph_.clear();
     QMutexLocker locker(&optimizer_mutex_);
     QMutexLocker locker2(&optimization_mutex_);
-    delete (optimizer_); optimizer_=NULL; //FIXME: this leads to a double free corruption. Bug in g2o?
+    //delete (optimizer_); optimizer_=NULL; //FIXME: this leads to a double free corruption. Bug in g2o?
     ransac_marker_pub_.shutdown();
     whole_cloud_pub_.shutdown();
     marker_pub_.shutdown();

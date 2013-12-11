@@ -554,9 +554,9 @@ unsigned int Node::featureMatching(const Node* other, std::vector<cv::DMatch>* m
                        "feature_extractor_type (" << ps->get<std::string>("feature_extractor_type") << ") chosen.");
   }
 
-  ROS_INFO_NAMED("statistics", "count_matrix(%3d, %3d) =  %4d;",
-                 this->id_+1, other->id_+1, (int)matches->size());
-  ROS_INFO_NAMED("statistics", "dista_matrix(%3d, %3d) =  %f;",
+  ROS_DEBUG_NAMED("statistics", "count_matrix(%3d, %3d) =  %4d;",
+                  this->id_+1, other->id_+1, (int)matches->size());
+  ROS_DEBUG_NAMED("statistics", "dista_matrix(%3d, %3d) =  %f;",
                  this->id_+1, other->id_+1, sum_distances/ (float)matches->size());
   ROS_DEBUG_NAMED("statistics", "Feature Matches between Nodes %3d (%4d features) and %3d (%4d features):\t%4d",
                   this->id_, (int)this->feature_locations_2d_.size(),

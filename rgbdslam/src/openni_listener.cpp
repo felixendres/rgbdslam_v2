@@ -543,7 +543,7 @@ void OpenNIListener::noCloudCallback (const sensor_msgs::ImageConstPtr& visual_i
 
   if(pause_ && !getOneFrame_){ 
     if(ps->get<bool>("use_gui")){
-      //Q_EMIT newVisualImage(cvMat2QImage(visual_img, 0)); //visual_idx=0
+      Q_EMIT newVisualImage(cvMat2QImage(visual_img, 0)); //visual_idx=0
       //Q_EMIT newDepthImage (cvMat2QImage(depth_mono8_img_,1));//overwrites last cvMat2QImage
     }
     return;
@@ -613,7 +613,7 @@ void OpenNIListener::kinectCallback (const sensor_msgs::ImageConstPtr& visual_im
 
   if(pause_ && !getOneFrame_){ 
     if(ps->get<bool>("use_gui")){
-      //Q_EMIT newVisualImage(cvMat2QImage(visual_img, 0)); //visual_idx=0
+      Q_EMIT newVisualImage(cvMat2QImage(visual_img, 0)); //visual_idx=0
 //      Q_EMIT newDepthImage (cvMat2QImage(depth_mono8_img_,1));//overwrites last cvMat2QImage
     }
     return;
@@ -710,34 +710,13 @@ void OpenNIListener::processNode(Node* new_node)
   //######### Visualization code  #############################################
   if(ParameterServer::instance()->get<bool>("use_gui")){
     if(has_been_added){
-      if(ParameterServer::instance()->get<bool>("visualize_mono_depth_overlay")){
-        //Edge channels
-        cv::Mat visual_edges = cv::Mat( visualization_img_.rows, visualization_img_.cols, CV_8UC1); 
-        cv::Mat depth_edges  = cv::Mat( visualization_img_.rows, visualization_img_.cols, CV_8UC1); 
-        overlay_edges(visualization_img_, depth_mono8_img_, visual_edges, depth_edges);
-
-        //Feature channel
-        cv::Mat feature_img = cv::Mat::zeros( visualization_img_.rows, visualization_img_.cols, CV_8UC1); 
-        graph_mgr_->drawFeatureFlow(feature_img);
-
-        //Q_EMIT newDepthImage(cvMat2QImage(depth_mono8_img_, 6)); //show registration
-        Q_EMIT newFeatureFlowImage(cvMat2QImage(feature_img,depth_edges, visual_edges, 6)); //show registration by edge overlay
-        //Q_EMIT newFeatureFlowImage(cvMat2QImage(visualization_img_,visualization_depth_mono8_img_, feature_img, 2)); //show registration by color overlay
-      } else {
-        graph_mgr_->drawFeatureFlow(visualization_img_, cv::Scalar(0,0,255), cv::Scalar(0,128,0) );
-        graph_mgr_->drawFeatureFlow(depth_mono8_img_, cv::Scalar(0,0,255), cv::Scalar(0,128,0) );
-        Q_EMIT newFeatureFlowImage(cvMat2QImage(visualization_img_, 5)); //show registration
-        //Q_EMIT newDepthImage(cvMat2QImage(depth_mono8_img_, 6)); //show registration
-      }
+      graph_mgr_->drawFeatureFlow(visualization_img_, cv::Scalar(0,0,255), cv::Scalar(0,128,0) );
+      //graph_mgr_->drawFeatureFlow(depth_mono8_img_, cv::Scalar(0,0,255), cv::Scalar(0,128,0) );
+      Q_EMIT newFeatureFlowImage(cvMat2QImage(visualization_img_, 5)); //show registration
+      //Q_EMIT newDepthImage(cvMat2QImage(depth_mono8_img_, 6)); //show registration
     } else {
-      if(ParameterServer::instance()->get<bool>("visualize_mono_depth_overlay")){
-        cv::Mat feature_img = cv::Mat( visualization_img_.rows, visualization_img_.cols, CV_8UC1); 
-        cv::drawKeypoints(feature_img, new_node->feature_locations_2d_, feature_img, cv::Scalar(155), 5);
-        Q_EMIT newFeatureFlowImage(cvMat2QImage(visualization_img_,visualization_depth_mono8_img_, feature_img, 2)); //show registration
-      } else {
-        cv::drawKeypoints(visualization_img_, new_node->feature_locations_2d_, visualization_img_, cv::Scalar(0, 100,0), 5);
-        Q_EMIT newFeatureFlowImage(cvMat2QImage(visualization_img_, 2)); //show registration
-      }
+      cv::drawKeypoints(visualization_img_, new_node->feature_locations_2d_, visualization_img_, cv::Scalar(0, 100,0), 5);
+      Q_EMIT newFeatureFlowImage(cvMat2QImage(visualization_img_, 2)); //show registration
     }
   }
   if(!has_been_added) {

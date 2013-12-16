@@ -5,7 +5,7 @@
   <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" cwd="node" required="true" output="log"> 
     <!-- Input data settings-->
     <param name="config/topic_image_mono"              value="/camera/rgb/image_rect_color"/> <!--could also be color -->
-    <param name="config/topic_image_depth"             value="/camera/depth_registered/image_rect"/>
+    <param name="config/topic_image_depth"             value="/camera/depth_registered/sw_registered/image_rect_raw"/>
     <param name="config/topic_points"                  value="/camera/depth_registered/points"/> <!--if empty, poincloud will be reconstructed from image and depth -->
 
     <param name="config/feature_detector_type"         value="SIFTGPU"/><!-- If SIFTGPU is enabled in CMakeLists.txt, use SURF here -->

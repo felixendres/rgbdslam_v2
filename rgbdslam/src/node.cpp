@@ -57,12 +57,13 @@ Node::Node(const cv::Mat& visual,
            const cv::Mat& depth,
            const cv::Mat& detection_mask,
            const sensor_msgs::CameraInfoConstPtr& cam_info, 
-           std_msgs::Header depth_header,
+           myHeader depth_header,
            cv::Ptr<cv::FeatureDetector> detector,
            cv::Ptr<cv::DescriptorExtractor> extractor) :
   id_(-1), seq_id_(-1), vertex_id_(-1), valid_tf_estimate_(true), matchable_(true),
   pc_col(new pointcloud_type()),
   flannIndex(NULL),
+  header_(depth_header),
   base2points_(tf::Transform::getIdentity(), depth_header.stamp, ParameterServer::instance()->get<std::string>("base_frame_name"), depth_header.frame_id),
   ground_truth_transform_(tf::Transform::getIdentity(), depth_header.stamp, ParameterServer::instance()->get<std::string>("ground_truth_frame_name"), ParameterServer::instance()->get<std::string>("base_frame_name")),
   odom_transform_(tf::Transform::getIdentity(), depth_header.stamp, "missing_odometry", depth_header.frame_id),
@@ -83,7 +84,7 @@ Node::Node(const cv::Mat& visual,
   {
     pc_col = pointcloud_type::Ptr(new pointcloud_type());
   }
-  pc_col->header = depth_header;
+  pc_col->header = header_;
 
   cv::Mat gray_img; 
   if(visual.type() == CV_8UC3){
@@ -164,11 +165,11 @@ Node::Node(const cv::Mat visual,
   id_(-1), seq_id_(-1), vertex_id_(-1), valid_tf_estimate_(true), matchable_(true),
   pc_col(point_cloud),
   flannIndex(NULL),
-  base2points_(tf::Transform::getIdentity(), point_cloud->header.stamp,ParameterServer::instance()->get<std::string>("base_frame_name"), point_cloud->header.frame_id),
-  ground_truth_transform_(tf::Transform::getIdentity(), point_cloud->header.stamp, ParameterServer::instance()->get<std::string>("ground_truth_frame_name"), ParameterServer::instance()->get<std::string>("base_frame_name")),
-  odom_transform_(tf::Transform::getIdentity(), point_cloud->header.stamp, "missing_odometry", point_cloud->header.frame_id),
-  initial_node_matches_(0)
-{
+  header_(point_cloud->header),
+  base2points_(tf::Transform::getIdentity(), header_.stamp,ParameterServer::instance()->get<std::string>("base_frame_name"), header_.frame_id),
+  ground_truth_transform_(tf::Transform::getIdentity(), header_.stamp, ParameterServer::instance()->get<std::string>("ground_truth_frame_name"), ParameterServer::instance()->get<std::string>("base_frame_name")),
+  odom_transform_(tf::Transform::getIdentity(), header_.stamp, "missing_odometry", header_.frame_id),
+  initial_node_matches_(0){
   //cv::namedWindow("matches");
   ParameterServer* ps = ParameterServer::instance();
 
@@ -606,7 +607,10 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
 
   std::list<int> featuresUsed;
   
+  //double max_depth = ps->get<double>("maximum_depth");
+  //double min_depth = ps->get<double>("minimum_depth");
   int index = -1;
+
   for(unsigned int i = 0; i < feature_locations_2d.size(); /*increment at end of loop*/){
     ++index;
 
@@ -621,12 +625,14 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
     if (std::isnan (Z))
     {
       ROS_DEBUG("Feature %d has been extracted at NaN depth. Using pixel coordinates", i);
+      /*
       //FIXME Use parameter here to choose whether to use
       //FIXME Bad hack: using pixel coords
       x = (p2d.x - cx) * 1.0 * fx;
       y = (p2d.y - cy) * 1.0 * fy;
-      //feature_locations_2d.erase(feature_locations_2d.begin()+i);
-      //continue;
+      */
+      feature_locations_2d.erase(feature_locations_2d.begin()+i);
+      continue;
     }
     else
     {

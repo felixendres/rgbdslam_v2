@@ -9,5 +9,5 @@
   <node pkg="dynamic_reconfigure" type="dynparam" 
         name="setregistration" args="set camera/driver depth_registration True"/>
 
-  <include file="$(find rgbdslam)/launch/rgbdslam.launch"/>
+      <!--  <include file="$(find rgbdslam)/launch/rgbdslam.launch"/>-->
 </launch>

@@ -24,14 +24,14 @@ ColorOctomapServer::~ColorOctomapServer() {}
 ///Clear octomap and reset values to paramters from parameter server
 void ColorOctomapServer::reset()
 {
-  m_octoMap.octree.clear();
+  m_octoMap.clear();
   ParameterServer* ps = ParameterServer::instance();
-  m_octoMap.octree.setClampingThresMin(ps->get<double>("octomap_clamping_min"));
-  m_octoMap.octree.setClampingThresMax(ps->get<double>("octomap_clamping_max"));
-  m_octoMap.octree.setResolution(ps->get<double>("octomap_resolution"));
-  m_octoMap.octree.setOccupancyThres(ps->get<double>("octomap_occupancy_threshold"));
-  m_octoMap.octree.setProbHit(ps->get<double>("octomap_prob_hit"));
-  m_octoMap.octree.setProbMiss(ps->get<double>("octomap_prob_miss"));
+  m_octoMap.setClampingThresMin(ps->get<double>("octomap_clamping_min"));
+  m_octoMap.setClampingThresMax(ps->get<double>("octomap_clamping_max"));
+  m_octoMap.setResolution(ps->get<double>("octomap_resolution"));
+  m_octoMap.setOccupancyThres(ps->get<double>("octomap_occupancy_threshold"));
+  m_octoMap.setProbHit(ps->get<double>("octomap_prob_hit"));
+  m_octoMap.setProbMiss(ps->get<double>("octomap_prob_miss"));
 }
 
 bool ColorOctomapServer::save(const char* filename) const
@@ -39,13 +39,13 @@ bool ColorOctomapServer::save(const char* filename) const
   ScopedTimer s(__FUNCTION__);
   std::ofstream outfile(filename, std::ios_base::out | std::ios_base::binary);
   if (outfile.is_open()){
-    //m_octoMap.octree.writeConst(outfile); 
+    //m_octoMap.writeConst(outfile); 
     if (ParameterServer::instance()->get<bool>("concurrent_io")) {
       ROS_INFO("Waiting for rendering thread to finish");
       rendering.waitForFinished();
     }
     ROS_INFO("Writing octomap to %s", filename);
-    m_octoMap.octree.write(outfile); 
+    m_octoMap.write(outfile); 
     outfile.close();
     ROS_INFO("color tree written %s", filename);
     return true;
@@ -80,9 +80,9 @@ void ColorOctomapServer::insertCloudCallback(const pointcloud_type::ConstPtr clo
 
 void ColorOctomapServer::insertCloudCallbackCommon(const pointcloud_type::ConstPtr  pcl_cloud,
                                                    const tf::Transform& trans, double max_range) {
-  if(m_octoMap.octree.getResolution() != ParameterServer::instance()->get<double>("octomap_resolution")){
+  if(m_octoMap.getResolution() != ParameterServer::instance()->get<double>("octomap_resolution")){
     ROS_WARN("OctoMap resolution changed from %f to %f. Resetting Octomap", 
-             m_octoMap.octree.getResolution(), ParameterServer::instance()->get<double>("octomap_resolution"));
+             m_octoMap.getResolution(), ParameterServer::instance()->get<double>("octomap_resolution"));
     this->reset();
   }
   geometry_msgs::Point origin;
@@ -90,8 +90,8 @@ void ColorOctomapServer::insertCloudCallbackCommon(const pointcloud_type::ConstP
 
   ROS_DEBUG("inserting data");
   //    m_octoMap.insertScan(pcl_cloud, origin, m_maxRange, false, true); // no pruning 
-  m_octoMap.insertScan(*pcl_cloud, origin, max_range, true, true); 
-
+  /*
+   * m_octoMap.insertScan(*pcl_cloud, origin, max_range, true, true); 
   // integrate color measurements
   unsigned char* colors = new unsigned char[3];
 
@@ -108,11 +108,12 @@ void ColorOctomapServer::insertCloudCallbackCommon(const pointcloud_type::ConstP
       colors[0] = ((rgb >> 16) & 0xff);
       colors[1] = ((rgb >> 8) & 0xff);
       colors[2] = (rgb & 0xff);
-      m_octoMap.octree.averageNodeColor(it->x, it->y, it->z, colors[0], colors[1], colors[2]);
+      m_octoMap.averageNodeColor(it->x, it->y, it->z, colors[0], colors[1], colors[2]);
     }
   }
 
   // updates inner node colors, too
   ROS_DEBUG("updating inner nodes");
-  m_octoMap.octree.updateInnerOccupancy();
+  m_octoMap.updateInnerOccupancy();
+   */
 }

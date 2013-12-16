@@ -653,6 +653,14 @@ void GLViewer::addFeatures(const std::vector<Eigen::Vector4f, Eigen::aligned_all
     glEndList();
 }
 
+inline float squaredEuclideanDistance(point_type p1, point_type p2){
+  float dx = p1.x - p2.x;
+  float dy = p1.y - p2.y;
+  float dz = p1.z - p2.z;
+  return dx*dx + dy*dy + dz*dz;
+}
+
+
 void GLViewer::pointCloud2GLStrip(pointcloud_type * pc){
     ScopedTimer s(__FUNCTION__);
     ROS_DEBUG("Making GL list from point-cloud pointer %p in thread %d", pc, (unsigned int)QThread::currentThreadId());

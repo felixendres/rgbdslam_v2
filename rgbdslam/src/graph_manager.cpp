@@ -466,8 +466,8 @@ bool GraphManager::nodeComparisons(Node* new_node,
       mr = new_node->matchNodePair(prev_frame);
       ROS_INFO("Node comparison result: %s", mr.toString());
       if(mr.edge.id1 >= 0 && mr.edge.id2 >= 0) {//Found trafo
-        ros::Time time1 = prev_frame->pc_col->header.stamp;
-        ros::Time time2 = new_node->pc_col->header.stamp;
+        ros::Time time1 = prev_frame->header_.stamp;
+        ros::Time time2 = new_node->header_.stamp;
         ros::Duration delta_time =  time2 - time1;
         if(!isBigTrafo(mr.edge.mean) || !isSmallTrafo(mr.edge.mean, delta_time.toSec())){ //Found trafo, but bad trafo (too small to big)
             ROS_WARN("Transformation not within bounds. Did not add as Node");
@@ -554,7 +554,7 @@ bool GraphManager::nodeComparisons(Node* new_node,
               ROS_INFO("new node has id %i", new_node->id_);
               assert(graph_[mr.edge.id1]);
 
-              ros::Duration delta_time = new_node->pc_col->header.stamp - graph_[mr.edge.id1]->pc_col->header.stamp;
+              ros::Duration delta_time = new_node->header_.stamp - graph_[mr.edge.id1]->header_.stamp;
               if (isSmallTrafo(mr.edge.mean, delta_time.toSec()) &&
                   addEdgeToG2O(mr.edge,graph_[mr.edge.id1],new_node, isBigTrafo(mr.edge.mean), mr.inlier_matches.size() > curr_best_result_.inlier_matches.size(), curr_motion_estimate))
                 { 
@@ -585,7 +585,7 @@ bool GraphManager::nodeComparisons(Node* new_node,
 
             if (mr.edge.id1 >= 0) {
 
-              ros::Duration delta_time = new_node->pc_col->header.stamp - graph_[mr.edge.id1]->pc_col->header.stamp;
+              ros::Duration delta_time = new_node->header_.stamp - graph_[mr.edge.id1]->header_.stamp;
               if (isSmallTrafo(mr.edge.mean, delta_time.toSec()) &&
                   addEdgeToG2O(mr.edge, node_to_compare, new_node, isBigTrafo(mr.edge.mean), mr.inlier_matches.size() > curr_best_result_.inlier_matches.size(), curr_motion_estimate))
               {
@@ -1190,7 +1190,7 @@ unsigned int GraphManager::pruneEdgesWithErrorAbove(float thresh){
           int n_id1 = vertex_id_to_node_id[v1->id()]; 
           int n_id2 = vertex_id_to_node_id[v2->id()];
           if(abs(n_id1 - n_id2) == 1){ //predecessor-successor
-            ros::Duration delta_time = graph_[n_id2]->pc_col->header.stamp - graph_[n_id1]->pc_col->header.stamp;
+            ros::Duration delta_time = graph_[n_id2]->header_.stamp - graph_[n_id1]->header_.stamp;
             if(!isSmallTrafo(myedge->measurement(), delta_time.toSec()))
             { 
               ROS_INFO("Setting edge from node %d to %d to Identity because translation is too large", n_id1, n_id2);

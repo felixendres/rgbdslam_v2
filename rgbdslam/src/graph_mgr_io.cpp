@@ -78,7 +78,7 @@ tf::StampedTransform GraphManager::computeFixedToBaseTransform(Node* node, bool 
     std::string base_frame  = ParameterServer::instance()->get<std::string>("base_frame_name");
     if(base_frame.empty())
     { //if there is no base frame defined, use frame of sensor data
-      base_frame = graph_.begin()->second->pc_col->header.frame_id;
+      base_frame = graph_.begin()->second->header_.frame_id;
     }
     if(invert){
       return tf::StampedTransform(world2base.inverse(), now, base_frame, fixed_frame);
@@ -114,19 +114,19 @@ void GraphManager::saveBagfile(QString filename)
     tf::tfMessage tfmsg;
 
     tf::StampedTransform base_to_fixed = this->computeFixedToBaseTransform(node, true);
-    base_to_fixed.stamp_ = node->pc_col->header.stamp;
+    base_to_fixed.stamp_ = node->header_.stamp;
     tf::transformStampedTFToMsg(base_to_fixed, geom_msg);
     tfmsg.transforms.push_back(geom_msg);
 
     tf::StampedTransform base_to_points = node->getBase2PointsTransform();
-    base_to_points.stamp_ = node->pc_col->header.stamp;
+    base_to_points.stamp_ = node->header_.stamp;
     tf::transformStampedTFToMsg(base_to_points, geom_msg);
     tfmsg.transforms.push_back(geom_msg);
 
     //tfmsg.set_transforms_size(2);
 
-    bag.write("/tf", node->pc_col->header.stamp, tfmsg);
-    bag.write("/rgbdslam/batch_clouds", node->pc_col->header.stamp, node->pc_col);
+    bag.write("/tf", node->header_.stamp, tfmsg);
+    bag.write("/rgbdslam/batch_clouds", node->header_.stamp, node->pc_col);
 
     QString message;
     Q_EMIT setGUIInfo(message.sprintf("Writing pointcloud and map transform (%i/%i) to bagfile %s", it->first, (int)graph_.size(), qPrintable(filename)));
@@ -211,7 +211,7 @@ bool GraphManager::updateCloudOrigin(Node* node)
     // Update the sensor pose stored in the point clouds
     node->pc_col->sensor_origin_.head<3>() = v->estimate().translation().cast<float>();
     node->pc_col->sensor_orientation_ =  v->estimate().rotation().cast<float>();
-    //node->pc_col->header.frame_id = ParameterServer::instance()->get<std::string>("fixed_frame_name");
+    //node->header_.frame_id = ParameterServer::instance()->get<std::string>("fixed_frame_name");
 }
 
 void GraphManager::saveOctomap(QString filename, bool threaded){
@@ -289,7 +289,7 @@ void GraphManager::writeOctomap(QString filename) const
 void GraphManager::renderToOctomap(Node* node)
 {
     ScopedTimer s(__FUNCTION__);
-    ROS_INFO("Rendering Node %i with frame %s", node->id_, node->pc_col->header.frame_id.c_str());
+    ROS_INFO("Rendering Node %i with frame %s", node->id_, node->header_.frame_id.c_str());
     co_server_.insertCloudCallback(node->pc_col, ParameterServer::instance()->get<double>("maximum_depth")); // Will be transformed according to sensor pose set previously
     if(ParameterServer::instance()->get<bool>("octomap_clear_raycasted_clouds")){
       node->clearPointCloud();
@@ -341,7 +341,7 @@ void GraphManager::saveIndividualCloudsToFile(QString file_basename)
 
       node->pc_col->sensor_origin_ = sensor_origin;
       node->pc_col->sensor_orientation_ = sensor_orientation;
-      node->pc_col->header.frame_id = fixed_frame_id;
+      node->header_.frame_id = fixed_frame_id;
     }
     else {
       tf::Transform pose = eigenTransf2TF(v->estimate());
@@ -353,7 +353,7 @@ void GraphManager::saveIndividualCloudsToFile(QString file_basename)
 
       node->pc_col->sensor_origin_ = sensor_origin;
       node->pc_col->sensor_orientation_ = sensor_orientation;
-      node->pc_col->header.frame_id = fixed_frame_id;
+      node->header_.frame_id = fixed_frame_id;
     }
 
     filename.sprintf("%s_%04d.pcd", qPrintable(file_basename), it->first);
@@ -372,7 +372,7 @@ void GraphManager::saveIndividualCloudsToFile(QString file_basename)
 
       node->pc_col->sensor_origin_ = sensor_origin;
       node->pc_col->sensor_orientation_ = sensor_orientation;
-      node->pc_col->header.frame_id = fixed_frame_id;
+      node->header_.frame_id = fixed_frame_id;
 
       filename.sprintf("%s_%04d_gt.pcd", qPrintable(file_basename), it->first);
       Q_EMIT setGUIStatus(message.sprintf("Saving to %s: Transformed Node %i/%i", qPrintable(filename), it->first, (int)camera_vertices.size()));
@@ -467,7 +467,7 @@ void GraphManager::saveAllCloudsToFile(QString filename){
 
     std::string base_frame  = ParameterServer::instance()->get<std::string>("base_frame_name");
     if(base_frame.empty()){ //if there is no base frame defined, use frame of sensor data
-      base_frame = graph_.begin()->second->pc_col->header.frame_id;
+      base_frame = graph_.begin()->second->header_.frame_id;
     }
 
     tf::Transform  world2cam;
@@ -597,7 +597,7 @@ void GraphManager::saveTrajectory(QString filebasename, bool with_ground_truth)
       tf::StampedTransform base2points = node->getBase2PointsTransform();//get pose of base w.r.t current pc at capture time
       tf::Transform world2base = init_base_pose_*base2points*pose*base2points.inverse();
 
-      logTransform(et_out, world2base, node->pc_col->header.stamp.toSec());
+      logTransform(et_out, world2base, node->header_.stamp.toSec());
       //Eigen::Matrix<double, 6,6> uncertainty = v->uncertainty();
       //et_out << uncertainty(0,0) << "\t" << uncertainty(1,1) << "\t" << uncertainty(2,2) << "\t" << uncertainty(3,3) << "\t" << uncertainty(4,4) << "\t" << uncertainty(5,5) <<"\n" ;
       if(with_ground_truth && !gt.empty()){
@@ -879,7 +879,7 @@ tf::StampedTransform GraphManager::stampedTransformInWorldFrame(const Node* node
     std::string fixed_frame = ParameterServer::instance()->get<std::string>("fixed_frame_name");
     std::string base_frame  = ParameterServer::instance()->get<std::string>("base_frame_name");
     if(base_frame.empty()){ //if there is no base frame defined, use frame of sensor data
-      base_frame = node->pc_col->header.frame_id;
+      base_frame = node->header_.frame_id;
     }
     const tf::StampedTransform& base2points = node->getBase2PointsTransform();//get pose of base w.r.t current pc at capture time
 
@@ -911,7 +911,7 @@ void GraphManager::broadcastTransform(Node* node, tf::Transform& computed_motion
     std::string fixed_frame = ParameterServer::instance()->get<std::string>("fixed_frame_name");
     std::string base_frame  = ParameterServer::instance()->get<std::string>("base_frame_name");
     if(base_frame.empty()){ //if there is no base frame defined, use frame of sensor data
-      base_frame = node->pc_col->header.frame_id;
+      base_frame = node->header_.frame_id;
     }
     
     /*
@@ -935,11 +935,13 @@ void GraphManager::broadcastTransform(Node* node, tf::Transform& computed_motion
 
 ///Send node's pointcloud with given publisher and timestamp
 void publishCloud(Node* node, ros::Time timestamp, ros::Publisher pub){
-  ros::Time stamp = node->pc_col->header.stamp; //temp storage
-  node->pc_col->header.stamp = timestamp; //to sync with tf
+  myHeader backup_h(node->pc_col->header);
+  myHeader newtime_h(node->pc_col->header);
+  newtime_h.stamp = timestamp;
+  node->pc_col->header = newtime_h;
   pub.publish(node->pc_col);
-  node->pc_col->header.stamp = stamp; //restore original stamp (to minimize unexpected side-effects of this function)
   ROS_INFO("Pointcloud with id %i sent with frame %s", node->id_, node->pc_col->header.frame_id.c_str());
+  node->pc_col->header = backup_h;
 }
 
 void drawFeatureConnectors(cv::Mat& canvas, cv::Scalar line_color, 

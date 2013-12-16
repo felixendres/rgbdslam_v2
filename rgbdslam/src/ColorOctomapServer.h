@@ -4,9 +4,12 @@
 #include "parameter_server.h"
 #include <octomap_server/OctomapServer.h>
 #include <octomap/ColorOcTree.h>
-#include <octomap_ros/OctomapROS.h>
+//#include <octomap_ros/OctomapROS.h>
+#include <octomap_ros/conversions.h>
+#include <octomap/octomap.h>
 #include <qtconcurrentrun.h>
 
+typedef octomap::ColorOcTree OcTreeT;
 
   class ColorOctomapServer: public octomap_server::OctomapServer {
   public:
@@ -19,7 +22,8 @@
                                            const tf::Transform& trans, double max_range);
 
   protected:
-    octomap::OctomapROS<octomap::ColorOcTree> m_octoMap;
+    OcTreeT m_octoMap;
+    //octomap::OctomapROS<octomap::ColorOcTree> m_octoMap;
     mutable QFuture<void> rendering;  //Mutable is a hack, otherwise waitforfinished cannot be called in const function
   };
 

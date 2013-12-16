@@ -126,7 +126,8 @@ class OpenNIListener : public QObject {
                           const sensor_msgs::CameraInfoConstPtr& cam_info_msg) ;
     //! No depth image but pointcloud, e.g., for stereo cameras
     void stereoCallback(const sensor_msgs::ImageConstPtr& visual_img_msg, const sensor_msgs::PointCloud2ConstPtr& point_cloud);
-    void pcdCallback(const sensor_msgs::ImageConstPtr visual_img_msg, pointcloud_type::Ptr point_cloud);
+    //void pcdCallback(const sensor_msgs::ImageConstPtr visual_img_msg, pointcloud_type::Ptr point_cloud);
+    void pcdCallback(const sensor_msgs::ImageConstPtr visual_img_msg, sensor_msgs::PointCloud2::Ptr point_cloud);
 
   protected:
     void loadBag(std::string filename);
@@ -139,6 +140,7 @@ class OpenNIListener : public QObject {
     QImage cvMat2QImage(const cv::Mat& channel1, const cv::Mat& channel2, const cv::Mat& channel3, unsigned int idx);
     //!Retrieve the transform between the lens and the base-link at capturing time
     void retrieveTransformations(std_msgs::Header depth_header, Node* node_ptr);
+    void visualize_images(cv::Mat visual_image, cv::Mat depth_image);
 
     //!Call processNode either regularly or as background thread
     void callProcessing(cv::Mat gray_img, Node* node_ptr);

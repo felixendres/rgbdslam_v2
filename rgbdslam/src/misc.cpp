@@ -24,12 +24,14 @@
 #include "parameter_server.h"
 #include <cv.h>
 #include "scoped_timer.h"
+#include "header.h"
 
 #include "g2o/types/slam3d/se3quat.h"
 #include "g2o/types/slam3d/vertex_se3.h"
 
 #include <pcl_ros/transforms.h>
 #include "pcl/common/io.h"
+#include "pcl/common/distances.h"
 
 #if CV_MAJOR_VERSION > 2 || CV_MINOR_VERSION >= 4
 #include "opencv2/core/core.hpp"
@@ -608,8 +610,10 @@ pointcloud_type* createXYZRGBPointCloud (const sensor_msgs::ImageConstPtr& depth
 {
   ScopedTimer s(__FUNCTION__);
   pointcloud_type* cloud (new pointcloud_type() );
-  cloud->header.stamp     = depth_msg->header.stamp;
-  cloud->header.frame_id  = rgb_msg->header.frame_id;
+  myHeader h(0, depth_msg->header.stamp,  rgb_msg->header.frame_id);
+  cloud->header = h;
+  //cloud->header.stamp     = depth_msg->header.stamp;
+  //cloud->header.frame_id  = rgb_msg->header.frame_id;
   cloud->is_dense         = false; //single point of view, 2d rasterized NaN where no depth value was found
 
   ParameterServer* ps = ParameterServer::instance();
@@ -1212,7 +1216,7 @@ void overlay_edges(cv::Mat visual, cv::Mat depth, cv::Mat& visual_edges, cv::Mat
     visual_edges = visual;
   }
   cv::blur( visual_edges, visual_edges, cv::Size(3,3) );
-  cv::Canny(visual_edges, visual_edges, 10, 30);
-  cv::Canny(depth, depth_edges, 100, 300);
+  cv::Canny(visual_edges, visual_edges, 25, 300);
+  cv::Canny(depth, depth_edges, 10, 300);
 }
 

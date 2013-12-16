@@ -26,7 +26,8 @@
 //this is a global definition of the points to be used
 //changes to omit color would need adaptations in 
 //the visualization too
-#include "pcl/point_cloud.h"
+//#include "pcl/point_cloud.h"
+#include "pcl_ros/point_cloud.h"
 #include "pcl/point_types.h"
 #include "point_types.h"
 #ifdef RGB_IS_4TH_DIM

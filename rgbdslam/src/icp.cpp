@@ -6,7 +6,8 @@
 #include <pcl/registration/icp.h>
 #include <pcl/registration/impl/icp_nl.hpp>
 #include <pcl/registration/impl/icp.hpp>
-#include </opt/ros/fuerte/include/pcl-1.5/pcl/kdtree/impl/kdtree_flann.hpp>
+#include <pcl/kdtree/impl/kdtree_flann.hpp>
+//#include </opt/ros/fuerte/include/pcl-1.5/pcl/kdtree/impl/kdtree_flann.hpp>
 //#include <pcl/registration/impl/gicp.hpp>
 #include <pcl/filters/filter.h>
 #include "scoped_timer.h"
@@ -55,7 +56,7 @@ Eigen::Matrix4f icpAlignment(pointcloud_type::Ptr cloud_1, pointcloud_type::Ptr 
   pointcloud_type::Ptr filtered_out(new pointcloud_type);
   std::vector<int> indices_nonused;
   // Set the input source and target
-  icp->setInputCloud(cloud_1);
+  icp->setInputSource(cloud_1);
   icp->setInputTarget(cloud_2);
   // Set the max correspondence distance to 5cm (e.g., correspondences with higher distances will be ignored)
   icp->setMaxCorrespondenceDistance(0.05);

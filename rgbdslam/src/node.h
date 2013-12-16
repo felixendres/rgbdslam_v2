@@ -45,6 +45,7 @@
 
 #include "matching_result.h" 
 #include <Eigen/StdVector>
+#include "header.h"
 
 typedef std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f> > std_vector_of_eigen_vector4f;
 //!Holds the data for one graph node and provides functionality to compute relative transformations to other Nodes.
@@ -57,7 +58,7 @@ public:
 			 const cv::Mat& depth,
 			 const cv::Mat& detection_mask,
        const sensor_msgs::CameraInfoConstPtr& cam_info, 
-       std_msgs::Header depth_header,
+       myHeader depth_header,
 			 cv::Ptr<cv::FeatureDetector> detector,
 			 cv::Ptr<cv::DescriptorExtractor> extractor);
 	///Visual must be CV_8UC1
@@ -182,6 +183,7 @@ public:
                  int knn, 
                  const cv::flann::SearchParams& params) const;
 
+  myHeader header_;
 protected:
   const cv::flann::Index* getFlannIndex() const;
   static QMutex gicp_mutex;

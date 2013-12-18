@@ -1,0 +1,190 @@
+0.5.400
+	Fixes some platform issues to make SiftGPU work with Intel integrated GPUs.
+		Tested on window 7 and Ubuntu.
+		Note that Linux+Intel card works only on Mesa 9 for now.
+	Replaced the deprecated ostrstream by ostringstream
+	Fixed a few memory leaks (delete[]/delete mistakes);
+0.5.382
+	Fixed a bug with CUDA-based SiftMatchGPU (can match up to only 4096)
+	* The maximu texture dimension is not updated from hardware since V370
+0.5.381
+	Really fixed the bug in CUDA-implementation of Guided SIFT matching...
+
+0.5.380
+	Fixed a bug in CUDA-implementation of Guided SIFT matching. (Thanks to Oliver Whyte)
+	Added auto-downsampling to try fit the GPU memory cap.
+	Fixed minor GLSL code issue on Intel Integrated Cards.. not fully functional on Intel
+	Fixed bug with a rarely used parameter -tc for limiting feature counts
+	Updated Devil 64 bit lib to let it search for Devil64.dll (to keep both in the same folder)
+	Fixed an issue on the new nVidia driver with one GLSL shader. 
+	Fixed a glReadPixels issue on ATI when the feature count is too big.
+	Modified the descriptor code to make it work correctly for ATI
+	Finally made GPU selection for Windows working (e.g. -display \\.\DISPLAY4)
+	MSVC Only: Converted the visual studio solution to v2010 
+0.5.370
+	Automatic switch from OpenGL to CUDA when OpenGL is not supported (Useful for X)
+	Dropped indirect data transfer path CPU->GL->CUDA 
+	    (CUDA part not requiring OpenGL at all, but restrictive on input type)
+	New parameter -mind (mininum working dimension) for performance tweak
+	    (By default it is 16; Gaussian octaves smaller than this will be skipped)
+	    (Small dimensions are ineffecient for GPU because many processes are on idle)
+	Added a function to compute SIFT for any rectangle (not only square!)
+	    (Email me if you are interested in using it)
+	
+	Dropped all CG implementation to simplify maintance
+	Added a partial OpenCL implementation (half speed of CUDA/GLSL)
+	Added macro SIFTGPU_NO_DEVIL to allow droping DevIL depencency
+	Fixed minor bug in makefile
+	Removed reference to MAX_PATH in SiftGPU.h. It is dangerrous..since they can be redefined. 
+
+0.5.360 
+	Added demo MultiThreadSIFT to demonstrate using Multi-GPU with Multi-Threading.
+	Improved CUDA performance on frequent image size changes
+	Skipped unacessary gradient/dog computation when using keypoint list on a same image
+	Added x64 projects to VisualStudio solution
+	Provided three different ways to limit the number of feautres -tc1 -tc2 -tc3
+		(to keep either the highest levels or the lowest levels)
+	Fixed a bug with -tc introduced in V360Beta (2/26/10)
+	Fixed a bug in CUDA-implementation when the first several octaves are skipped (2/28/10)
+	Let RunSIFT return 0 when errors are found in CUDA (previously ignored)
+	Added option -display to select GPU according to Display
+	Modified option -cuda [device_index] to select GPU device.
+	Added Wrapper ServerSiftGPU to allow run multiple SiftGPU on multiple GPUs 
+	Added option -tc to set a soft limit for the number of returned features. 
+	Changed OpenGL context creation. The core library no longer requires GLUT.	
+	Removed calles to std in file ProgramCU.cu to avoid possible compiling errors. 
+	Reorganized the file structure of the code package.     
+	Fixed some linux makefile issue and linux compilation issue.	
+	Fixed linux name mangling problem for dynamic library loading.
+0.5.345
+	New Linux makefile. CG, CUDA and sse parameters can now be changed easily in makefile.
+	CG-based SiftGPU is now disabled by default to reduce dependencies. 
+	Made more parameters changable after initizlization (check manual for details)
+	Changed the way of handling out-of-boundary user-specified keypoints.
+	Changed the timing function from clock to gettimeofday for Linux (Thanks to Pilet)
+	Fixed a bug in saving binary format(Thanks to Dekker)
+	Fixed linux makefile for CUDA-SIFTGPU (Thanks to Planna)
+	Fixed a conversion bug for 64-bit system introduced in V340 (Thanks to Plana and Wang)
+0.5.340
+	Added (-glsl -pack -m -s) to default setting. (You can change back to CG by -cg)
+	Updated libraries (CG 2.1, GLEW 1.5, DEVIL 1.77)
+	Used SSE to speed up descriptor normalization	
+	Improved speed of the OpenGL-based SiftMatchGPU. (1.5x)
+	Added GLSL and CUDA implementation of SiftMatchGPU
+	Added the packed glsl implementation. It might be slightly faster than cg.
+	Added a CUDA-based SiftGPU implementation(use -cuda to turn it on)
+	Cleaned up the GLSL code to follow the GLSL standard more strictly.
+	Tested many of the GLSL shaders in GPU ShaderAnalyzer 1.5.
+	Added option -fastmath to specify -fastmath to cg compiler(yet no big difference).
+	Increased the threshold to fix the bug in guided matching when F is NULL
+	Fixed a bug in orientation for -m2p (missing a ";" in shader code)
+	Changed interface to handle all OpenGL pixel data (Previous only float and unsigned char). 
+	Kept only the fastest verion of descriptor generation code, and dropped others. 
+0.5.320
+	Fixed a bug (Wrong texture size may be assigned when image size changes)
+	Fixed a bug (Descriptor storage size may be not updated when image size changes)
+0.5.319
+	Fixed a bug (Setkeypoint before specifying image was not working in previous versoins)
+0.5.318
+	Changed interface to process keypoints WITHOUT known orientations
+	Added interface to specifiy float image data
+	Overloaded new operator of SiftGPU and SiftMatchGPU to fix a possible heap corruption on deallocation
+0.5.317
+	Fixed a bug in processing user-specified keypoints
+	Updated the .def file for the released package
+0.5.316
+	Fixed a bug of insufficient buffer allocation in very rare cases. (Thanks to Zheng)
+	Added guided SIFT putative matching using homography or/and fundamental matrix
+	Added function to change the feature number limitation for sift matching
+0.5.315
+	Added a cg-based sift matching implementation (Thanks to Zach)(see SimpleSIFT.cpp for example).
+	Added optional output of the extremum type (maximum or minimum) of feature
+	Added function to compute descriptors for user-specified keypoints
+	Included xcode project and makefile(Thanks to Perfanov and Wittenhagen)
+0.5.313
+	Finished the GLSL implementation of SIFT (use -glsl to turn it on).
+	Fixed a bug of crashing after many iterations on newer graphic card like GTX 280. (Thanks to Zheng)
+0.5.312
+	Fixed a bug introduced in V311(One texture size not updated for image size chaning with -pack)
+	Fixed a bug introduced in V311(feature readback function is empty for -pack). (Thanks to Palomo)
+0.5.311
+	Fixed a bug in descriptor computation (it may cause error in descriptors of 10% of features)
+	Implemented a packed SIFT implementation (use -pack to use it. 3x pyramid construction speed)
+	Used GPU/CPU mixed list generation (2X compared with old method)
+	Used only CPU for multi-orientation list generation (much faster than GPU)
+	Changed parameter to avoid using dyamic array indexing by default.
+	Implemented a new descriptor computation method(30% faster than the old one
+	Evaluated the speed on GTX 280. (obtained 1.5x the speed of 8800 GTX)
+	Dropped many unreferenced functions and also some old shaders.
+	Changed some definition for better compiliation on Mac (Thanks to Wittenhagen)
+	Changed SaveSIFT function to keep a little bit less fractional digits
+	Combined the horizontal gradient and vertical gradient visualization to one.
+0.5.302
+	Updated cg, glew and glut libraries
+	Added speed evaluation code 
+	Added some debug code to write out floating point tiff images 
+	Refactorized code a little bit, now it is having much less warnings 
+0.5.293
+	Changed gaussian weighting factor in orientation computation, now closer to Lowe's
+	Minor bug fix on texture reallocation for too many features
+	Added new feature to automatically down-sample images that are larger than user-defined size. 
+0.5.288
+	Added comparision with Lowe's SIFT on box.pgm(check /doc/evaluation for results)
+	Fixed two bugs related to feature scale 
+	Fixed a bug related to up-sampling
+	Added a missing dog threshold test after subpixel localization. 
+	Added new parameter for fixing the feature orientations
+	Added export function to check how SiftGPU is supported by  current OpenGL context
+	Changed some default parameter ( now it downloades result, and use verbose level 2 by default)
+0.5.280
+	Added an example of dyanmic loading of siftgpu library
+	Fixed a serious bug of GetFeatureVector (orientation and scale are misordered previously)
+	Fixed a bug in def file
+	Fixed a bug in calling RunSIFT with pixel data. 
+	Fixed some GLSL shader bugs
+0.5.276
+	Removed file "gs_types.h" and put the export definition in "siftgpu.h"
+	Added high resolution timing for windows by using funciton timeGetTime
+	Fixed some problems on arbfp1. Now it can run a limited demo again.
+	Added parameter for changing the maximum allowed feature number of a level
+0.5.267
+	Corrected a neglected stricmp to _stricmp for linux compiliation
+	Fixed a bug in function ResizePyramid which happens when image size changes in some way
+	Added key input function to change verbose level for GUI mode
+	
+0.5.265
+	Added display of fps information in console for sequential processing
+	Added an optional step that converts RGB to Luminance before uploading to GPU
+	Added a parameter "-p WxH" to specify the size for initializing the pyramids 
+0.5.261
+	Added a new feature for using existing memories for processing smaller images
+	Added new functions to let user control the allocation pyramid momory
+	Fixed a bug with sub-pixel localization 
+
+0.5.256
+	Added linux makefile 
+	Added a new feature for allocating seperate processing memories for multiple images.
+0.5.250 
+	New keypoint detection code capable of sub-pixel/sub-scale localization
+	Changed code for easy Linux porting. Thank Martin Schneider for his help on this 
+	Changed some default values of the parameters. 
+	Improved SIFT visualization. 
+0.5.236 
+	Fixed an important bug in orientation computation 
+	Successfully tested on many image matching experiments 
+	Changed the command line -m to default 2 orientations 
+0.5.232 
+	Fixed a sift output bug 
+	Fixed a NaN bug in descriptor generation
+	Fixed a bug that some images are flipped 
+0.5.224          
+	Fixed a memory leak bug on FBO 
+	Added one more demo for processing 640*480 image sequence 
+	Smalled change to interface, so that image data can be specified like OpenGL textures
+0.5.220 
+	Added more examples to manual. 
+	Added more comments about the siftgpu interface 
+	Added one more input interface 
+	Fixed bug of crash on image size change 
+0.5.208 
+	First release

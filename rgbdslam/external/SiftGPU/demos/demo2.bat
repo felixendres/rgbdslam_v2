@@ -1,0 +1,1 @@
+..\bin\TestWinGlut.exe -il ..\data\list640.txt  

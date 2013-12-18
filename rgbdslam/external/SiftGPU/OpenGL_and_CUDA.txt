@@ -1,0 +1,79 @@
+PART 1, OPENGL, 
+
+Pay special attention if you have your own OpenGL code.
+The OpenGL-based implmentations of SiftGPU need valid OpenGL context to run properly.
+
+1. If you use the same OpenGL context for SiftGPU and your own your visualization
+	Make sure the OpenGL states are restored before calling SiftGPU. SiftGPU changes several 
+	OpenGL internal states, including texture binding to GL_TEXTURE_RECTANGLE_ARB and current
+	ViewPort. You might need to restore them for your own OpenGL part. To avoid this problem,
+	you can create a seperate GL context, and activate different context for different part. 
+
+	Note that GL_TEXTURE_RECTANGLE_ARB is always enabled in SiftGPU. When you have problem 
+    displaying textures, you can try first glDisable(GL_TEXTURE_RECTANGLE_ARB) before painting, 
+    but don't forget to call glEnable(GL_TEXTURE_RECTANGLE_ARB) after. (Thanks to Pilet)
+	
+2. How to create/setup an OpenGL context for SiftGPU
+
+	If you choose to let SiftGPU to manage OpenGL context, you can simply do that by 
+	SiftGPU::CreateContextGL and SiftMatchGPU::CreateContextGL.	When you mix your own OpenGL
+	code with SiftGPU, you need to re-call CreateContextGL before calling SiftGPU functions,
+	which will implicitly activate the internal OpenGL context. 
+	
+	
+	If you choose to create openGL contexts yourself when mixing SiftGPU with other openGL 
+	code, don't call SiftGPU::CreateContextGL or SiftMatchGPU::CreateContextGL; Instead you 
+	should first activate your OpenGL context (WglMakeCurrent in win32), and set GL_FILL 
+	for polygon mode, then call SiftGPU::VerifyContextGL or SiftMatchGPU::VerifyContextGL
+    for initialization. You should also setup in the same way before calling SiftGPU functions. 
+	
+
+PART 2, CUDA
+---------------------------------------------------------------------------------
+1. How to enable CUDA
+
+The CUDA implementation in the package is not compiled by default.
+
+To enable it for visual stuio 2010, use msvc/SiftGPU_CUDA_Enabled.sln
+To enable it for other OS, you need to change siftgpu_enable_cuda to 1 in the makefile
+
+
+---------------------------------------------------------------------------------
+2. Change CUDA build parameters.
+For windows, you need to change the settings in the custom build command line of 
+ProgramCU.cu. For example, add -use_fast_match for using fast match. 
+
+For Other OS, you need to change the makefile. The top part of the makefile is 
+the configuration section, which includes: 
+	siftgpu_enable_cuda = 0             (Set 1 to enable CUDA-based SiftGPU)
+	CUDA_INSTALL_PATH = /usr/local/cuda (Where to find CUDA)
+	siftgpu_cuda_options = -arch sm_10  (Additional CUDA Compiling options)
+
+	
+------------------------------------------------------------------------------------
+3. CUDA runtime parameters for SiftGPU::ParseParam
+First, you need to specify "-cuda" to use CUDA-based SiftGPU. More parameters can 
+be chagned at runtime in CUDA-based SiftGPU than in OpenGL-based version. Check out
+the manual for details. 
+
+NEW. You can choose GPU for CUDA computation by using "-cuda [device_index=0]"
+
+One parameter for CUDA is "-di", which controls whether dynamic indexing is used
+in descriptor generations. It is turned off by default. My experiments on 8800 
+GTX show that unrolled loop of 8 if-assigns are faster than dynamic indexing, but
+it might be different on other GPUs.
+
+
+--------------------------------------------------------------------------------------
+4. Speed of CUDA-based SiftGPU
+If the size of the first octave (multiply the original size by 2 if upsample is used)
+is less than or around 1024x768, CUDA version will be faster than OpenGL versions, 
+otherwise the OpenGL versions are still faster. 
+
+**************************************************************************************
+This is observed on nVidia 8800 GTX, it might be different on other GPUs. Recent
+experiments on GTX280 show that CUDA version is not as fast as OpenGL version. 
+
+Note: the thread block settings are currently tuned on GPU nVidia GTX 8800, 
+       which may not be optimized for other GPUs.
+**************************************************************************************

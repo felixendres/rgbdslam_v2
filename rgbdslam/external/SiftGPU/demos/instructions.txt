@@ -1,0 +1,9 @@
+after the window shows up, try the following keys
+r	process the next image
+l	start/stop loopy processing
+space 	next subview
+enter   next view
+
+Check out ../doc/manual.doc for more viewer instructions.
+
+demo3 process a list of images with varing image sizes

@@ -1,0 +1,87 @@
+------------------------------------------------------------------------
+SPEED
+------------------------------------------------------------------------
+1. The first several rounds of SiftGPU might be slow, don't worry. If it
+is always slow, the reason  might be either the graphic card is old or the 
+graphic memory is small. 
+
+2. Texture reallocation happens when a new image does not fit in the already 
+allocated storage. To get less reallocations, you can pre-allocate storage 
+to fit the largest image size, or just use images with the same size. 
+
+3. Loading some compressed images (.e.g jpg) may take a lot of time on 
+decompressing. Using binary pgm files or directly specifying data in memory 
+can achive better performance. Writing ASCII SIFT files is also slow. 
+
+4. The packd version saves GPU memory but also run faster than the unpacked, 
+which is default now. 
+
+5. SiftGPU might be faster with older grpahic card drivers than with newer ones. 
+
+6. The descriptor normalization in the OpenGL-based implementation is running 
+on CPU. New versions are now using SSE, which improves the speed for this part
+a lot. 
+
+7. The orientation computation in unpacked implementation is occasionally slow 
+under single orientation  mode (-m 1) or packed orientation mode (-m2p). By 
+default, siftgpu uses 2 orientations  (-m 2), which should be fine. This issue
+is still unresolved.
+
+8. The thread block settings in the CUDA-based SiftGPU are currently tuned 
+for my GPU nVidia GTX 8800, which may not be optimized for other GPUs.
+
+----------------------------------------------------------------------------
+ACCURACY
+----------------------------------------------------------------------------
+1. The latest version of SiftGPU now has comparable accuracy with CPU 
+implementatins. Evaluation on box.pgm of Lowe's package now gives around 600 
+matches, which is close to SIFT++.
+
+2. In orientation computation, SiftGPU uses a factor 2.0 * sigma as the sample 
+window size, which is smaller than the typical value 3.0. Changing it from 2.0 
+to 3.0 reduces the speed of this step by %40, but gives only a very small 
+improvements in matching. You can change it by specifying parameter "-w 3". 
+
+3. In keypoint localization, SiftGPU refines the location only once by default, 
+and SiftGPU does not move the level of keypoints in the refinement. 
+
+4. The feature locations are having a (0.5,0.5) offset compared with CPU 
+implementations by default.  (0, 0) in texture is at the top-left coorner 
+(instead of center) of the top-left pixel. You can use the center as (0, 0) 
+by specifying "-loweo"
+
+5. By default, SiftGPU does not do Upsampling(-fo -1), To match it with Lowe's 
+implementation you need  to use "-fo -1 -loweo". 
+
+6. SiftGPU may get slightly different results on different GPUs due to different 
+floating point precision. SiftGPU is tested on limited types of graphic cards/OS, 
+working on your graphic card is not guaranteed. 
+
+IF it returns different number of features at different run on the same card, 
+then something is going wrong, and probably some special tricks need to be used. 
+Please email me if that happens. 
+
+7. When getting wrong matches, please look at the saved SIFT file to make sure 
+there are no weired descriptors( for example, all of the numbers of a descriptor 
+are 45, or any number in a descriptor is larger than 255)
+
+------------------------------------------------------------------------------
+KWOWN ISSUES.
+------------------------------------------------------------------------------
+1. SiftGPU may have problem with dual monitor.
+2. Slow on 7950. Changing GlobalParam::_iTexFormat to GL_RGBA16F_ARB can make 
+   it work. Unknown reason.
+3. Experiments on 8600 show problems. It works fine for the first image, but 
+   gets wrong keypoints after.
+
+
+
+
+
+
+
+
+
+
+
+

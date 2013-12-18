@@ -1,0 +1,119 @@
+Microsoft Developer Studio Workspace File, Format Version 6.00
+# WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
+
+###############################################################################
+
+Project: "SiftGPU"=.\SiftGPU\SiftGPU.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "SiftGPU_Server"=.\ServerSiftGPU\SiftGPU_Server.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name SiftGPU
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "SimpleSIFT"=.\TestWin\SimpleSIFT.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name SiftGPU
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "Speed"=.\TestWin\Speed.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name SiftGPU
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "TestBase"=.\TestWin\TestBase.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name SiftGPU
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "TestWin"=.\TestWin\TestWin.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name TestBase
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "TestWinGlut"=.\TestWin\TestWinGlut.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name TestBase
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Global:
+
+Package=<5>
+{{{
+}}}
+
+Package=<3>
+{{{
+}}}
+
+###############################################################################
+

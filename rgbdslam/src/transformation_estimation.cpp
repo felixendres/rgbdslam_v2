@@ -11,7 +11,7 @@
 #include "g2o/types/slam3d/se3quat.h"
 #include "g2o/types/slam3d/edge_se3_pointxyz_depth.h"
 #include "g2o/types/slam3d/vertex_pointxyz.h"
-#include "landmark.h" //Only for point_information_matrix. TODO: Move to misc2.h
+#include "misc2.h" //Only for point_information_matrix. TODO: Move to misc2.h
 #include <Eigen/SVD>
 //TODO: Move these definitions and includes into a common header, g2o.h
 #include "g2o/core/estimate_propagator.h"
@@ -25,6 +25,9 @@
 using namespace Eigen;
 using namespace std;
 using namespace g2o;
+
+typedef g2o::VertexPointXYZ  feature_vertex_type;
+typedef g2o::EdgeSE3PointXYZDepth feature_edge_type;
 //TODO: Make a class of this, with optimizerSetup being the constructor.
 //      getTransformFromMatchesG2O into a method for adding a node that 
 //      can be called as often as desired and one evaluation method.
@@ -49,6 +52,7 @@ void optimizerSetup(g2o::SparseOptimizer& optimizer){
   //optimizer.setSolver(solver_ptr);
 
   g2o::ParameterCamera* cameraParams = new g2o::ParameterCamera();
+  //FIXME From Parameter server or cam calibration
   cameraParams->setKcam(521,521,319.5,239.5);
   g2o::SE3Quat offset; // identity
   cameraParams->setOffset(offset);
@@ -84,13 +88,12 @@ std::pair<g2o::VertexSE3*, g2o::VertexSE3*>  sensorVerticesSetup(g2o::SparseOpti
     // add to optimizer
     return std::make_pair(vc1, vc2);
 }
-
-Proj_edge_type* edgeToFeature(const Node* node, 
+feature_edge_type* edgeToFeature(const Node* node, 
                               unsigned int feature_id,
                               g2o::VertexSE3* camera_vertex,
                               g2o::VertexPointXYZ* feature_vertex)
 {
-   Proj_edge_type* edge = new Proj_edge_type();
+   feature_edge_type* edge = new feature_edge_type();
    cv::KeyPoint kp = node->feature_locations_2d_[feature_id];
    Vector4f position = node->feature_locations_3d_[feature_id];
    float depth = position(2);
@@ -135,22 +138,22 @@ void getTransformFromMatchesG2O(const Node* earlier_node,
   //Second cam is set to fixed, therefore the transformation from the second to the first cam will be computed
   std::pair<g2o::VertexSE3*, g2o::VertexSE3*> cams = sensorVerticesSetup(*optimizer, transformation_estimate);
 
-  //std::vector<LM_vertex_type*> feature_vertices;
+  //std::vector<feature_vertex_type*> feature_vertices;
   int v_id = optimizer->vertices().size(); //0 and 1 are taken by sensor vertices
   //For each match, create a vertex and connect it to the sensor vertices with the measured position
   BOOST_FOREACH(const cv::DMatch& m, matches)
   {
-    LM_vertex_type* v = new LM_vertex_type();//TODO: Speicherleck?
+    feature_vertex_type* v = new feature_vertex_type();//TODO: Speicherleck?
     v->setId(v_id++);
     v->setFixed(false);
 
     optimizer->addVertex(v);
     //feature_vertices.push_back(v);
 
-    Proj_edge_type* e1 = edgeToFeature(earlier_node, m.trainIdx, cams.first, v);
+    feature_edge_type* e1 = edgeToFeature(earlier_node, m.trainIdx, cams.first, v);
     optimizer->addEdge(e1);
 
-    Proj_edge_type* e2 = edgeToFeature(newer_node, m.queryIdx, cams.second, v);
+    feature_edge_type* e2 = edgeToFeature(newer_node, m.queryIdx, cams.second, v);
     optimizer->addEdge(e2);
 
   }

@@ -454,6 +454,7 @@ unsigned int Node::featureMatching(const Node* other, std::vector<cv::DMatch>* m
     //if ((int)bruteForceMatches.size() < min_kp) max_dist_ratio_fac = 1.0; //if necessary use possibly bad descriptors
     srand((long)std::clock());
     std::set<int> train_indices;
+    matches->reserve(bruteForceMatches.size());
     for(unsigned int i = 0; i < bruteForceMatches.size(); i++) {
         cv::DMatch m1 = bruteForceMatches[i][0];
         cv::DMatch m2 = bruteForceMatches[i][1];
@@ -515,7 +516,9 @@ unsigned int Node::featureMatching(const Node* other, std::vector<cv::DMatch>* m
       double avg_ratio = 0.0;
       double max_dist_ratio_fac = ps->get<double>("nn_distance_ratio");
       std::set<int> train_indices;
+      matches->reserve(indices.rows);
       for(int i = 0; i < indices.rows; ++i) {
+        ScopedTimer s("Feature Selection");
         float dist_ratio_fac =  static_cast<float>(dists_ptr[2 * i]) / static_cast<float>(dists_ptr[2 * i + 1]);
         avg_ratio += dist_ratio_fac;
         //if (indices.rows < min_kp) dist_ratio_fac = 1.0; //if necessary use possibly bad descriptors
@@ -845,51 +848,62 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
 
 
 void Node::computeInliersAndError(const std::vector<cv::DMatch> & all_matches,
-                                  const Eigen::Matrix4f& transformation,
+                                  const Eigen::Matrix4f& transformation4f,
                                   const std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f> >& origins,
-                                  //const std::vector<std::pair<float, float> > origins_depth_stats,
                                   const std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f> >& earlier,
-                                  //const std::vector<std::pair<float, float> > targets_depth_stats,
+                                  size_t min_inliers, //break if this can't be reached
                                   std::vector<cv::DMatch>& inliers, //pure output var
-                                  double& mean_error,//pure output var: rms-mahalanobis-distance
+                                  double& return_mean_error,//pure output var: rms-mahalanobis-distance
                                   //std::vector<double>& errors,
                                   double squaredMaxInlierDistInM) const
 { 
   ScopedTimer s(__FUNCTION__);
   inliers.clear();
-  //errors.clear();
-  std::vector<std::pair<float,int> > dists;
   assert(all_matches.size() > 0);
-  mean_error = 0.0;
+  inliers.reserve(all_matches.size());
+  //errors.clear();
+  const size_t all_matches_size = all_matches.size();
+  double mean_error = 0.0;
+  Eigen::Matrix4d transformation4d = transformation4f.cast<double>();
 
-
-  BOOST_FOREACH(const cv::DMatch& m, all_matches)
+//parallelization doesn't seem to have any effect...
+#pragma omp parallel for reduction (+: mean_error)
+  for(int i=0; i < all_matches_size; ++i)
+  //BOOST_FOREACH(const cv::DMatch& m, all_matches)
   {
+    const cv::DMatch& m = all_matches[i];
     const Eigen::Vector4f& origin = origins[m.queryIdx];
     const Eigen::Vector4f& target = earlier[m.trainIdx];
     if(origin(2) == 0.0 || target(2) == 0.0){ //does NOT trigger on NaN
        continue;
     }
-    double mahal_dist = errorFunction2(origin, target, transformation);
+    double mahal_dist = errorFunction2(origin, target, transformation4d);
     if(mahal_dist > squaredMaxInlierDistInM)
       continue; //ignore outliers
     if(!(mahal_dist >= 0.0)){
       ROS_WARN_STREAM("Mahalanobis_ML_Error: "<<mahal_dist);
-      ROS_WARN_STREAM("Transformation for error !>= 0:\n" << transformation << "Matches: " << all_matches.size());
+      ROS_WARN_STREAM("Transformation for error !>= 0:\n" << transformation4d << "Matches: " << all_matches.size());
       continue;
     }
-    inliers.push_back(m); //include inlier
     mean_error += mahal_dist;
-    //errors.push_back(mahal_dist );
+#pragma omp critical
+    inliers.push_back(m); //include inlier
+    /* Too ineffective (seldom happens and then mostly skips the last 5 iterations)
+    //if remaining items < yet to find items
+    if(static_cast<int>(all_matches_size - i) < (static_cast<int>(min_inliers) - static_cast<int>(inliers.size()))) {
+        ROS_INFO("Can't reach to min inliers (%lu) in iteration %d. Found %lu of %lu. Leaving %d to be found in %lu steps", min_inliers, i, inliers.size(), all_matches_size, (static_cast<int>(min_inliers) - static_cast<int>(inliers.size())), all_matches_size -i);
+        break;
+    }
+    */
   }
 
 
   if (inliers.size()<3){ //at least the samples should be inliers
     ROS_WARN_COND(inliers.size() > 3, "No inliers at all in %d matches!", (int)all_matches.size()); // only warn if this checks for all initial matches
-    mean_error = 1e9;
+    return_mean_error = 1e9;
   } else {
     mean_error /= inliers.size();
-    mean_error = sqrt(mean_error);
+    return_mean_error = sqrt(mean_error);
   }
 
 }
@@ -988,12 +1002,16 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
   bool valid_tf = false; // valid is false iff the sampled points clearly aren't inliers themself 
 
   std::vector<cv::DMatch> matches_with_depth; //matches without depth can validate but not create the trafo
-  BOOST_FOREACH(const cv::DMatch& m, *initial_matches){
-      if(!isnan(this->feature_locations_3d_[m.queryIdx](2)) 
-         && !isnan(earlier_node->feature_locations_3d_[m.trainIdx](2)))
-        matches_with_depth.push_back(m);
+  matches_with_depth.reserve(initial_matches->size());
+  {
+    ScopedTimer s("Filtering matches");
+    BOOST_FOREACH(const cv::DMatch& m, *initial_matches){
+        if(!isnan(this->feature_locations_3d_[m.queryIdx](2)) 
+           && !isnan(earlier_node->feature_locations_3d_[m.trainIdx](2)))
+          matches_with_depth.push_back(m);
+    }
+    std::sort(matches_with_depth.begin(), matches_with_depth.end()); //sort by distance, which is the nn_ratio
   }
-  std::sort(matches_with_depth.begin(), matches_with_depth.end()); //sort by distance, which is the nn_ratio
 
   int real_iterations = 0;
   for(int n = 0; (n < ransac_iterations && matches_with_depth.size() >= sample_size); n++) //Without the minimum number of matches, the transformation can not be computed as usual TODO: implement monocular motion est
@@ -1017,6 +1035,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
         computeInliersAndError(*initial_matches, transformation, 
                                this->feature_locations_3d_, //this->feature_depth_stats_, 
                                earlier_node->feature_locations_3d_, //earlier_node->feature_depth_stats_, 
+                               refined_matches.size(), //break if no chance to reach this amount of inliers
                                inlier, inlier_error, max_dist_m*max_dist_m); 
         
         if(inlier.size() < min_inlier_threshold || inlier_error > max_dist_m){
@@ -1026,10 +1045,12 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
 
         //superior to before?
         if (inlier.size() >= refined_matches.size() && inlier_error <= refined_error) {
+          size_t prev_num_inliers = refined_matches.size();
           assert(inlier_error>=0);
           refined_transformation = transformation;
           refined_matches = inlier;
           refined_error = inlier_error;
+          if(inlier.size() == prev_num_inliers) break; //only error improved -> no change would happen next iteration
         }
         else break;
     }  //END REFINEMENTS
@@ -1049,7 +1070,8 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
           resulting_transformation = refined_transformation;
           matches.assign(refined_matches.begin(), refined_matches.end());
           //Performance hacks:
-          if (refined_matches.size() > initial_matches->size()*0.5) n+=10;///Iterations with more than half of the initial_matches inlying, count twice
+          if (refined_matches.size() > initial_matches->size()*0.5) n+=10;///Iterations with more than half of the initial_matches inlying, count tenfold
+          if (refined_matches.size() > initial_matches->size()*0.75) n+=10;///Iterations with more than 3/4 of the initial_matches inlying, count twentyfold
           if (refined_matches.size() > initial_matches->size()*0.8) break; ///Can this get better anyhow?
         }
     }
@@ -1065,6 +1087,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
     computeInliersAndError(*initial_matches, transformation, 
                            this->feature_locations_3d_, //this->feature_depth_stats_, 
                            earlier_node->feature_locations_3d_, //earlier_node->feature_depth_stats_, 
+                           min_inlier_threshold, //break if no chance to reach this amount of inliers
                            inlier, inlier_error, max_dist_m*max_dist_m); 
     
     //superior to before?
@@ -1097,6 +1120,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
     computeInliersAndError(*initial_matches, transformation, 
                            this->feature_locations_3d_, //this->feature_depth_stats_, 
                            earlier_node->feature_locations_3d_, //earlier_node->feature_depth_stats_, 
+                           matches.size(), //minimum to reach
                            inlier,inlier_error, //Output!
                            max_dist_m*max_dist_m); 
     ROS_INFO_STREAM(nodesstring << ": g2o transformation estimated to Node " << earlier_node->id_ << ":\n" << transformation);
@@ -1109,6 +1133,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
         computeInliersAndError(*initial_matches, transformation, 
                                this->feature_locations_3d_, //this->feature_depth_stats_, 
                                earlier_node->feature_locations_3d_, //earlier_node->feature_depth_stats_, 
+                               inlier.size(), //minimum to reach
                                inlier,inlier_error, max_dist_m*max_dist_m); 
       }
       ROS_INFO("G2o optimization result for %i<->%i: inliers: %i (min %i), inlier_error: %.2f (max %.2f)", this->id_, earlier_node->id_, (int)inlier.size(), (int) min_inlier_threshold,  inlier_error, max_dist_m);

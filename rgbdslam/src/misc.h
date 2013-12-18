@@ -129,7 +129,7 @@ double errorFunction(const Eigen::Vector4f& x1, const double x1_depth_cov,
 
 double errorFunction2(const Eigen::Vector4f& x1, 
                       const Eigen::Vector4f& x2, 
-                      const Eigen::Matrix4f& tf_1_to_2);
+                      const Eigen::Matrix4d& tf_1_to_2);
 
 float getMinDepthInNeighborhood(const cv::Mat& depth, cv::Point2f center, float diameter);
 

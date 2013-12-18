@@ -346,10 +346,11 @@ void GraphManager::saveIndividualCloudsToFile(QString file_basename)
     else {
       tf::Transform pose = eigenTransf2TF(v->estimate());
       tf::StampedTransform base2points =  node->getBase2PointsTransform();//get pose of base w.r.t current pc at capture time
-      world2base = pose.inverse(); //init_base_pose_*base2points*pose*base2points.inverse();
+      world2base = this->computeFixedToBaseTransform(node, false);
+      tf::Transform world2points = world2base*base2points;
 
-      Eigen::Vector4f sensor_origin(world2base.getOrigin().x(),world2base.getOrigin().y(),world2base.getOrigin().z(),world2base.getOrigin().w());
-      Eigen::Quaternionf sensor_orientation(world2base.getRotation().w(),world2base.getRotation().x(),world2base.getRotation().y(),world2base.getRotation().z());
+      Eigen::Vector4f sensor_origin(world2points.getOrigin().x(),world2points.getOrigin().y(),world2points.getOrigin().z(),world2points.getOrigin().w());
+      Eigen::Quaternionf sensor_orientation(world2points.getRotation().w(),world2points.getRotation().x(),world2points.getRotation().y(),world2points.getRotation().z());
 
       node->pc_col->sensor_origin_ = sensor_origin;
       node->pc_col->sensor_orientation_ = sensor_orientation;

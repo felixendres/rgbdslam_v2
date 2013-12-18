@@ -25,11 +25,11 @@ Eigen::Matrix4f getTransformFromMatches(const Node* newer_node,
 
     //Create point cloud inf necessary
     if(ps->get<int>("segment_to_optimize") > 0){
-      weight =1/( earlier_node->feature_locations_3d_[m.trainIdx][3] \  
-                * newer_node->feature_locations_3d_[m.queryIdx][3]);
+      weight =1/( earlier_node->feature_locations_3d_[m.trainIdx][3] \
+                + newer_node->feature_locations_3d_[m.queryIdx][3]);
     } else {
-      weight =1/( earlier_node->feature_locations_3d_[m.trainIdx][2] \  
-                * newer_node->feature_locations_3d_[m.queryIdx][2]);
+      weight =1/( earlier_node->feature_locations_3d_[m.trainIdx][2] \
+                + newer_node->feature_locations_3d_[m.queryIdx][2]);
     }
     //Validate that 3D distances are corresponding
     if (max_dist_m > 0) {  //storing is only necessary, if max_dist is given

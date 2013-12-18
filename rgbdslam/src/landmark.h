@@ -38,5 +38,4 @@ struct Landmark {
 };
 
 
-Eigen::Matrix3d point_information_matrix(double distance);
 #endif /* LANDMARK_H_ */

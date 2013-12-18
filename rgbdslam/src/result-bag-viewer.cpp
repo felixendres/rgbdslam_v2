@@ -41,6 +41,7 @@ void gui_connections(Graphical_UI* gui, BagLoader* loader)
       QObject::connect(glv, SIGNAL(cloudRendered(pointcloud_type *)), loader, SLOT(clearPointCloud(pointcloud_type *))); // 
     }
     QObject::connect(loader, SIGNAL(setGUIInfo(QString)), gui, SLOT(setInfo(QString)));
+    QObject::connect(loader, SIGNAL(setGUIInfo2(QString)), gui, SLOT(setInfo2(QString)));
     QObject::connect(loader, SIGNAL(setGUIStatus(QString)), gui, SLOT(setStatus(QString)));
     QObject::connect(gui, SIGNAL(togglePause()), loader, SLOT(togglePause()));
 }

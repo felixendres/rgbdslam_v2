@@ -95,7 +95,8 @@ inline void setGLColor(const PointType& p){
 };
 
 GLViewer::GLViewer(QWidget *parent)
-    : QGLWidget(QGLFormat(QGL::SampleBuffers|QGL::StereoBuffers), parent),
+    : QGLWidget(QGLFormat(QGL::NoSampleBuffers), parent),
+    //: QGLWidget(QGLFormat(QGL::SampleBuffers|QGL::StereoBuffers), parent),
       xRot(180*16.0),
       yRot(0),
       zRot(0),
@@ -124,6 +125,7 @@ GLViewer::GLViewer(QWidget *parent)
       button_pressed_(false),
       fast_rendering_step_(1)
 {
+    this->format().setSwapInterval(0);
     bg_col_[0] = bg_col_[1] = bg_col_[2] = bg_col_[3] = 0.01;//almost black background (almost, so that the see-through rendering bug on my pc doesn't occur
     ROS_DEBUG_COND(!this->format().stereo(), "Stereo not supported");
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding); //can make good use of more space
@@ -151,7 +153,7 @@ void GLViewer::setXRotation(int angle) {
     qNormalizeAngle(angle);
     if (angle != xRot) {
         xRot = angle;
-        clearAndUpdate();
+        //clearAndUpdate();
     }
 }
 
@@ -160,7 +162,15 @@ void GLViewer::setYRotation(int angle) {
     qNormalizeAngle(angle);
     if (angle != yRot) {
         yRot = angle;
-        clearAndUpdate();
+        //clearAndUpdate();
+    }
+}
+
+void GLViewer::setZRotation(int angle) {
+    qNormalizeAngle(angle);
+    if (angle != zRot) {
+        zRot = angle;
+        //clearAndUpdate();
     }
 }
 
@@ -171,14 +181,6 @@ void GLViewer::setRotationGrid(double rot_step_in_degree) {
 void GLViewer::setStereoShift(double shift) {
   stereo_shift_ = shift;
   clearAndUpdate();
-}
-
-void GLViewer::setZRotation(int angle) {
-    qNormalizeAngle(angle);
-    if (angle != zRot) {
-        zRot = angle;
-        clearAndUpdate();
-    }
 }
 
 void GLViewer::initializeGL() {
@@ -270,13 +272,21 @@ void GLViewer::drawAxis(float scale){
     glVertex3f(0, 0, scale);
     glEnd();
 }
-
+void GLViewer::makeCurrent(){
+  ScopedTimer s(__FUNCTION__);
+  if(context() != context()->currentContext()){
+    ScopedTimer s("QGLWidget::makeCurrent");
+    QGLWidget::makeCurrent();
+  }
+}
 void GLViewer::paintGL() {
     if(!this->isVisible()) return;
+    ScopedTimer s(__FUNCTION__);
     //ROS_INFO("This is paint-thread %d", (unsigned int)QThread::currentThreadId());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glPointSize(ParameterServer::instance()->get<double>("gl_point_size"));
     if(stereo_){
+        this->format().setStereo(true);
         float ratio = (float)(width_) / (float) height_;
         glViewport(0, 0, width_/2, height_);
         glMatrixMode(GL_PROJECTION);
@@ -294,6 +304,15 @@ void GLViewer::paintGL() {
     drawClouds(0.0);
 }
 
+void GLViewer::drawOneCloud(int i) {
+        glPushMatrix();
+        glMultMatrixd(static_cast<GLdouble*>( (*cloud_matrices)[i].data() ));//works as long as qreal and GLdouble are typedefs to double (might depend on hardware)
+        if(show_clouds_) glCallList(cloud_list_indices[i]);
+        if(show_features_ && feature_list_indices.size()>i){
+          glCallList(feature_list_indices[i]);
+        }
+        glPopMatrix();
+}
 void GLViewer::drawClouds(float xshift) {
     ScopedTimer s(__FUNCTION__);
     if(follow_mode_){
@@ -320,15 +339,19 @@ void GLViewer::drawClouds(float xshift) {
     int step = button_pressed_ ? ParameterServer::instance()->get<int>("fast_rendering_step") + fast_rendering_step_ : 1; //if last_draw_duration_ was bigger than 100hz, skip clouds in drawing when button pressed
     step = std::max(step,1);
     int last_cloud = std::min(cloud_list_indices.size(), cloud_matrices->size());
-    for(int i = 0; i < last_cloud; i+=step){
-        glPushMatrix();
-        glMultMatrixd(static_cast<GLdouble*>( (*cloud_matrices)[i].data() ));//works as long as qreal and GLdouble are typedefs to double (might depend on hardware)
-        if(show_clouds_) glCallList(cloud_list_indices[i]);
-        if(show_features_ && feature_list_indices.size()>i){
-          glCallList(feature_list_indices[i]);
-        }
-        glPopMatrix();
-        if((last_cloud - i) <= 1.5*step) step = 1; //Draw all of the most recent clouds
+    int first_cloud = 0;
+
+    //For only viewing a single cloud
+    int specific_cloud = ParameterServer::instance()->get<int>("show_cloud_with_id");
+    if(specific_cloud >= 0){ 
+      drawOneCloud(specific_cloud);
+    }
+    else //Show all
+    {
+      for(int i = 0; i < last_cloud; i+=step){
+          drawOneCloud(i);
+          if((last_cloud - i) <= 1.5*step) step = 1; //Draw all of the most recent clouds
+      }
     }
 
     glDisable(GL_DEPTH_TEST);
@@ -453,7 +476,7 @@ void GLViewer::toggleFollowMode(bool flag){
 /** Create context menu */
 void GLViewer::mouseReleaseEvent(QMouseEvent *event) {
   button_pressed_ = false;
-  clearAndUpdate();
+  //clearAndUpdate();
 
   if(event->button() == Qt::RightButton)
   {
@@ -604,6 +627,8 @@ void GLViewer::addPointCloud(pointcloud_type * pc, QMatrix4x4 transform){
         pointCloud2GLPoints(pc);
       } else if(display_type == "ELLIPSOIDS"){
         pointCloud2GLEllipsoids(pc);
+      } else if(display_type == "NONE"){
+        cloud_list_indices.push_back(0);
       } else { //TRIANGLE_STRIP is default, because it is generated fastest. It is also displayed the smoothes (timings seem worse than for POINTS, yet "perceived" fps are much better)
         pointCloud2GLStrip(pc);
       }
@@ -908,7 +933,8 @@ void GLViewer::pointCloud2GLTriangleList(pointcloud_type const * pc){
             if(validXYZ(*pj)
                and squaredEuclideanDistance(*pi,*pj)/depth <= mesh_thresh  
                and squaredEuclideanDistance(*pj,*pl)/depth <= mesh_thresh){
-              drawTriangle(*pi, *pj, *pl);
+              //drawTriangle(*pi, *pj, *pl);
+              drawTriangle(*pi, *pl, *pj);
             }
             const point_type* pk = &pc->points[(x)+(y+1)*w]; //one down
             
@@ -1080,7 +1106,14 @@ void GLViewer::drawToPS(QString filename){
 
 
 inline void GLViewer::clearAndUpdate(){
-  updateGL();
+  ScopedTimer s(__FUNCTION__);
+  makeCurrent();
+  paintGL();
+  if(this->format().doubleBuffer())
+  {
+    ScopedTimer s("SwapBuffers");
+    swapBuffers();
+  }
 }
 
 ///From http://www.gamedev.net/topic/126624-generating-an-ellipsoid-in-opengl/

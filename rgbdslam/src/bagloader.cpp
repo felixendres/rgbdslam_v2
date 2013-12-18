@@ -69,7 +69,7 @@ void BagLoader::loadBag(std::string filename)
   tf_pub_ = nh.advertise<tf::tfMessage>(tf_tpc, 10);
 
   ROS_INFO("Loading Bagfile %s", filename.c_str());
-  Q_EMIT setGUIInfo(QString("Loading ")+filename.c_str());
+  Q_EMIT setGUIStatus(QString("Loading ")+filename.c_str());
   { //bag will be destructed after this block (hopefully frees memory for the optimizer)
     rosbag::Bag bag;
     try{
@@ -80,7 +80,7 @@ void BagLoader::loadBag(std::string filename)
       return;
     }
     ROS_INFO("Opened Bagfile %s", filename.c_str());
-    Q_EMIT setGUIInfo(QString("Opened ")+filename.c_str());
+    Q_EMIT setGUIStatus(QString("Opened ")+filename.c_str());
 
     // Image topics to load for bagfiles
     std::vector<std::string> topics;
@@ -122,6 +122,7 @@ void BagLoader::loadBag(std::string filename)
         }
       }
       while(!pointclouds.empty() && pointclouds.front()->header.stamp < last_tf){
+          Q_EMIT setGUIInfo(QString("Processing frame ") + QString::number(data_id_));
           callback(pointclouds.front());
           pointclouds.pop_front();
       }
@@ -130,7 +131,7 @@ void BagLoader::loadBag(std::string filename)
     bag.close();
   }
   ROS_INFO("Bagfile fully processed");
-  Q_EMIT setGUIInfo(QString("Done with ")+filename.c_str());
+  Q_EMIT setGUIStatus(QString("Done with ")+filename.c_str());
   Q_EMIT bagFinished();
 }
 
@@ -159,8 +160,8 @@ BagLoader::~BagLoader(){
 void BagLoader::togglePause(){
   pause_ = !pause_;
   ROS_INFO("Pause toggled to: %s", pause_? "true":"false");
-  if(pause_) Q_EMIT setGUIStatus("Processing Thread Stopped");
-  else Q_EMIT setGUIStatus("Processing Thread Running");
+  if(pause_) Q_EMIT setGUIInfo2("Processing Thread Stopped");
+  else Q_EMIT setGUIInfo2("Processing Thread Running");
 }
 
 //Retrieve the transform between the lens and the base-link at capturing time

@@ -959,9 +959,13 @@ bool readOneFile(const QString& qfilename, sensor_msgs::PointCloud2& cloud)
       return false;
     } 
     /*FIXME convert to sensor_msgs::PointCloud2
+    if(cloud.size() == 640*480){
+      cloud.width = 640;
+      cloud.height = 480;
+    }
 #ifdef HEMACLOUDS
     pointcloud_type tmp_pc(cloud);
-#pragma omp parallel for
+//#pragma omp parallel for
     for(size_t i = 0; i < cloud.size(); i++)
     {
       float x = cloud.at(i).x;
@@ -969,7 +973,7 @@ bool readOneFile(const QString& qfilename, sensor_msgs::PointCloud2& cloud)
         cloud.at(i).x = -cloud.at(i).y;
         cloud.at(i).y = -cloud.at(i).z;
         cloud.at(i).z = x;
-        cloud.at(i).segment = nearest_segment(tmp_pc, i);
+        //cloud.at(i).segment = nearest_segment(tmp_pc, i);
       }
     }
 #endif

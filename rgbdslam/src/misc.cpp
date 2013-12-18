@@ -754,8 +754,10 @@ double errorFunction(const Eigen::Vector4f& x1, const double x1_depth_cov,
 
 double errorFunction2(const Eigen::Vector4f& x1,
                       const Eigen::Vector4f& x2,
-                      const Eigen::Matrix4f& tf_1_to_2)
+                      const Eigen::Matrix4d& transformation)
 {
+  ScopedTimer s(__FUNCTION__);
+  //FIXME: Take from paramter_server or cam info
   static const double cam_angle_x = 58.0/180.0*M_PI;/*{{{*/
   static const double cam_angle_y = 45.0/180.0*M_PI;
   static const double cam_resol_x = 640;
@@ -770,17 +772,19 @@ double errorFunction2(const Eigen::Vector4f& x1,
 
   bool nan1 = isnan(x1(2));
   bool nan2 = isnan(x2(2));
+  //if(nan1||nan2) return std::numeric_limits<double>::max();
+
   Eigen::Vector4d x_1 = x1.cast<double>();
   Eigen::Vector4d x_2 = x2.cast<double>();
-  Eigen::Matrix4d tf_12 = tf_1_to_2.cast<double>();
 
+  Eigen::Matrix4d tf_12 = transformation;
   if(nan1) x_1(2) = 1.0; //FIXME: Bad Hack 
   if(nan2) x_2(2) = 1.0; //FIXME: Bad Hack 
   if(nan1 && !nan2){ //If x_1 is nan, but not x_2, switch them, so the "good one" is transformed to the frame of the other
     x_1 = x2.cast<double>();
     x_2 = x1.cast<double>();
     x_2(2) = 1.0; //FIXME: Bad Hack 
-    tf_12 = tf_12.inverse().eval();
+    tf_12 = transformation.inverse().eval();
     nan1 = false;
     nan2 = true;
   }

@@ -102,8 +102,6 @@ LINK_DIRECTORIES(${LIBRARY_OUTPUT_PATH})
 SET(${CMAKE_LIBRARY_PATH} ${LIBRARY_OUTPUT_PATH})
 #SET(CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE TRUE)
 
-ADD_DEFINITIONS(-DDO_FEATURE_OPTIMIZATION)
-
 
 #Only possible when not subscribing to point cloud topic. Possibly dangerous anyway, but halves storage space per point cloud
 #ADD_DEFINITIONS(-DRGB_IS_4TH_DIM) 

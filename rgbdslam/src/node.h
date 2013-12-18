@@ -231,9 +231,8 @@ protected:
 	void computeInliersAndError(const std::vector<cv::DMatch> & initial_matches,
                               const Eigen::Matrix4f& transformation,
                               const std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f> >& origins,
-                              //const std::vector<std::pair<float, float> > origins_depth_stats,
                               const std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f> >& targets,
-                              //const std::vector<std::pair<float, float> > targets_depth_stats,
+                              size_t min_inliers, //break if this can't be reached
                               std::vector<cv::DMatch>& new_inliers, //pure output var
                               double& mean_error, //pure output var //std::vector<double>& errors,
                               double squaredMaxInlierDistInM = 0.0009) const; //output var;

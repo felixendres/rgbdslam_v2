@@ -7,6 +7,7 @@
 # G2O_INCLUDE_DIR, where to find the g2o header files
 #
 # Niko Suenderhauf <niko@etit.tu-chemnitz.de>
+# Adapted by Felix Endres <endres@informatik.uni-freiburg.de>
 
 IF(UNIX)
 
@@ -16,71 +17,57 @@ IF(UNIX)
   ENDIF(G2O_INCLUDE_DIR AND G2O_LIBRARIES)
 
   MESSAGE(STATUS "Searching for g2o ...")
-
   FIND_PATH(G2O_INCLUDE_DIR
     NAMES core math_groups types
-    PATHS
-    /usr/local
-    /usr
-    PATH_SUFFIXES include/g2o include
-  )
+    PATHS /usr/local /usr
+    PATH_SUFFIXES include/g2o include)
+
   IF (G2O_INCLUDE_DIR)
     MESSAGE(STATUS "Found g2o headers in: ${G2O_INCLUDE_DIR}")
   ENDIF (G2O_INCLUDE_DIR)
 
-  FIND_LIBRARY(G2O_CORE_LIBRARIES
-    NAMES g2o_core
-    PATHS
-    /usr/local
-    /usr
-    PATH_SUFFIXES lib
-  )
-  FIND_LIBRARY(G2O_CLI_LIBRARIES
-    NAMES g2o_cli
-    PATHS
-    /usr/local
-    /usr
-    PATH_SUFFIXES lib
-  )
-
-  FIND_LIBRARY(G2O_SLAM2D_LIBRARIES
-    NAMES g2o_types_slam2d
-    PATHS
-    /usr/local
-    /usr
-    PATH_SUFFIXES lib
-  )
-  
-  FIND_LIBRARY(G2O_SLAM3D_LIBRARIES
-    NAMES g2o_types_slam3d
-    PATHS
-    /usr/local
-    /usr
-    PATH_SUFFIXES lib
-  )
-
-  FIND_LIBRARY(G2O_SOLVER_CSPARSE
-    NAMES g2o_solver_csparse
-    PATHS
-    /usr/local
-    /usr
-    PATH_SUFFIXES lib
-  )
-
-  FIND_LIBRARY(G2O_CSPARSE_EXTENSION
+  FIND_LIBRARY(G2O_CORE_LIB             
+    NAMES g2o_core 
+    PATHS /usr/local /usr 
+    PATH_SUFFIXES lib)
+  FIND_LIBRARY(G2O_STUFF_LIB            
+    NAMES g2o_stuff 
+    PATHS /usr/local /usr 
+    PATH_SUFFIXES lib)
+  FIND_LIBRARY(G2O_TYPES_SLAM3D_LIB     
+    NAMES g2o_types_slam3d 
+    PATHS /usr/local /usr 
+    PATH_SUFFIXES lib)
+  FIND_LIBRARY(G2O_SOLVER_CHOLMOD_LIB   
+    NAMES g2o_solver_cholmod 
+    PATHS /usr/local /usr 
+    PATH_SUFFIXES lib)
+  FIND_LIBRARY(G2O_SOLVER_PCG_LIB       
+    NAMES g2o_solver_pcg 
+    PATHS /usr/local /usr 
+    PATH_SUFFIXES lib)
+  FIND_LIBRARY(G2O_SOLVER_CSPARSE_LIB   
+    NAMES g2o_solver_csparse 
+    PATHS /usr/local /usr 
+    PATH_SUFFIXES lib)
+  FIND_LIBRARY(G2O_INCREMENTAL_LIB      
+    NAMES g2o_incremental 
+    PATHS /usr/local /usr 
+    PATH_SUFFIXES lib)
+  FIND_LIBRARY(G2O_CSPARSE_EXTENSION_LIB
     NAMES g2o_csparse_extension
-    PATHS
-    /usr/local
-    /usr
-    PATH_SUFFIXES lib
-  )
+    PATHS /usr/local /usr
+    PATH_SUFFIXES lib)
 
-  SET(G2O_LIBRARIES ${G2O_CORE_LIBRARIES}
-                    ${G2O_CLI_LIBRARIES}
-                    ${G2O_SLAM2D_LIBRARIES}
-                    ${G2O_SLAM3D_LIBRARIES}
-                    ${G2O_SOLVER_CSPARSE}
-                    ${G2O_CSPARSE_EXTENSION})
+  SET(G2O_LIBRARIES ${G2O_CSPARSE_EXTENSION_LIB}
+                    ${G2O_CORE_LIB}           
+                    ${G2O_STUFF_LIB}          
+                    ${G2O_TYPES_SLAM3D_LIB}   
+                    ${G2O_SOLVER_CHOLMOD_LIB} 
+                    ${G2O_SOLVER_PCG_LIB}     
+                    ${G2O_SOLVER_CSPARSE_LIB} 
+                    ${G2O_INCREMENTAL_LIB}                        
+                    )
  
   IF(G2O_LIBRARIES AND G2O_INCLUDE_DIR)
     SET(G2O_FOUND "YES")

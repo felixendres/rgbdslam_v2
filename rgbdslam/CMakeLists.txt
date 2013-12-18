@@ -37,7 +37,7 @@ ENDIF (${USE_GICP_BIN} OR ${USE_GICP_CODE})
 # ROS
 ####################################################
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules/")
-message(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
+#message(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
 find_package(catkin REQUIRED COMPONENTS pcl_conversions pcl_ros roscpp octomap_server image_transport cv_bridge sensor_msgs 
              geometry_msgs visualization_msgs std_msgs tf message_generation message_filters rosbag)
 
@@ -78,6 +78,7 @@ find_package(G2O REQUIRED)
 include_directories(${G2O_INCLUDE_DIRS})
 link_directories(${G2O_LIBRARY_DIRS})
 link_libraries(${G2O_LIBRARIES})
+message("G2o-libraries "${G2O_LIBRARIES})
 
 # Qt ########################
 # http://qtnode.net/wiki/Qt4_with_cmake
@@ -112,37 +113,39 @@ ADD_DEFINITIONS(-DDO_FEATURE_OPTIMIZATION)
 # SiftGPU ###################
 #############################
 IF (${USE_SIFT_GPU})
-include(ExternalProject)
-  SET(SIFTGPU_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/external/SiftGPU)
-  MESSAGE(${SIFTGPU_PREFIX} )
-  ExternalProject_Add(project_siftgpu
-    #URL http://www.informatik.uni-freiburg.de/~endres/files/SiftGPU.tgz
-    PREFIX ${SIFTGPU_PREFIX} 
-    SOURCE_DIR ${SIFTGPU_PREFIX} 
-    BUILD_IN_SOURCE ON
-    # Wrap download, configure, build and install steps in a script to log output
-    LOG_DOWNLOAD ON
-    LOG_CONFIGURE ON
-    LOG_BUILD ON
-    LOG_INSTALL ON
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND make
-    INSTALL_COMMAND ""
-  )
-
-  ExternalProject_Get_Property(project_siftgpu install_dir)
-  ExternalProject_Get_Property(project_siftgpu source_dir)
-  #SET(sift_gpu_build_path ${CMAKE_CURRENT_SOURCE_DIR}/external/siftgpu/linux)
-  MESSAGE("SiftGPU Install Dir" ${install_dir})
-  MESSAGE("SiftGPU Source Dir" ${source_dir})
-  include_directories(${install_dir}/src/SiftGPU/include)
-  link_directories(${install_dir}/bin/)	
+  #include(ExternalProject)
+  #  SET(SIFTGPU_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/external/SiftGPU)
+  #  MESSAGE(${SIFTGPU_PREFIX} )
+  #  ExternalProject_Add(project_siftgpu
+  #    #URL http://www.informatik.uni-freiburg.de/~endres/files/SiftGPU.tgz
+  #    PREFIX ${SIFTGPU_PREFIX} 
+  #    SOURCE_DIR ${SIFTGPU_PREFIX} 
+  #    BUILD_IN_SOURCE ON
+  #    # Wrap download, configure, build and install steps in a script to log output
+  #    LOG_DOWNLOAD ON
+  #    LOG_CONFIGURE ON
+  #    LOG_BUILD ON
+  #    LOG_INSTALL ON
+  #    CONFIGURE_COMMAND ""
+  #    BUILD_COMMAND make
+  #    INSTALL_COMMAND ""
+  #  )
+  #
+  #  ExternalProject_Get_Property(project_siftgpu install_dir)
+  #  ExternalProject_Get_Property(project_siftgpu source_dir)
+  #  #SET(sift_gpu_build_path ${CMAKE_CURRENT_SOURCE_DIR}/external/siftgpu/linux)
+  #  MESSAGE("SiftGPU Install Dir" ${install_dir})
+  #  MESSAGE("SiftGPU Source Dir" ${source_dir})
+  #include_directories(${install_dir}/src/SiftGPU/include)
+  #link_directories(${install_dir}/bin/)	
   #	EXECUTE_PROCESS(
   #		COMMAND make ${ROS_PARALLEL_JOBS} siftgpu 
   #		WORKING_DIRECTORY ${sift_gpu_build_path}
   #		RESULT_VARIABLE sift_gpu_return
   #	)
-	MESSAGE("\n------------------------------------------------------------------\n")
+  #MESSAGE("\n------------------------------------------------------------------\n")
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/SiftGPU/src)
+  link_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/SiftGPU/bin)	
 	
   ##on error
 	#IF (NOT ${sift_gpu_return} EQUAL 0)
@@ -242,10 +245,11 @@ add_dependencies(rgbdslam rgbdslam_gencpp)
 
 
 #set libs
-SET(G2O_LIBS cholmod g2o_core g2o_stuff g2o_types_slam3d g2o_solver_cholmod g2o_solver_pcg g2o_solver_csparse cxsparse g2o_incremental)
+#SET(G2O_LIBS cholmod g2o_core g2o_stuff g2o_types_slam3d g2o_solver_cholmod g2o_solver_pcg g2o_solver_csparse cxsparse g2o_incremental)
 #SET(G2O_LIBS ${G2O_LIBRARIES} cholmod cxsparse)
 #SET(LIBS_LINK GL GLU -lgl2ps ${G2O_LIBS} ${QT_LIBRARIES} ${QT_QTOPENGL_LIBRARY} ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${OpenCV_LIBS})
-SET(LIBS_LINK GL GLU ${G2O_LIBS} ${QT_LIBRARIES} ${QT_QTOPENGL_LIBRARY} ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${OpenCV_LIBS} -lboost_signals -lrt -loctomap -loctomap_server -loctomath)
+SET(LIBS_LINK GL GLU cholmod cxsparse ${G2O_LIBRARIES} ${QT_LIBRARIES} ${QT_QTOPENGL_LIBRARY} ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${OpenCV_LIBS})
+#-lboost_signals -lrt -loctomap -loctomap_server -loctomath)
 
 IF (${USE_SIFT_GPU})
  	SET(LIBS_LINK ${LIBS_LINK} siftgpu)

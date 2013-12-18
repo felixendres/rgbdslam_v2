@@ -8,8 +8,7 @@
 #include <octomap_ros/conversions.h>
 #include <octomap/octomap.h>
 #include <qtconcurrentrun.h>
-
-typedef octomap::ColorOcTree OcTreeT;
+#include <memory>
 
   class ColorOctomapServer: public octomap_server::OctomapServer {
   public:
@@ -17,12 +16,19 @@ typedef octomap::ColorOcTree OcTreeT;
     virtual ~ColorOctomapServer();
     void reset();
     bool save(const char* filename) const;
+    ///Raycas cloud into the octomap
+    /// @param cloud pointcloud in arbitrary frame (specified in the clouds header)
     virtual void insertCloudCallback(const pointcloud_type::ConstPtr cloud, double max_range = -1.0);
-    virtual void insertCloudCallbackCommon(const pointcloud_type::ConstPtr cloud,
-                                           const tf::Transform& trans, double max_range);
+
+    ///Raycast cloud into the octomap
+    /// @param cloud pointcloud in map frame
+    /// @param origin sensor location in map frame
+    virtual void insertCloudCallbackCommon(std::shared_ptr<octomap::Pointcloud> cloud,
+                                           pointcloud_type::ConstPtr colors,
+                                           const octomap::point3d& origin, double max_range = -1.0);
 
   protected:
-    OcTreeT m_octoMap;
+    octomap::ColorOcTree m_octoMap;
     //octomap::OctomapROS<octomap::ColorOcTree> m_octoMap;
     mutable QFuture<void> rendering;  //Mutable is a hack, otherwise waitforfinished cannot be called in const function
   };

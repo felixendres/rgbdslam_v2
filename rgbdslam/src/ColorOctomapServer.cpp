@@ -9,6 +9,7 @@
  */
 
 
+#include <octomap/Pointcloud.h>
 #include "ColorOctomapServer.h"
 #include "scoped_timer.h"
 #include <pcl_ros/transforms.h>
@@ -69,35 +70,38 @@ void ColorOctomapServer::insertCloudCallback(const pointcloud_type::ConstPtr clo
   pointcloud_type::Ptr pcl_cloud(new pointcloud_type);
   pcl_ros::transformPointCloud(*cloud, *pcl_cloud, trans);
 
+  //Conversions
+  std::shared_ptr<octomap::Pointcloud> octomapCloud(new octomap::Pointcloud());
+  octomap::pointcloudPCLToOctomap(*pcl_cloud, *octomapCloud);
+  octomap::point3d origin = octomap::pointTfToOctomap(trans.getOrigin());
+
   if (ParameterServer::instance()->get<bool>("concurrent_io")) {
     rendering.waitForFinished();
-    rendering = QtConcurrent::run(this, &ColorOctomapServer::insertCloudCallbackCommon, pcl_cloud, trans, max_range);
+    rendering = QtConcurrent::run(this, &ColorOctomapServer::insertCloudCallbackCommon, octomapCloud, pcl_cloud, origin, max_range);
   }
   else {
-    insertCloudCallbackCommon(pcl_cloud, trans, max_range);
+    insertCloudCallbackCommon(octomapCloud, pcl_cloud, origin, max_range);
   }
 }
 
-void ColorOctomapServer::insertCloudCallbackCommon(const pointcloud_type::ConstPtr  pcl_cloud,
-                                                   const tf::Transform& trans, double max_range) {
+void ColorOctomapServer::insertCloudCallbackCommon(std::shared_ptr<octomap::Pointcloud> octomapCloud,
+                                                   pointcloud_type::ConstPtr color_cloud,
+                                                   const octomap::point3d& origin, double max_range) {
   if(m_octoMap.getResolution() != ParameterServer::instance()->get<double>("octomap_resolution")){
     ROS_WARN("OctoMap resolution changed from %f to %f. Resetting Octomap", 
              m_octoMap.getResolution(), ParameterServer::instance()->get<double>("octomap_resolution"));
     this->reset();
   }
-  geometry_msgs::Point origin;
-  tf::pointTFToMsg(trans.getOrigin(), origin);
+  //geometry_msgs::Point origin;
+  //tf::pointTFToMsg(trans.getOrigin(), origin);
 
   ROS_DEBUG("inserting data");
-  //    m_octoMap.insertScan(pcl_cloud, origin, m_maxRange, false, true); // no pruning 
-  /*
-   * m_octoMap.insertScan(*pcl_cloud, origin, max_range, true, true); 
+  m_octoMap.insertPointCloud(*octomapCloud, origin, max_range, true); 
   // integrate color measurements
   unsigned char* colors = new unsigned char[3];
 
   ROS_DEBUG("inserting color measurements");
-  pointcloud_type::const_iterator it;
-  for (it = pcl_cloud->begin(); it != pcl_cloud->end(); ++it) {
+  for (auto it = color_cloud->begin(); it != color_cloud->end(); ++it) {
     // Check if the point is invalid
     if (!isnan (it->x) && !isnan (it->y) && !isnan (it->z)) {
 #ifndef RGB_IS_4TH_DIM
@@ -115,5 +119,4 @@ void ColorOctomapServer::insertCloudCallbackCommon(const pointcloud_type::ConstP
   // updates inner node colors, too
   ROS_DEBUG("updating inner nodes");
   m_octoMap.updateInnerOccupancy();
-   */
 }

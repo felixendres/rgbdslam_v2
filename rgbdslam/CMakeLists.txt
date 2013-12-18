@@ -36,7 +36,8 @@ ENDIF (${USE_GICP_BIN} OR ${USE_GICP_CODE})
 ####################################################
 # ROS
 ####################################################
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake-modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules/")
+message(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
 find_package(catkin REQUIRED COMPONENTS pcl_conversions pcl_ros roscpp octomap_server image_transport cv_bridge sensor_msgs 
              geometry_msgs visualization_msgs std_msgs tf message_generation message_filters rosbag)
 
@@ -87,13 +88,13 @@ ADD_DEFINITIONS(-DQT_NO_KEYWORDS)
 include(${QT_USE_FILE})
 
 # This is necessary as all ui files etc will get dumped in the bottom of then binary directory. 
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${QT_QTOPENGL_INCLUDE_DIR} external/gicp/ann_1.1.2/include/ANN)
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${QT_QTOPENGL_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/external/gicp/ann_1.1.2/include/ANN)
 
 #get_directory_property(clean ADDITIONAL_MAKE_CLEAN_FILES)
 #SET(clean external/siftgpu/linux/bin/libsiftgpu.so)
 #set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${clean}")
  	
-LINK_DIRECTORIES(${LIBRARY_OUTPUT_PATH} ./external/siftgpu/linux/bin/)
+LINK_DIRECTORIES(${LIBRARY_OUTPUT_PATH})
 
 
 SET(${CMAKE_LIBRARY_PATH} ${LIBRARY_OUTPUT_PATH})
@@ -107,30 +108,48 @@ ADD_DEFINITIONS(-DDO_FEATURE_OPTIMIZATION)
 #ADD_DEFINITIONS(-DDO_FEATURE_OPTIMIZATION)
 #ADD_DEFINITIONS(-DHEMACLOUDS) 
 
-
 #############################
 # SiftGPU ###################
 #############################
 IF (${USE_SIFT_GPU})
-	SET(sift_gpu_build_path ${CMAKE_SOURCE_DIR}/external/siftgpu/linux)
+include(ExternalProject)
+  SET(SIFTGPU_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/external/SiftGPU)
+  MESSAGE(${SIFTGPU_PREFIX} )
+  ExternalProject_Add(project_siftgpu
+    #URL http://www.informatik.uni-freiburg.de/~endres/files/SiftGPU.tgz
+    PREFIX ${SIFTGPU_PREFIX} 
+    SOURCE_DIR ${SIFTGPU_PREFIX} 
+    BUILD_IN_SOURCE ON
+    # Wrap download, configure, build and install steps in a script to log output
+    LOG_DOWNLOAD ON
+    LOG_CONFIGURE ON
+    LOG_BUILD ON
+    LOG_INSTALL ON
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND make
+    INSTALL_COMMAND ""
+  )
 
-	include_directories(${CMAKE_CURRENT_BINARY_DIR} external/siftgpu/src)
-	
+  ExternalProject_Get_Property(project_siftgpu install_dir)
+  ExternalProject_Get_Property(project_siftgpu source_dir)
+  #SET(sift_gpu_build_path ${CMAKE_CURRENT_SOURCE_DIR}/external/siftgpu/linux)
+  MESSAGE("SiftGPU Install Dir" ${install_dir})
+  MESSAGE("SiftGPU Source Dir" ${source_dir})
+  include_directories(${install_dir}/src/SiftGPU/include)
+  link_directories(${install_dir}/bin/)	
+  #	EXECUTE_PROCESS(
+  #		COMMAND make ${ROS_PARALLEL_JOBS} siftgpu 
+  #		WORKING_DIRECTORY ${sift_gpu_build_path}
+  #		RESULT_VARIABLE sift_gpu_return
+  #	)
 	MESSAGE("\n------------------------------------------------------------------\n")
-	MESSAGE("Compiling SiftGPU...")
-	EXECUTE_PROCESS(
-		COMMAND make ${ROS_PARALLEL_JOBS} siftgpu 
-		WORKING_DIRECTORY ${sift_gpu_build_path}
-		RESULT_VARIABLE sift_gpu_return
-	)
-	MESSAGE("\n------------------------------------------------------------------\n")
 	
-	#on error
-	IF (NOT ${sift_gpu_return} EQUAL 0)
-		MESSAGE(FATAL_ERROR "SiftGPU cannot be compiled. Returned: ${sift_gpu_return}")
-	ENDIF (NOT ${sift_gpu_return} EQUAL 0)
+  ##on error
+	#IF (NOT ${sift_gpu_return} EQUAL 0)
+	#	MESSAGE(FATAL_ERROR "SiftGPU cannot be compiled. Returned: ${sift_gpu_return}")
+	#ENDIF (NOT ${sift_gpu_return} EQUAL 0)
 	
-	FILE(COPY external/siftgpu/linux/bin/libsiftgpu.so DESTINATION ../lib/)
+  #FILE(COPY external/siftgpu/linux/bin/libsiftgpu.so DESTINATION ../lib/)
 	
 	add_definitions(-DUSE_SIFT_GPU)
 	add_definitions(-DSIFT_GPU_MODE=$ENV{SIFT_GPU_MODE})

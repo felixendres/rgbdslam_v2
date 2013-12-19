@@ -147,6 +147,7 @@ void GraphManager::sendAllCloudsImpl()
   ROS_INFO("Sending out all clouds");
   batch_processing_runs_ = true;
   ros::Rate r(ParameterServer::instance()->get<double>("send_clouds_rate")); //slow down a bit, to allow for transmitting to and processing in other nodes
+  double delay_seconds = ParameterServer::instance()->get<double>("send_clouds_delay");
 
   for (graph_it it = graph_.begin(); it != graph_.end(); ++it)
   {
@@ -155,6 +156,10 @@ void GraphManager::sendAllCloudsImpl()
     if(!node->valid_tf_estimate_) {
       ROS_INFO("Skipping node %i: No valid estimate", node->id_);
       continue;
+    }
+    while(node->pc_col->header.stamp.toSec() > (ros::Time::now().toSec() - delay_seconds)){
+      ROS_INFO("Waiting for node becoming %f seconds old", delay_seconds);
+      r.sleep();
     }
     tf::StampedTransform base_to_fixed = this->computeFixedToBaseTransform(node, true);
     br_.sendTransform(base_to_fixed);
@@ -253,8 +258,16 @@ void GraphManager::saveOctomapImpl(QString filename)
   co_server_.reset();
   Q_EMIT iamBusy(0, "Saving Octomap", nodes_for_octomapping.size());
   unsigned int rendered_points = 0;
+  double delay_seconds = ParameterServer::instance()->get<double>("save_octomap_delay");
   BOOST_FOREACH(Node* node, nodes_for_octomapping)
   {
+    /*
+      double data_stamp = node->pc_col->header.stamp.toSec();
+      while(data_stamp > ros::Time::now().toSec() - delay_seconds){
+        ROS_INFO("Waiting for node becoming %f seconds old before rendering to octomap", delay_seconds);
+        ros::Duration((ros::Time::now().toSec() - delay_seconds) - data_stamp).sleep();
+      }
+      */
       QString message;
       Q_EMIT setGUIStatus(message.sprintf("Inserting Node %i/%i into octomap", ++counter, (int)nodes_for_octomapping.size()));
       this->renderToOctomap(node);

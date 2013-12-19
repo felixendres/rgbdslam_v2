@@ -772,12 +772,15 @@ double errorFunction2(const Eigen::Vector4f& x1,
 
   bool nan1 = isnan(x1(2));
   bool nan2 = isnan(x2(2));
-  //if(nan1||nan2) return std::numeric_limits<double>::max();
-
+  if(nan1||nan2){
+    ROS_INFO("NaN");
+    return std::numeric_limits<double>::max();
+  }
   Eigen::Vector4d x_1 = x1.cast<double>();
   Eigen::Vector4d x_2 = x2.cast<double>();
 
   Eigen::Matrix4d tf_12 = transformation;
+  /* NaNs filtered before
   if(nan1) x_1(2) = 1.0; //FIXME: Bad Hack 
   if(nan2) x_2(2) = 1.0; //FIXME: Bad Hack 
   if(nan1 && !nan2){ //If x_1 is nan, but not x_2, switch them, so the "good one" is transformed to the frame of the other
@@ -787,12 +790,23 @@ double errorFunction2(const Eigen::Vector4f& x1,
     tf_12 = transformation.inverse().eval();
     nan1 = false;
     nan2 = true;
-  }
+  }*/
 
   Eigen::Vector3d mu_1 = x_1.head<3>();
   Eigen::Vector3d mu_2 = x_2.head<3>();
-
   Eigen::Vector3d mu_1_in_frame_2 = (tf_12 * x_1).head<3>(); // μ₁⁽²⁾  = T₁₂ μ₁⁽¹⁾  
+  //New Shortcut to determine clear outliers
+  if(ParameterServer::instance()->get<bool>("use_error_shortcut"))
+  {
+    double delta_sq_norm = (mu_1_in_frame_2 - mu_2).squaredNorm();
+    double sigma_max_1 = std::max(raster_cov_x, depth_covariance(mu_1(2)));//Assuming raster_cov_x and _y to be approx. equal
+    double sigma_max_2 = std::max(raster_cov_x, depth_covariance(mu_2(2)));//Assuming raster_cov_x and _y to be approx. equal
+    if(delta_sq_norm > 3.0 * (sigma_max_1+sigma_max_2)) //FIXME: Factor 3 for mahal dist should be gotten from caller
+    {
+      return std::numeric_limits<double>::max();
+    }
+  } 
+
   Eigen::Matrix3d rotation_mat = tf_12.block(0,0,3,3);
 
   //Point 1

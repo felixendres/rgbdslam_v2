@@ -157,7 +157,7 @@ void GraphManager::sendAllCloudsImpl()
       ROS_INFO("Skipping node %i: No valid estimate", node->id_);
       continue;
     }
-    while(node->pc_col->header.stamp.toSec() > (ros::Time::now().toSec() - delay_seconds)){
+    while(node->header_.stamp.toSec() > (ros::Time::now().toSec() - delay_seconds)){
       ROS_INFO("Waiting for node becoming %f seconds old", delay_seconds);
       r.sleep();
     }
@@ -572,7 +572,6 @@ void GraphManager::saveTrajectory(QString filebasename, bool with_ground_truth)
       ROS_ERROR("Graph is empty, no trajectory can be saved");
       return;
     }
-    ROS_INFO("Logging Trajectory");
     QMutexLocker locker(&optimizer_mutex_);
 
     //FIXME: DO this block only if with_ground_truth is true and !gt.empty()
@@ -591,6 +590,7 @@ void GraphManager::saveTrajectory(QString filebasename, bool with_ground_truth)
     QString et_fname("_estimate.txt");
     QFile et_file (et_fname.prepend(filebasename));//file is closed on destruction
     if(!et_file.open(QIODevice::WriteOnly|QIODevice::Text)) return; //TODO: Errormessage
+    ROS_INFO("Logging Trajectory to %s", qPrintable(et_fname));
     QTextStream et_out(&et_file);
     et_out.setRealNumberNotation(QTextStream::FixedNotation);
     b2p = graph_[0]->getBase2PointsTransform();

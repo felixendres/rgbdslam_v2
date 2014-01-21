@@ -773,7 +773,7 @@ double errorFunction2(const Eigen::Vector4f& x1,
   bool nan1 = isnan(x1(2));
   bool nan2 = isnan(x2(2));
   if(nan1||nan2){
-    ROS_INFO("NaN");
+    //FIXME: Handle Features with NaN, by reporting the reprojection error
     return std::numeric_limits<double>::max();
   }
   Eigen::Vector4d x_1 = x1.cast<double>();

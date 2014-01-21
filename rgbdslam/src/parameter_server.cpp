@@ -88,12 +88,12 @@ void ParameterServer::defaultConfig() {
   // Frontend settings 
   addOption("max_translation_meter",         static_cast<double> (1e10),                "Sanity check for smooth motion.");
   addOption("max_rotation_degree",           static_cast<int> (360),                    "Sanity check for smooth motion.");
-  addOption("min_translation_meter",         static_cast<double> (0.0),                "Frames with motion less than this, will be omitted ");
+  addOption("min_translation_meter",         static_cast<double> (0.0),                 "Frames with motion less than this, will be omitted ");
   addOption("min_rotation_degree",           static_cast<double> (0.0),                 "Frames with motion less than this, will be omitted ");
   addOption("max_dist_for_inliers",          static_cast<double> (3),                   "Mahalanobis distance for matches to be considered inliers by ransac");
-  addOption("ransac_iterations",             static_cast<int> (500),                   "These are fast, so high values are ok ");
+  addOption("ransac_iterations",             static_cast<int> (100),                    "Number of iterations for registration");
   addOption("ransac_termination_inlier_pct", static_cast<double> (60.0),                "Percentage of matches that need to be inliers to succesfully terminate ransac before the 'ransac_iterations' have been reached");
-  addOption("g2o_transformation_refinement", static_cast<int> (0),                     "Use g2o to refine the ransac result for that many iterations, i.e. optimize the Mahalanobis distance in a final step. Use zero to disable.");
+  addOption("g2o_transformation_refinement", static_cast<int> (0),                      "Use g2o to refine the ransac result for that many iterations, i.e. optimize the Mahalanobis distance in a final step. Use zero to disable.");
   addOption("max_connections",               static_cast<int> (-1),                     "Stop frame comparisons after this many succesfully found spation relations. Negative value: No limit.");
   addOption("geodesic_depth",                static_cast<int> (3),                      "For comparisons with neighbors, consider those with a graph distance (hop count) equal or below this value as neighbors of the direct predecessor");
   addOption("predecessor_candidates",        static_cast<int> (2),                      "Compare Features to this many direct sequential predecessors");
@@ -104,7 +104,7 @@ void ParameterServer::defaultConfig() {
   addOption("gicp_max_cloud_size",           static_cast<int> (10000),                  "Subsample for increased speed");
   addOption("emm__skip_step",                static_cast<int> (5),                      "When evaluating the transformation, subsample rows and cols with this stepping");
   addOption("emm__mark_outliers",            static_cast<bool> (false),                 "Mark outliers in the observation likelihood evaluation with colors. Red: point would have blocked the view of an earlier observation. Cyan: An earlier observation should have blocked the view to this point");
-  addOption("observability_threshold",       static_cast<double> (-0.6),                 "What fraction of the aligned points are required to be in observable position (i.e. don't contradict the sensor physics)");
+  addOption("observability_threshold",       static_cast<double> (-0.6),                "What fraction of the aligned points are required to be in observable position (i.e. don't contradict the sensor physics)");
 
   //Backend
   addOption("pose_relative_to",              std::string("first"),                      "This option allows to choose which frame(s) should be set fixed during optimization: first, previous, inaffected, largest_loop. The latter sets all frames as fixed to which no transformation has been found.");

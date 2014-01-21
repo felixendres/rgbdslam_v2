@@ -1039,7 +1039,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
                                inlier, inlier_error, max_dist_m*max_dist_m); 
         
         if(inlier.size() < min_inlier_threshold || inlier_error > max_dist_m){
-          ROS_DEBUG_NAMED(__FILE__, "Skipped iteration: inliers: %i (min %i), inlier_error: %.2f (max %.2f)", (int)inlier.size(), (int) min_inlier_threshold,  inlier_error*100, max_dist_m*100);
+          ROS_DEBUG("Skipped iteration: inliers: %i (min %i), inlier_error: %.2f (max %.2f)", (int)inlier.size(), (int) min_inlier_threshold,  inlier_error*100, max_dist_m*100);
           break; //hopeless case
         }
 
@@ -1065,7 +1065,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
             refined_matches.size() >= matches.size() && 
             refined_matches.size() >= min_inlier_threshold)
         {
-          ROS_INFO("%s: Improvment in iteration %d: inliers: %i (min %i), inlier_error: %.2f (max %.2f)",nodesstring.c_str(), real_iterations, (int)refined_matches.size(), (int) min_inlier_threshold,  refined_error, max_dist_m);
+          ROS_DEBUG("%s: Improvment in iteration %d: inliers: %i (min %i), inlier_error: %.2f (max %.2f)",nodesstring.c_str(), real_iterations, (int)refined_matches.size(), (int) min_inlier_threshold,  refined_error, max_dist_m);
           rmse = refined_error;
           resulting_transformation = refined_transformation;
           matches.assign(refined_matches.begin(), refined_matches.end());

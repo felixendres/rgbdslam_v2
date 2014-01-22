@@ -20,13 +20,15 @@
 #include <set>
 #include <iostream>
 #include "g2o/types/slam3d/se3quat.h"
+#include <Eigen/Core>
 
 struct LoadedEdge3D
 {
   int id1, id2;
   //enum { OTHER=0, RANSAC, ICP } edge_type; 
   //edge_type type;
-  g2o::SE3Quat mean;
+  //g2o::SE3Quat mean;
+  Eigen::Isometry3d transform;
   Eigen::Matrix<double, 6,6> informationMatrix;
 };
 

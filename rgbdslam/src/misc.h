@@ -95,10 +95,12 @@ void transformAndAppendPointCloud (const pointcloud_type &cloud_in,
 geometry_msgs::Point pointInWorldFrame(const Eigen::Vector4f& point3d, const g2o::VertexSE3::EstimateType& transf);
 // true if translation > 10cm or largest euler-angle>5 deg
 // used to decide if the camera has moved far enough to generate a new nodes
-bool isBigTrafo(const Eigen::Matrix4f& t);
+//bool isBigTrafo(const Eigen::Matrix4f& t);
+bool isBigTrafo(const Eigen::Isometry3d& t);
 bool isBigTrafo(const g2o::SE3Quat& t);
 //! Computes whether the motion per time is bigger than the parameters max_translation_meter and max_rotation_degree define
 bool isSmallTrafo(const g2o::SE3Quat& t, double seconds = 1.0);
+bool isSmallTrafo(const Eigen::Isometry3d& t, double seconds = 1.0);
 
 
 //bool overlappingViews(LoadedEdge3D edge);

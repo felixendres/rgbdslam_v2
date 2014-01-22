@@ -838,15 +838,15 @@ void GraphManager::visualizeGraphNodes() const {
    // for(/*see above*/; vertex_iter != optimizer_->vertices().end(); vertex_iter++, counter++) {
 
    v = dynamic_cast<g2o::VertexSE3* >(*it);
-            //v->estimateAsSE3Quat().rotation().x()+ v->estimateAsSE3Quat().rotation().y()+ v->estimateAsSE3Quat().rotation().z()+ v->estimateAsSE3Quat().rotation().w();
-            tmp = v->estimateAsSE3Quat() * origin;
+            //v->estimate().rotation().x()+ v->estimate().rotation().y()+ v->estimate().rotation().z()+ v->estimate().rotation().w();
+            tmp = v->estimate() * origin;
             tail.x = tmp.x();
             tail.y = tmp.y();
             tail.z = tmp.z();
             //Endpoints X-Axis
             nodes_marker.points.push_back(tail);
             nodes_marker.colors.push_back(arrow_color_red);
-            tmp = v->estimateAsSE3Quat() * x_axis;
+            tmp = v->estimate() * x_axis;
             tip.x  = tmp.x();
             tip.y  = tmp.y();
             tip.z  = tmp.z();
@@ -855,7 +855,7 @@ void GraphManager::visualizeGraphNodes() const {
             //Endpoints Y-Axis
             nodes_marker.points.push_back(tail);
             nodes_marker.colors.push_back(arrow_color_green);
-            tmp = v->estimateAsSE3Quat() * y_axis;
+            tmp = v->estimate() * y_axis;
             tip.x  = tmp.x();
             tip.y  = tmp.y();
             tip.z  = tmp.z();
@@ -864,7 +864,7 @@ void GraphManager::visualizeGraphNodes() const {
             //Endpoints Z-Axis
             nodes_marker.points.push_back(tail);
             nodes_marker.colors.push_back(arrow_color_blue);
-            tmp = v->estimateAsSE3Quat() * z_axis;
+            tmp = v->estimate() * z_axis;
             tip.x  = tmp.x();
             tip.y  = tmp.y();
             tip.z  = tmp.z();

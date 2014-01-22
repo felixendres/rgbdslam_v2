@@ -469,10 +469,10 @@ bool GraphManager::nodeComparisons(Node* new_node,
         ros::Time time1 = prev_frame->header_.stamp;
         ros::Time time2 = new_node->header_.stamp;
         ros::Duration delta_time =  time2 - time1;
-        if(!isBigTrafo(mr.edge.mean) || !isSmallTrafo(mr.edge.mean, delta_time.toSec())){ //Found trafo, but bad trafo (too small to big)
+        if(!isBigTrafo(mr.edge.transform) || !isSmallTrafo(mr.edge.transform, delta_time.toSec())){ //Found trafo, but bad trafo (too small to big)
             ROS_WARN("Transformation not within bounds. Did not add as Node");
             //Send the current pose via tf nevertheless
-            tf::Transform incremental = g2o2TF(mr.edge.mean);
+            tf::Transform incremental = eigenTransf2TF(mr.edge.transform);
             g2o::VertexSE3* v = dynamic_cast<g2o::VertexSE3*>(optimizer_->vertex(graph_[prev_frame->id_]->vertex_id_));
             tf::Transform previous = eigenTransf2TF(v->estimate());
             tf::Transform combined = previous*incremental;
@@ -555,8 +555,8 @@ bool GraphManager::nodeComparisons(Node* new_node,
               assert(graph_[mr.edge.id1]);
 
               ros::Duration delta_time = new_node->header_.stamp - graph_[mr.edge.id1]->header_.stamp;
-              if (isSmallTrafo(mr.edge.mean, delta_time.toSec()) &&
-                  addEdgeToG2O(mr.edge,graph_[mr.edge.id1],new_node, isBigTrafo(mr.edge.mean), mr.inlier_matches.size() > curr_best_result_.inlier_matches.size(), curr_motion_estimate))
+              if (isSmallTrafo(mr.edge.transform, delta_time.toSec()) &&
+                  addEdgeToG2O(mr.edge,graph_[mr.edge.id1],new_node, isBigTrafo(mr.edge.transform), mr.inlier_matches.size() > curr_best_result_.inlier_matches.size(), curr_motion_estimate))
                 { 
                   graph_[new_node->id_] = new_node; //Needs to be added
 #ifdef DO_FEATURE_OPTIMIZATION
@@ -586,8 +586,8 @@ bool GraphManager::nodeComparisons(Node* new_node,
             if (mr.edge.id1 >= 0) {
 
               ros::Duration delta_time = new_node->header_.stamp - graph_[mr.edge.id1]->header_.stamp;
-              if (isSmallTrafo(mr.edge.mean, delta_time.toSec()) &&
-                  addEdgeToG2O(mr.edge, node_to_compare, new_node, isBigTrafo(mr.edge.mean), mr.inlier_matches.size() > curr_best_result_.inlier_matches.size(), curr_motion_estimate))
+              if (isSmallTrafo(mr.edge.transform, delta_time.toSec()) &&
+                  addEdgeToG2O(mr.edge, node_to_compare, new_node, isBigTrafo(mr.edge.transform), mr.inlier_matches.size() > curr_best_result_.inlier_matches.size(), curr_motion_estimate))
               {
 #ifdef DO_FEATURE_OPTIMIZATION
                 updateLandmarks(mr, node_to_compare, new_node);
@@ -628,7 +628,7 @@ bool GraphManager::nodeComparisons(Node* new_node,
       LoadedEdge3D odom_edge;
       odom_edge.id1 = sequentially_previous_id;
       odom_edge.id2 = new_node->id_;
-      odom_edge.mean = tf2G2O(odom_delta_tf);
+      odom_edge.transform = tf2G2O(odom_delta_tf);
 
       //Real odometry
       //FIXME get odometry information matrix and transform it to the optical frame
@@ -649,12 +649,10 @@ bool GraphManager::nodeComparisons(Node* new_node,
     { 
       LoadedEdge3D odom_edge;
 
-      Eigen::Quaterniond eigen_quat(1,0,0,0);
-      Eigen::Vector3d translation(0,0,0);
       odom_edge.id1 = sequentially_previous_id;
       odom_edge.id2 = new_node->id_;
-      odom_edge.mean = g2o::SE3Quat(eigen_quat, translation);
-      curr_motion_estimate = g2o2QMatrix(odom_edge.mean);
+      odom_edge.transform.setIdentity();
+      curr_motion_estimate = eigenTF2QMatrix(odom_edge.transform);
       odom_edge.informationMatrix = Eigen::Matrix<double,6,6>::Zero(); 
       ///High information value for translation 
       ///10000 corresponds to 1cm std deviation, i.e. we expect the camera to travel about 1cm in any direction (with mean 0)
@@ -684,7 +682,7 @@ bool GraphManager::nodeComparisons(Node* new_node,
       Eigen::Vector3d translation(0,0,0);
       g2o::SE3Quat unit_tf(eigen_quat, translation);
 
-      const_pos_edge.mean = unit_tf;
+      const_pos_edge.transform.setIdentity();
       const_pos_edge.informationMatrix = Eigen::Matrix<double,6,6>::Identity() * 1e-9; 
       //Rotation should be less than translation, so translation is not changed to have constant orientation, which gives bad effects
       const_pos_edge.informationMatrix(3,3) = 1e-50;
@@ -853,7 +851,7 @@ bool GraphManager::addEdgeToG2O(const LoadedEdge3D& edge,Node* n1, Node* n2,  bo
     // is large enough to avoid to many vertices on the same spot
     if (!v1 || !v2){
         if (!largeEdge) {
-            ROS_INFO("Edge to new vertex is to short, vertex will not be inserted");
+            ROS_INFO("Edge to new vertex is too short, vertex will not be inserted");
             return false; 
         }
     }
@@ -869,7 +867,7 @@ bool GraphManager::addEdgeToG2O(const LoadedEdge3D& edge,Node* n1, Node* n2,  bo
         v1->setId(v_id);
 
         n1->vertex_id_ = v_id; // save vertex id in node so that it can find its vertex
-        v1->setEstimate(v2->estimateAsSE3Quat() * edge.mean.inverse());
+        v1->setEstimate(v2->estimate() * edge.transform.inverse());
         camera_vertices.insert(v1);
         optimizer_->addVertex(v1); 
         motion_estimate = eigenTF2QMatrix(v1->estimate()); 
@@ -881,26 +879,26 @@ bool GraphManager::addEdgeToG2O(const LoadedEdge3D& edge,Node* n1, Node* n2,  bo
         int v_id = next_vertex_id++;
         v2->setId(v_id);
         n2->vertex_id_ = v_id;
-        v2->setEstimate(v1->estimateAsSE3Quat() * edge.mean);
+        v2->setEstimate(v1->estimate() * edge.transform);
         camera_vertices.insert(v2);
         optimizer_->addVertex(v2); 
-        motion_estimate = g2o2QMatrix(v2->estimateAsSE3Quat()); 
+        motion_estimate = eigenTF2QMatrix(v2->estimate()); 
     }
     else if(set_estimate){
-        v2->setEstimate(v1->estimateAsSE3Quat() * edge.mean);
-        motion_estimate = g2o2QMatrix(v2->estimateAsSE3Quat()); 
+        v2->setEstimate(v1->estimate() * edge.transform);
+        motion_estimate = eigenTF2QMatrix(v2->estimate()); 
     }
     g2o::EdgeSE3* g2o_edge = new g2o::EdgeSE3;
     g2o_edge->vertices()[0] = v1;
     g2o_edge->vertices()[1] = v2;
-    g2o::SE3Quat meancopy(edge.mean); 
+    Eigen::Isometry3d meancopy(edge.transform); 
     g2o_edge->setMeasurement(meancopy);
     //Change setting from which mahal distance the robust kernel is used: robust_kernel_.setDelta(1.0);
     g2o_edge->setRobustKernel(&robust_kernel_);
-    // g2o_edge->setInverseMeasurement(edge.mean.inverse());
+    // g2o_edge->setInverseMeasurement(edge.trannsform.inverse());
     g2o_edge->setInformation(edge.informationMatrix);
     optimizer_->addEdge(g2o_edge);
-    ROS_DEBUG_STREAM("Added Edge ("<< edge.id1 << "-" << edge.id2 << ") to Optimizer:\n" << edge.mean.to_homogeneous_matrix() << "\nInformation Matrix:\n" << edge.informationMatrix);
+    //ROS_DEBUG_STREAM("Added Edge ("<< edge.id1 << "-" << edge.id2 << ") to Optimizer:\n" << edge.transform << "\nInformation Matrix:\n" << edge.informationMatrix);
     cam_cam_edges.insert(g2o_edge);
     current_match_edges_.insert(g2o_edge); //Used if all previous vertices are fixed ("pose_relative_to" == "all")
 //    new_edges_.append(qMakePair(edge.id1, edge.id2));

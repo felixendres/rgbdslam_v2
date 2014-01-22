@@ -1222,7 +1222,7 @@ MatchingResult Node::matchNodePair(const Node* older_node)
 
           mr.edge.id1 = older_node->id_;//and we have a valid transformation
           mr.edge.id2 = this->id_; //since there are enough matching features,
-          mr.edge.mean = eigen2G2O(mr.final_trafo.cast<double>());//we insert an edge between the frames
+          mr.edge.transform = mr.final_trafo.cast<double>();//we insert an edge between the frames
           if(ParameterServer::instance()->get<double>("observability_threshold") > 0){
             pairwiseObservationLikelihood(this, older_node, mr);
             found_transformation = observation_criterion_met(mr.inlier_points, mr.outlier_points, mr.occluded_points + mr.inlier_points + mr.outlier_points, ransac_quality);

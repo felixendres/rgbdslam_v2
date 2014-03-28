@@ -17,10 +17,10 @@ export ROS_MASTER_URI=http://localhost:11386
 #ROSCOREPID=$!
 #echo Waiting for roscore
 #sleep 3
-for CANDIDATES in 2 4; do
+for CANDIDATES in 2 8; do
   SMPL_CANDIDATES=`echo "$CANDIDATES * 2"|bc`
   for OBS_EVAL in  0.00; do
-    for RANSAC_ITER in 099; do
+    for RANSAC_ITER in 100; do
       for DISTANCEMSR in true; do 
         for OPT_SKIP in 1000000; do #online/offline
           for FEAT_TYPE in SIFTGPU; do 
@@ -44,7 +44,7 @@ for CANDIDATES in 2 4; do
                   continue #don't overwrite existing results
                 fi
                 echo `date +%H:%M:%S` Results for $BASE_NAME are stored in `readlink -f $DIRECTORY`
-                roslaunch rgbdslam `basename $LAUNCHFILE` bagfile_name:=`readlink -f $bagfile` match_candidates:=$CANDIDATES sampled_candidates:=$SMPL_CANDIDATES feature_type:=$FEAT_TYPE max_keypoints:=$MAXFEATURES ransac_iterations:=$RANSAC_ITER optimizer_skip_step:=$OPT_SKIP observability_threshold:=$OBS_EVAL use_root_sift:=$DISTANCEMSR          >  $DIRECTORY/logfile 2>&1
+                roslaunch rgbdslam `basename $LAUNCHFILE` bagfile_name:=`readlink -f $bagfile` match_candidates:=$CANDIDATES sampled_candidates:=$SMPL_CANDIDATES feature_type:=$FEAT_TYPE max_keypoints:=$MAXFEATURES ransac_iterations:=$RANSAC_ITER optimizer_skip_step:=$OPT_SKIP observability_threshold:=$OBS_EVAL use_root_sift:=$DISTANCEMSR gui:=false         >  $DIRECTORY/logfile 2>&1
                 #rosparam get /rgbdslam/config >>  $DIRECTORY/logfile 2>&1
                 echo `date +%H:%M:%S` Finished processing $BASE_NAME
 

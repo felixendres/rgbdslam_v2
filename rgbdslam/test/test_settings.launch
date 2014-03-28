@@ -1,6 +1,5 @@
 <launch>
   <!-- These parameters are used for the benchmark evaluation. Documentation can be found in parameter_server.cpp -->
-
   <!--<env name="ROSCONSOLE_CONFIG_FILE" value="$(find rgbdslam)/rgbd_benchmark/log_eval.conf"/>-->
   <env name="ROSCONSOLE_FORMAT" value="[${severity}] Time:[${time}] Thread:[${thread}]: ${message}"/>
   <arg name="debug" default="false"/>
@@ -14,14 +13,15 @@
 
   <!-- These parameters are defined in the calling script (run_tests.sh)-->
   <arg name="bagfile_name" />
-  <arg name="feature_type" />
-  <arg name="ransac_iterations" />
-  <arg name="optimizer_skip_step" />
-  <arg name="observability_threshold" />
-  <arg name="use_root_sift" />
-  <arg name="max_keypoints" />
-  <arg name="match_candidates" />
-  <arg name="sampled_candidates" />
+  <arg name="feature_type" default="SIFTGPU"/>
+  <arg name="ransac_iterations" default="100"/>
+  <arg name="optimizer_skip_step" default="10"/>
+  <arg name="observability_threshold" default="0"/>
+  <arg name="use_root_sift" default="true"/>
+  <arg name="max_keypoints" default="600"/>
+  <arg name="match_candidates" default="4"/>
+  <arg name="sampled_candidates" default="4"/>
+  <arg name="gui" default="true"/>
 
   <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" cwd="node" required="true" output="screen"  launch-prefix="$(arg launch_prefix)"> 
     <!-- Input data settings-->
@@ -33,10 +33,23 @@
     <param name="config/wide_cloud_topic"              value=""/>
 
     <!--Values for benchmark dataset fr1 -->
+    <!--
     <param name="config/depth_camera_fx"                     value="591.1"/>
     <param name="config/depth_camera_fy"                     value="590.1"/>
     <param name="config/depth_camera_cx"                     value="331.0"/>
     <param name="config/depth_camera_cy"                     value="234.0"/>
+    -->
+    <!--testing the values for fr1 from http://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats 
+    <param name="config/depth_camera_fx"               value="517.3"/>
+    <param name="config/depth_camera_fy"               value="516.5"/>
+    <param name="config/depth_camera_cx"               value="318.6"/>
+    <param name="config/depth_camera_cy"               value="255.3"/>
+    -->
+    <!-- FR2 from above url-->
+    <param name="config/depth_camera_fx"               value="520.9"/>
+    <param name="config/depth_camera_fy"               value="521.0"/>
+    <param name="config/depth_camera_cx"               value="325.1"/>
+    <param name="config/depth_camera_cy"               value="249.7"/>
 
     <!-- TF information settings -->
   	<param name="config/fixed_frame_name"              value="/map"/>
@@ -71,14 +84,14 @@
   	<param name="config/min_matches"                   value="20"/>
   	<param name="config/max_dist_for_inliers"          value="2.0"/>
   	<param name="config/ransac_iterations"             value="$(arg ransac_iterations)"/><!-- these are fast, so high values are ok -->
-  	<param name="config/use_gui"                       value="false"/>
-  	<param name="config/use_glwidget"                  value="false"/>
-  	<param name="config/glwidget_without_clouds"       value="false"/> <!-- incompatible with voxelgrid filter > 0 -->
+  	<param name="config/use_gui"                       value="$(arg gui)"/>
+  	<param name="config/use_glwidget"                  value="$(arg gui)"/>
   	<param name="config/concurrent_node_construction"  value="true"/>
   	<param name="config/concurrent_edge_construction"  value="true"/>
-  	<param name="config/concurrent_optimization"       value="false"/>
+  	<param name="config/concurrent_optimization"       value="true"/>
     <param name="config/optimizer_skip_step"           value="$(arg optimizer_skip_step)"/><!--optimize at end only -->
     <param name="config/backend_solver"                value="csparse"/>
+    <param name="config/pose_relative_to"              value="inaffected"/>
     <param name="config/optimize_landmarks"            value="false"/> <!-- Include feature poses as vertices in graph optimization-->
   	<param name="config/data_skip_step"                value="1"/><!-- skip every n-th frame completely -->
   	<param name="config/visualization_skip_step"       value="1"/> <!-- draw only every nth pointcloud row and line, high values require higher squared_meshing_threshold -->
@@ -89,9 +102,9 @@
     <param name="config/keep_all_nodes"                value="true"/> <!-- add nodes with constant motion if no transformation can be found -->
     <param name="config/use_icp"                       value="false"/> <!-- Ignored if ICP is not compiled in (see top of CMakeLists.txt) -->
     <param name="config/gicp_max_cloud_size"           value="25000"/>
-    <param name="config/use_root_sift"                 value="true"/>
+    <param name="config/use_root_sift"                 value="$(arg use_root_sift)"/>
     <param name="config/optimizer_iterations"          value="0.001"/><!-- maximum of iterations in online operation (i.e., does affect the final optimization in batch mode) -->
-    <param name="config/emm__skip_step"                value="4"/> 
+    <param name="config/emm__skip_step"                value="1"/> 
     <param name="config/emm__mark_outliers"            value="false"/> 
     <param name="config/observability_threshold"       value="$(arg observability_threshold)"/>  
   <!--      <param name="config/max_edge_error"       value="0.01"/>  -->

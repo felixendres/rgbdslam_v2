@@ -9,16 +9,17 @@ if  test ! -d "$DIR"; then
 fi
 
 pushd $DIR > /dev/null
-for num in 0 1 2 3 4 5; do 
-  if grep "absolute.*error" ate_evaluation_$num.csv;then
+for num in 0 1 2 3 4; do 
+  if grep "absolute.*error" ate_evaluation_$num.csv &> /dev/null;then
     echo "[0;36mResult exists: ate_evaluation_$num.csv[1;36m[0m "
+    column '-s;' -t  ate_evaluation_$num.csv
     continue;
   fi
   rm -f ate_evaluation_$num.csv
   rm -f evaluation_$num.csv
 
   rm -f eval_translational.txt eval_translational.ate.txt eval_rotational.txt eval_runtime.txt 
-  for BASENAME in `ls -d rgbd_dataset_freiburg* strata*`; do
+  for BASENAME in `ls -d rgbd_dataset_freiburg* strata* 2>/dev/null`; do
     echo -n "$BASENAME ... "
     if test ! -d "$BASENAME";then
       echo "[0;31mNot ready yet[1;31m[0m " $num 

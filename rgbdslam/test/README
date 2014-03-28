@@ -1,0 +1,64 @@
+Disclaimer: 
+These scripts are meant for the evaluation of my own
+research. They are publicized in the hope that they may be useful,
+and while I would expect you to be able to reproduce the published
+results, there is no guarantee that this will actually work, as 
+the code is actively worked on and new stuff may break old things.
+
+
+To test rgbdslam download one or more bagfiles from the rgbd benchmark:
+http://vision.in.tum.de/data/datasets/rgbd-dataset/download
+and their according ground truth files into this directory.
+
+Then run
+./run_tests.sh [TEST_NAME]
+This runs rgbdslam on the downloaded bag file(s) with the set of parameters
+specified in test_settings.launch plus some specified in run_tests.sh itself.
+In its original states, a comparison between different number of 
+frame-to-frame matches will be performed.
+
+The results will be put in the directory [TEST_NAME].
+If you omit the optional [TEST_NAME] the date will be chosen.
+
+
+The results will be displayed to the console. As an example, running the tests
+on the "desk" bagfiles would lead to output similar to the following:
+
+rgbd_dataset_freiburg1_desk ... rgbd_dataset_freiburg1_desk2 ... rgbd_dataset_freiburg2_desk ... 
+ATE Results at Level 0 are stored in /home/endres/catkin_rgbdslam_test/src/rgbdslam/rgbdslam/test/2014-03-28_17:42/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/300_Features/ate_evaluation_0.csv
+300 Features                                       "300 Features ATE RMSE"                "300 Features Duration"                        "300 Features Optimization Time"  x  x                      x   x
+FR1 desk        absolute translational error.rmse   0.104692                 m  Duration   134.089630324           s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+FR1 desk2       absolute translational error.rmse   0.078796                 m  Duration   141.159545860           s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+FR2 desk        absolute translational error.rmse   0.245620                 m  Duration   709.671456666           s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+rgbd_dataset_freiburg1_desk ... rgbd_dataset_freiburg1_desk2 ... rgbd_dataset_freiburg2_desk ... 
+ATE Results at Level 1 are stored in /home/endres/catkin_rgbdslam_test/src/rgbdslam/rgbdslam/test/2014-03-28_17:42/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/300_Features/ate_evaluation_1.csv
+300 Features                                       "300 Features ATE RMSE"                "300 Features Duration"                        "300 Features Optimization Time"  x  x                      x      x
+FR1 desk        absolute translational error.rmse   0.023961                 m  Duration   134.933010898           s  Optimizer Runtime   0.837529                         s  Number of Nodes/Edges   550   5773
+FR1 desk2       absolute translational error.rmse   0.034096                 m  Duration   141.730226714           s  Optimizer Runtime   0.56463                          s  Number of Nodes/Edges   594   5470
+FR2 desk        absolute translational error.rmse   0.048512                 m  Duration   780.423595765           s  Optimizer Runtime   70.7199                          s  Number of Nodes/Edges   2866  36625
+rgbd_dataset_freiburg1_desk ... rgbd_dataset_freiburg1_desk2 ... rgbd_dataset_freiburg2_desk ... 
+ATE Results at Level 2 are stored in /home/endres/catkin_rgbdslam_test/src/rgbdslam/rgbdslam/test/2014-03-28_17:42/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/300_Features/ate_evaluation_2.csv
+300 Features                                       "300 Features ATE RMSE"                "300 Features Duration"                        "300 Features Optimization Time"  x  x                      x      x
+FR1 desk        absolute translational error.rmse   0.023961                 m  Duration   135.145054564           s  Optimizer Runtime   0.0978786                        s  Number of Nodes/Edges   550   5773
+FR1 desk2       absolute translational error.rmse   0.034096                 m  Duration   141.907890027           s  Optimizer Runtime   0.0673897                        s  Number of Nodes/Edges   594   5470
+FR2 desk        absolute translational error.rmse   0.048512                 m  Duration   806.566153972           s  Optimizer Runtime   25.3947                          s  Number of Nodes/Edges   2866  36625
+rgbd_dataset_freiburg1_desk ... rgbd_dataset_freiburg1_desk2 ... rgbd_dataset_freiburg2_desk ... 
+ATE Results at Level 3 are stored in /home/endres/catkin_rgbdslam_test/src/rgbdslam/rgbdslam/test/2014-03-28_17:42/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/300_Features/ate_evaluation_3.csv
+300 Features                                       "300 Features ATE RMSE"                "300 Features Duration"                        "300 Features Optimization Time"  x  x                      x      x
+FR1 desk        absolute translational error.rmse   0.023961                 m  Duration   135.419693301           s  Optimizer Runtime   0.16933                          s  Number of Nodes/Edges   550   5773
+FR1 desk2       absolute translational error.rmse   0.034096                 m  Duration   142.079034468           s  Optimizer Runtime   0.0677425                        s  Number of Nodes/Edges   594   5470
+FR2 desk        absolute translational error.rmse   0.048473                 m  Duration   884.704456684           s  Optimizer Runtime   77.4081                          s  Number of Nodes/Edges   2866  36625
+rgbd_dataset_freiburg1_desk ... rgbd_dataset_freiburg1_desk2 ... rgbd_dataset_freiburg2_desk ... 
+ATE Results at Level 4 are stored in /home/endres/catkin_rgbdslam_test/src/rgbdslam/rgbdslam/test/2014-03-28_17:42/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/300_Features/ate_evaluation_4.csv
+300 Features                                       "300 Features ATE RMSE"                "300 Features Duration"                        "300 Features Optimization Time"  x  x                      x      x
+FR1 desk        absolute translational error.rmse   0.023961                 m  Duration   135.602641509           s  Optimizer Runtime   0.0962021                        s  Number of Nodes/Edges   550   5773
+FR1 desk2       absolute translational error.rmse   0.033646                 m  Duration   142.712050755           s  Optimizer Runtime   0.560159                         s  Number of Nodes/Edges   594   5470
+FR2 desk        absolute translational error.rmse   0.048466                 m  Duration   962.852686238           s  Optimizer Runtime   77.5804                          s  Number of Nodes/Edges   2866  36625
+
+
+If you browse the output directory you can find the results.
+You can easily redisplay them by executing
+rosrun rgbdslam summarize_evaluation.sh /home/endres/catkin_rgbdslam_test/src/rgbdslam/rgbdslam/test/2014-03-28_17:42/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/300_Features/
+where you need to adapt the path accordingly.
+
+

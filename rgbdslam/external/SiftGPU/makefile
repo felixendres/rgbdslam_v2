@@ -7,8 +7,8 @@ siftgpu_enable_server = 0
 siftgpu_enable_opencl = 0
 #------------------------------------------------------------------------------------------------
 # enable CUDA-based SiftGPU?
-# This test gives a false positive for me, disabled by xxx_
-simple_find_cuda = $(shell locate xxx_libcudart.so) 
+# Felix Endres: This test gives a false positive for me, so I made it mor specific
+simple_find_cuda = $(shell locate /usr/local/cuda/lib/libcudart.so*) 
 ifneq ($(simple_find_cuda), )
  	siftgpu_enable_cuda = 1
 else

@@ -112,46 +112,10 @@ SET(${CMAKE_LIBRARY_PATH} ${LIBRARY_OUTPUT_PATH})
 # SiftGPU ###################
 #############################
 IF (${USE_SIFT_GPU})
-  #include(ExternalProject)
-  #  SET(SIFTGPU_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/external/SiftGPU)
-  #  MESSAGE(${SIFTGPU_PREFIX} )
-  #  ExternalProject_Add(project_siftgpu
-  #    #URL http://www.informatik.uni-freiburg.de/~endres/files/SiftGPU.tgz
-  #    PREFIX ${SIFTGPU_PREFIX} 
-  #    SOURCE_DIR ${SIFTGPU_PREFIX} 
-  #    BUILD_IN_SOURCE ON
-  #    # Wrap download, configure, build and install steps in a script to log output
-  #    LOG_DOWNLOAD ON
-  #    LOG_CONFIGURE ON
-  #    LOG_BUILD ON
-  #    LOG_INSTALL ON
-  #    CONFIGURE_COMMAND ""
-  #    BUILD_COMMAND make
-  #    INSTALL_COMMAND ""
-  #  )
-  #
-  #  ExternalProject_Get_Property(project_siftgpu install_dir)
-  #  ExternalProject_Get_Property(project_siftgpu source_dir)
-  #  #SET(sift_gpu_build_path ${CMAKE_CURRENT_SOURCE_DIR}/external/siftgpu/linux)
-  #  MESSAGE("SiftGPU Install Dir" ${install_dir})
-  #  MESSAGE("SiftGPU Source Dir" ${source_dir})
-  #include_directories(${install_dir}/src/SiftGPU/include)
-  #link_directories(${install_dir}/bin/)	
-  #	EXECUTE_PROCESS(
-  #		COMMAND make ${ROS_PARALLEL_JOBS} siftgpu 
-  #		WORKING_DIRECTORY ${sift_gpu_build_path}
-  #		RESULT_VARIABLE sift_gpu_return
-  #	)
-  #MESSAGE("\n------------------------------------------------------------------\n")
+  add_subdirectory(external)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/SiftGPU/src)
   link_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/SiftGPU/bin)	
 	
-  ##on error
-	#IF (NOT ${sift_gpu_return} EQUAL 0)
-	#	MESSAGE(FATAL_ERROR "SiftGPU cannot be compiled. Returned: ${sift_gpu_return}")
-	#ENDIF (NOT ${sift_gpu_return} EQUAL 0)
-	
-  #FILE(COPY external/siftgpu/linux/bin/libsiftgpu.so DESTINATION ../lib/)
 	
 	add_definitions(-DUSE_SIFT_GPU)
 	add_definitions(-DSIFT_GPU_MODE=$ENV{SIFT_GPU_MODE})

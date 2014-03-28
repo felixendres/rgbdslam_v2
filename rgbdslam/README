@@ -4,6 +4,32 @@ DISCLAIMER
 THIS IS NEITHER A PRODUCT NOR IS IT ADVERTISED AS ONE. THIS IS A RESEARCH
 PROJECT AND SUBJECT TO FREQUENT CHANGES. THERE IS NO QUALITY ASSURANCE.
 
+VERSION WARNING 
+This software is an update of the ROS Fuerte version of RGBDSLAM. However
+many things have changed, so the documentation below may be outdated.
+
+Here's a quick overview of installation for hydro:
+
+Create a catkin workspace:
+http://wiki.ros.org/catkin/Tutorials/create_a_workspace
+
+Then put RGBDSLAMv2 into your workspace's "src/" directory.
+
+Next to RGBDSLAMv2, you need to get the latest versions of the master branches
+of octomap_ros, octomap_mapping and octomap_msgs. The urls are:
+
+git clone https://github.com/OctoMap/octomap_ros.git
+git clone https://github.com/OctoMap/octomap_mapping.git
+git clone https://github.com/OctoMap/octomap_msgs.git
+
+Optional, for evaluation purposes:
+svn checkout https://svncvpr.in.tum.de/cvpr-ros-pkg/trunk/rgbd_benchmark/rgbd_benchmark_tools
+
+To build RGBDSLAMv2 go to your workspace and execute 
+catkin_make
+
+
+ORIGINAL (PARTLY OUTDATED) DOCUMENTATION OF RGBDSLAM (Fuerte Version) FOLLOWS
 
 WARNING TO USERS OF THE SERVICE CALL INTERFACE: 
 The service definitions have minor changes, which will break existing service

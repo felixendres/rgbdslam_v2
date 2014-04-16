@@ -47,7 +47,6 @@
   <build_depend>sensor_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
   <build_depend>std_msgs</build_depend>
-  <build_depend>octomap_ros</build_depend>
   <run_depend>pcl_conversions</run_depend>
   <run_depend>pcl_ros</run_depend>
   <run_depend>roscpp</run_depend>
@@ -61,7 +60,6 @@
   <build_depend>image_transport</build_depend>
 
   <run_depend>cv_bridge</run_depend>
-  <run_depend>octomap_ros</run_depend>
   <run_depend>libpcl-all</run_depend>
   <run_depend>tf</run_depend>
   <run_depend>g2o</run_depend>

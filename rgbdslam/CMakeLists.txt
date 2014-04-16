@@ -39,7 +39,7 @@ ENDIF (${USE_GICP_BIN} OR ${USE_GICP_CODE})
 ####################################################
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules/")
 #message(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
-find_package(catkin REQUIRED COMPONENTS pcl_conversions pcl_ros roscpp image_transport cv_bridge sensor_msgs octomap_ros
+find_package(catkin REQUIRED COMPONENTS pcl_conversions pcl_ros roscpp image_transport cv_bridge sensor_msgs 
              geometry_msgs visualization_msgs std_msgs tf message_generation message_filters rosbag rosconsole)
 
 project(rgbdslam)

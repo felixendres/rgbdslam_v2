@@ -5,8 +5,6 @@
 #include <octomap/ColorVoxelMap.h>
 #include <octomap/ColorOcTree.h>
 #include <octomap/Pointcloud.h>
-//#include <octomap_ros/OctomapROS.h>
-#include <octomap_ros/conversions.h>
 #include <octomap/octomap.h>
 #include <qtconcurrentrun.h>
 #include <memory>

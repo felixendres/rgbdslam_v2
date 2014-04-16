@@ -62,18 +62,24 @@ void ColorOctomapServer::insertCloudCallback(const pointcloud_type::ConstPtr clo
   
   ScopedTimer s(__FUNCTION__);
 
+  //Conversions
   Eigen::Quaternionf q = cloud->sensor_orientation_;
   Eigen::Vector4f t = cloud->sensor_origin_;
   tf::Transform trans(tf::Quaternion(q.x(), q.y(), q.z(), q.w()), tf::Vector3(t[0], t[1], t[2]));
-  //eigen_transform = cloud->sensor_origin_ * cloud->sensor_orientation_ ;
-  //pcl_ros::transformAsMatrix (trans, eigen_transform);
+  octomap::point3d origin(t[0], t[1], t[2]);
   pointcloud_type::Ptr pcl_cloud(new pointcloud_type);
+
+  //Work
   pcl_ros::transformPointCloud(*cloud, *pcl_cloud, trans);
 
   //Conversions
   boost::shared_ptr<octomap::Pointcloud> octomapCloud(new octomap::Pointcloud());
-  octomap::pointcloudPCLToOctomap(*pcl_cloud, *octomapCloud);
-  octomap::point3d origin = octomap::pointTfToOctomap(trans.getOrigin());
+
+  //Work 
+  octomapCloud->reserve(pcl_cloud->size());
+  for (pointcloud_type::const_iterator it = pcl_cloud->begin(); it != pcl_cloud->end(); ++it){
+    if (!std::isnan (it->z)) octomapCloud->push_back(it->x, it->y, it->z);
+  }
 
   if (ParameterServer::instance()->get<bool>("concurrent_io")) {
     rendering.waitForFinished();

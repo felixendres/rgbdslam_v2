@@ -2,15 +2,18 @@
 #define COLOR_OCTOMAP_SERVER_RGBDSLAM
 
 #include "parameter_server.h"
-#include <octomap_server/OctomapServer.h>
+#include <octomap/ColorVoxelMap.h>
 #include <octomap/ColorOcTree.h>
+#include <octomap/Pointcloud.h>
 //#include <octomap_ros/OctomapROS.h>
 #include <octomap_ros/conversions.h>
 #include <octomap/octomap.h>
 #include <qtconcurrentrun.h>
 #include <memory>
+#include <boost/shared_ptr.hpp>
 
-  class ColorOctomapServer: public octomap_server::OctomapServer {
+  class ColorOctomapServer {
+    typedef octomap::ColorOcTree map_type;
   public:
     ColorOctomapServer();
     virtual ~ColorOctomapServer();
@@ -23,12 +26,12 @@
     ///Raycast cloud into the octomap
     /// @param cloud pointcloud in map frame
     /// @param origin sensor location in map frame
-    virtual void insertCloudCallbackCommon(std::shared_ptr<octomap::Pointcloud> cloud,
+    virtual void insertCloudCallbackCommon(boost::shared_ptr<octomap::Pointcloud> cloud,
                                            pointcloud_type::ConstPtr colors,
                                            const octomap::point3d& origin, double max_range = -1.0);
 
   protected:
-    octomap::ColorOcTree m_octoMap;
+    map_type m_octoMap;
     //octomap::OctomapROS<octomap::ColorOcTree> m_octoMap;
     mutable QFuture<void> rendering;  //Mutable is a hack, otherwise waitforfinished cannot be called in const function
   };

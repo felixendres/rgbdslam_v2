@@ -17,7 +17,7 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #set(CMAKE_CXX_FLAGS "-O3")
-SET(CMAKE_CXX_FLAGS "-O3 -fPIC -std=c++0x")
+SET(CMAKE_CXX_FLAGS "-g -O3 -fPIC -std=c++0x")
 
 IF (${USE_GL2PS})
   add_definitions(-DGL2PS)
@@ -39,8 +39,8 @@ ENDIF (${USE_GICP_BIN} OR ${USE_GICP_CODE})
 ####################################################
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules/")
 #message(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
-find_package(catkin REQUIRED COMPONENTS pcl_conversions pcl_ros roscpp octomap_server image_transport cv_bridge sensor_msgs 
-             geometry_msgs visualization_msgs std_msgs tf message_generation message_filters rosbag)
+find_package(catkin REQUIRED COMPONENTS pcl_conversions pcl_ros roscpp image_transport cv_bridge sensor_msgs octomap_ros
+             geometry_msgs visualization_msgs std_msgs tf message_generation message_filters rosbag rosconsole)
 
 project(rgbdslam)
 
@@ -69,8 +69,8 @@ link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
 # Octomap ###################
-find_package(octomap REQUIRED)
-include_directories(${OCTOMAP_INCLUDE_DIRS})
+find_package(octomap 1.6 REQUIRED)
+include_directories(BEFORE ${OCTOMAP_INCLUDE_DIRS})
 link_directories(${OCTOMAP_LIBRARY_DIRS})
 link_libraries(${OCTOMAP_LIBRARIES})
 

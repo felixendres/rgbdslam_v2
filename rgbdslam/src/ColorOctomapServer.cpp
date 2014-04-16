@@ -9,13 +9,12 @@
  */
 
 
-#include <octomap/Pointcloud.h>
 #include "ColorOctomapServer.h"
 #include "scoped_timer.h"
 #include <pcl_ros/transforms.h>
 #include <pcl_ros/impl/transforms.hpp>
 
-ColorOctomapServer::ColorOctomapServer() :  octomap_server::OctomapServer(), m_octoMap(0.05)
+ColorOctomapServer::ColorOctomapServer() : m_octoMap(0.05)
 { 
   reset();
 }
@@ -33,6 +32,7 @@ void ColorOctomapServer::reset()
   m_octoMap.setOccupancyThres(ps->get<double>("octomap_occupancy_threshold"));
   m_octoMap.setProbHit(ps->get<double>("octomap_prob_hit"));
   m_octoMap.setProbMiss(ps->get<double>("octomap_prob_miss"));
+  //m_octoMap.setScanCodeUsage(true);
 }
 
 bool ColorOctomapServer::save(const char* filename) const
@@ -60,7 +60,7 @@ bool ColorOctomapServer::save(const char* filename) const
 //Same as the other insertCloudCallback, but relies on the sensor position information in the cloud
 void ColorOctomapServer::insertCloudCallback(const pointcloud_type::ConstPtr cloud, double max_range) {
   
-  ScopedTimer s(__FUNCTION__); //Unconditional logging of time
+  ScopedTimer s(__FUNCTION__);
 
   Eigen::Quaternionf q = cloud->sensor_orientation_;
   Eigen::Vector4f t = cloud->sensor_origin_;
@@ -71,7 +71,7 @@ void ColorOctomapServer::insertCloudCallback(const pointcloud_type::ConstPtr clo
   pcl_ros::transformPointCloud(*cloud, *pcl_cloud, trans);
 
   //Conversions
-  std::shared_ptr<octomap::Pointcloud> octomapCloud(new octomap::Pointcloud());
+  boost::shared_ptr<octomap::Pointcloud> octomapCloud(new octomap::Pointcloud());
   octomap::pointcloudPCLToOctomap(*pcl_cloud, *octomapCloud);
   octomap::point3d origin = octomap::pointTfToOctomap(trans.getOrigin());
 
@@ -84,9 +84,10 @@ void ColorOctomapServer::insertCloudCallback(const pointcloud_type::ConstPtr clo
   }
 }
 
-void ColorOctomapServer::insertCloudCallbackCommon(std::shared_ptr<octomap::Pointcloud> octomapCloud,
+void ColorOctomapServer::insertCloudCallbackCommon(boost::shared_ptr<octomap::Pointcloud> octomapCloud,
                                                    pointcloud_type::ConstPtr color_cloud,
                                                    const octomap::point3d& origin, double max_range) {
+  ScopedTimer s(__FUNCTION__);
   if(m_octoMap.getResolution() != ParameterServer::instance()->get<double>("octomap_resolution")){
     ROS_WARN("OctoMap resolution changed from %f to %f. Resetting Octomap", 
              m_octoMap.getResolution(), ParameterServer::instance()->get<double>("octomap_resolution"));
@@ -101,7 +102,8 @@ void ColorOctomapServer::insertCloudCallbackCommon(std::shared_ptr<octomap::Poin
   unsigned char* colors = new unsigned char[3];
 
   ROS_DEBUG("inserting color measurements");
-  for (auto it = color_cloud->begin(); it != color_cloud->end(); ++it) {
+  pointcloud_type::const_iterator it;
+  for (it = color_cloud->begin(); it != color_cloud->end(); ++it) {
     // Check if the point is invalid
     if (!isnan (it->x) && !isnan (it->y) && !isnan (it->z)) {
 #ifndef RGB_IS_4TH_DIM

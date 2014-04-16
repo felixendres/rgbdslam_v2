@@ -2,7 +2,7 @@
 #define COLOR_OCTOMAP_SERVER_RGBDSLAM
 
 #include "parameter_server.h"
-#include <octomap/ColorVoxelMap.h>
+//#include <octomap/ColorVoxelMap.h>
 #include <octomap/ColorOcTree.h>
 #include <octomap/Pointcloud.h>
 #include <octomap/octomap.h>

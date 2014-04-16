@@ -154,7 +154,7 @@ void transformAndAppendPointCloud (const pointcloud_type &cloud_in,
 //                              const tf::Transform transformation)
 void transformAndAppendPointCloud (const pointcloud_type &cloud_in, 
                                    pointcloud_type &cloud_to_append_to,
-                                   const tf::Transform transformation, float max_Depth)
+                                   const tf::Transform transformation, float max_Depth, int )
 {
     bool compact = !ParameterServer::instance()->get<bool>("preserve_raster_on_save");
     Eigen::Matrix4f eigen_transform;

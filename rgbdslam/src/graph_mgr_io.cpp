@@ -303,7 +303,9 @@ void GraphManager::renderToOctomap(Node* node)
 {
     ScopedTimer s(__FUNCTION__);
     ROS_INFO("Rendering Node %i with frame %s", node->id_, node->header_.frame_id.c_str());
+    if(updateCloudOrigin(node)){//Only render if transformation estimate is valid
     co_server_.insertCloudCallback(node->pc_col, ParameterServer::instance()->get<double>("maximum_depth")); // Will be transformed according to sensor pose set previously
+    }
     if(ParameterServer::instance()->get<bool>("octomap_clear_raycasted_clouds")){
       node->clearPointCloud();
       ROS_INFO("Cleared pointcloud of Node %i", node->id_);
@@ -473,7 +475,7 @@ void GraphManager::saveAllCloudsToFile(QString filename){
       return;
     }
 
-    pcl::PointCloud<hema::PointXYZRGBCamSL> aggregate_cloud; ///will hold all other clouds
+    pcl::PointCloud<point_type> aggregate_cloud; ///will hold all other clouds
     //Make big enough to hold all other clouds. This might be too much if NaNs are filtered. They are filtered according to the parameter preserve_raster_on_save
     aggregate_cloud.reserve(graph_.size() * graph_.begin()->second->pc_col->size()); 
     ROS_INFO("Saving all clouds to %s, this may take a while as they need to be transformed to a common coordinate frame.", qPrintable(filename));

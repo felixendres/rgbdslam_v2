@@ -11,7 +11,6 @@
 #include <boost/shared_ptr.hpp>
 
   class ColorOctomapServer {
-    typedef octomap::ColorOcTree map_type;
   public:
     ColorOctomapServer();
     virtual ~ColorOctomapServer();
@@ -29,7 +28,7 @@
                                            const octomap::point3d& origin, double max_range = -1.0);
 
   protected:
-    map_type m_octoMap;
+    octomap::ColorOcTree m_octoMap;
     //octomap::OctomapROS<octomap::ColorOcTree> m_octoMap;
     mutable QFuture<void> rendering;  //Mutable is a hack, otherwise waitforfinished cannot be called in const function
   };

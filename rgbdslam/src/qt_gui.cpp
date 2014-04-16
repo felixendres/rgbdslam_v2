@@ -587,7 +587,7 @@ void Graphical_UI::createMenus() {
     dataMenu->addAction(saveOctoAct);
     this->addAction(saveOctoAct);
 
-    QAction *saveAct = new QAction(tr("&Save PC as..."), this);
+    QAction *saveAct = new QAction(tr("&Save as Point Cloud ..."), this);
     saveAct->setShortcuts(QKeySequence::SaveAs);
     saveAct->setStatusTip(tr("Save all stored point clouds with common coordinate frame"));
     saveAct->setIcon(QIcon::fromTheme("document-save-as"));//doesn't work for gnome
@@ -595,7 +595,7 @@ void Graphical_UI::createMenus() {
     dataMenu->addAction(saveAct);
     this->addAction(saveAct);
 
-    QAction *saveIndiAct = new QAction(tr("&Save PC Node-Wise..."), this);
+    QAction *saveIndiAct = new QAction(tr("&Save Point Cloud Node-Wise..."), this);
     saveIndiAct->setShortcut(QString("Ctrl+N"));
     saveIndiAct->setStatusTip(tr("Save stored point clouds in individual files"));
     saveAct->setIcon(QIcon::fromTheme("document-save-all"));//doesn't work for gnome

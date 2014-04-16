@@ -32,7 +32,6 @@ void ColorOctomapServer::reset()
   m_octoMap.setOccupancyThres(ps->get<double>("octomap_occupancy_threshold"));
   m_octoMap.setProbHit(ps->get<double>("octomap_prob_hit"));
   m_octoMap.setProbMiss(ps->get<double>("octomap_prob_miss"));
-  //m_octoMap.setScanCodeUsage(true);
 }
 
 bool ColorOctomapServer::save(const char* filename) const
@@ -93,7 +92,6 @@ void ColorOctomapServer::insertCloudCallback(const pointcloud_type::ConstPtr clo
 void ColorOctomapServer::insertCloudCallbackCommon(boost::shared_ptr<octomap::Pointcloud> octomapCloud,
                                                    pointcloud_type::ConstPtr color_cloud,
                                                    const octomap::point3d& origin, double max_range) {
-  ScopedTimer s(__FUNCTION__);
   if(m_octoMap.getResolution() != ParameterServer::instance()->get<double>("octomap_resolution")){
     ROS_WARN("OctoMap resolution changed from %f to %f. Resetting Octomap", 
              m_octoMap.getResolution(), ParameterServer::instance()->get<double>("octomap_resolution"));

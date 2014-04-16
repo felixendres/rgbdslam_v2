@@ -82,9 +82,10 @@ void mat2dist(const Eigen::Matrix4f& t, double &dist);
 pointcloud_type* createXYZRGBPointCloud (const sensor_msgs::ImageConstPtr& depth_msg, const sensor_msgs::ImageConstPtr& rgb_msg, const sensor_msgs::CameraInfoConstPtr& cam_info); 
 pointcloud_type* createXYZRGBPointCloud (const cv::Mat& depth_msg, const cv::Mat& rgb_msg, const sensor_msgs::CameraInfoConstPtr& cam_info); 
 
-///Helper function to aggregate pointclouds in a single coordinate frame
+///Helper function to aggregate pointclouds in a single coordinate frame. idx is only for compatibilty to the
+///Alternative function below
 void transformAndAppendPointCloud (const pointcloud_type &cloud_in, pointcloud_type &cloud_to_append_to,
-                                   const tf::Transform transformation, float Max_Depth);
+                                   const tf::Transform transformation, float Max_Depth, int idx=0);
 
 ///Same as other but different output cloud type
 void transformAndAppendPointCloud (const pointcloud_type &cloud_in, 

@@ -40,8 +40,8 @@
 const double PI= 3.14159265358979323846;
 
 template <typename PointType>
-inline bool validXYZ(const PointType& p){
-      if(ParameterServer::instance()->get<double>("maximum_depth") < p.z) return false;
+inline bool validXYZ(const PointType& p, float max_depth){
+      if(max_depth < p.z) return false;
       return std::isfinite(p.z) && std::isfinite(p.y) && std::isfinite(p.x);
 };
 
@@ -369,12 +369,14 @@ void GLViewer::drawClouds(float xshift) {
     }
     glEnable(GL_DEPTH_TEST);
     if(button_pressed_){
+      /*
       if(s.elapsed() > 0.15) { //Try to maintain high speed rendering if button is pressed
         fast_rendering_step_++;
         ROS_INFO("Increased renderer skipto every %d. cloud during motion", fast_rendering_step_);
       } else if(s.elapsed() < 0.03 && fast_rendering_step_ > 0) { //Try to maintain high rendering quality, if fast enough 
         fast_rendering_step_--;
       }
+      */
     }
 }
 
@@ -695,6 +697,7 @@ void GLViewer::pointCloud2GLStrip(pointcloud_type * pc){
         return;
     }
     float mesh_thresh = ParameterServer::instance()->get<double>("squared_meshing_threshold");
+    float max_depth = ParameterServer::instance()->get<double>("maximum_depth");
     glNewList(cloud_list_index, GL_COMPILE);
     //ROS_INFO_COND(!pc->is_dense, "Expected dense cloud for opengl drawing");
     point_type origin;
@@ -712,12 +715,12 @@ void GLViewer::pointCloud2GLStrip(pointcloud_type * pc){
             using namespace pcl;
             if(!strip_on){ //Generate vertices for new triangle
                 const point_type* ll = &pc->points[(x)+(y+step)*w]; //one down (lower left corner)
-                if(!validXYZ(*ll)) continue; // both new triangles in this step would use this point
+                if(!validXYZ(*ll, max_depth)) continue; // both new triangles in this step would use this point
                 const point_type* ur = &pc->points[(x+step)+y*w]; //one right (upper right corner)
-                if(!validXYZ(*ur)) continue; // both new triangles in this step would use this point
+                if(!validXYZ(*ur, max_depth)) continue; // both new triangles in this step would use this point
           
                 const point_type* ul = &pc->points[x+y*w]; //current point (upper right)
-                if(validXYZ(*ul)){ //ul, ur, ll all valid
+                if(validXYZ(*ul, max_depth)){ //ul, ur, ll all valid
                   depth = squaredEuclideanDistance(*ul,origin);
                   if (squaredEuclideanDistance(*ul,*ll)/depth <= mesh_thresh  and 
                       squaredEuclideanDistance(*ul,*ll)/depth <= mesh_thresh  and
@@ -735,7 +738,7 @@ void GLViewer::pointCloud2GLStrip(pointcloud_type * pc){
                 } 
                 if(!strip_on) { //can't use the point on the upper left, should I still init a triangle?
                   const point_type* lr = &pc->points[(x+step)+(y+step)*w]; //one right-down (lower right)
-                  if(!validXYZ(*lr)) {
+                  if(!validXYZ(*lr, max_depth)) {
                     //if this is not valid, there is no way to make a new triangle in the next step
                     //and one could have been drawn starting in this step, only if ul had been valid
                     x++;
@@ -764,7 +767,7 @@ void GLViewer::pointCloud2GLStrip(pointcloud_type * pc){
               const point_type* ul;
               if(flip){ ul = &pc->points[(x)+(y+step)*w]; } //one down (lower left corner) 
               else { ul = &pc->points[x+y*w]; } //current point (upper right)
-              if(validXYZ(*ul)){ //Neighbours to the left are prepared
+              if(validXYZ(*ul, max_depth)){ //Neighbours to the left are prepared
                 depth = squaredEuclideanDistance(*ul,origin);
                 if (squaredEuclideanDistance(*ul,*(ul-step))/depth > mesh_thresh){
                   glEnd();
@@ -786,7 +789,7 @@ void GLViewer::pointCloud2GLStrip(pointcloud_type * pc){
               const point_type* ll;
               if(flip){ ll = &pc->points[x+y*w]; } //current point (upper right)
               else { ll = &pc->points[(x)+(y+step)*w]; } //one down (lower left corner) 
-              if(validXYZ(*ll)){ 
+              if(validXYZ(*ll, max_depth)){ 
                 depth = squaredEuclideanDistance(*ll,origin);
                 if (squaredEuclideanDistance(*ul,*ll)/depth > mesh_thresh or
                     squaredEuclideanDistance(*ul,*(ul-step))/depth > mesh_thresh or
@@ -847,13 +850,14 @@ void GLViewer::pointCloud2GLEllipsoids(pointcloud_type * pc){
     origin.y = 0;
     origin.z = 0;
 
+    float max_depth = ParameterServer::instance()->get<double>("maximum_depth");
     float depth;
     unsigned int w=pc->width, h=pc->height;
     for(unsigned int x = 0; x < w; x++){
         for(unsigned int y = 0; y < h; y++){
             //using namespace pcl;
             const point_type& p = pc->points[x+y*w]; //current point
-            if(!(validXYZ(p))) continue;
+            if(!(validXYZ(p, max_depth))) continue;
             setGLColor(p);
             drawEllipsoid(0.001*p.z, 0.001*p.z, depth_std_dev(p.z), p.getVector4fMap());
         }
@@ -880,13 +884,14 @@ void GLViewer::pointCloud2GLPoints(pointcloud_type * pc){
     origin.y = 0;
     origin.z = 0;
 
+    float max_depth = ParameterServer::instance()->get<double>("maximum_depth");
     float depth;
     unsigned int w=pc->width, h=pc->height;
     for(unsigned int x = 0; x < w; x++){
         for(unsigned int y = 0; y < h; y++){
             using namespace pcl;
             const point_type* p = &pc->points[x+y*w]; //current point
-            if(!(validXYZ(*p))) continue;
+            if(!(validXYZ(*p, max_depth))) continue;
             setGLColor(*p);
             glVertex3f(p->x, p->y, p->z);
         }
@@ -914,6 +919,7 @@ void GLViewer::pointCloud2GLTriangleList(pointcloud_type const * pc){
     origin.y = 0;
     origin.z = 0;
 
+    float max_depth = ParameterServer::instance()->get<double>("maximum_depth");
     float depth;
     unsigned int w=pc->width, h=pc->height;
     for(unsigned int x = 0; x < w-1; x++){
@@ -922,15 +928,15 @@ void GLViewer::pointCloud2GLTriangleList(pointcloud_type const * pc){
 
             const point_type* pi = &pc->points[x+y*w]; //current point
 
-            if(!(validXYZ(*pi))) continue;
+            if(!(validXYZ(*pi, max_depth))) continue;
             depth = squaredEuclideanDistance(*pi,origin);
 
             const point_type* pl = &pc->points[(x+1)+(y+1)*w]; //one right-down
-            if(!(validXYZ(*pl)) or squaredEuclideanDistance(*pi,*pl)/depth > mesh_thresh)  
+            if(!(validXYZ(*pl, max_depth)) or squaredEuclideanDistance(*pi,*pl)/depth > mesh_thresh)  
               continue;
 
             const point_type* pj = &pc->points[(x+1)+y*w]; //one right
-            if(validXYZ(*pj)
+            if(validXYZ(*pj, max_depth)
                and squaredEuclideanDistance(*pi,*pj)/depth <= mesh_thresh  
                and squaredEuclideanDistance(*pj,*pl)/depth <= mesh_thresh){
               //drawTriangle(*pi, *pj, *pl);
@@ -938,7 +944,7 @@ void GLViewer::pointCloud2GLTriangleList(pointcloud_type const * pc){
             }
             const point_type* pk = &pc->points[(x)+(y+1)*w]; //one down
             
-            if(validXYZ(*pk)
+            if(validXYZ(*pk, max_depth)
                and squaredEuclideanDistance(*pi,*pk)/depth <= mesh_thresh  
                and squaredEuclideanDistance(*pk,*pl)/depth <= mesh_thresh){
               drawTriangle(*pi, *pk, *pl);

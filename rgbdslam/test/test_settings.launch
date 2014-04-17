@@ -7,13 +7,13 @@
   <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/gdb -ex run -args"/-->
   <arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/xterm -e gdb -ex run -args"/>
   <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/ddd -ex run -args"/-->
-  <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/valgrind -DELeTEME-tool=cachegrind -DELETEME-cachegrind-out-file=/tmp/cachegrind.out"/-->
+  <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/valgrind -DELETEME-tool=callgrind -DELETEME-callgrind-out-file=/tmp/callgrind.out"/-->
   <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/valgrind -DELETEME-leak-check=full "/-->
-  <arg unless="$(arg debug)" name="launch_prefix" value="/usr/bin/time "/>
+  <arg unless="$(arg debug)" name="launch_prefix" value=""/>
 
   <!-- These parameters are defined in the calling script (run_tests.sh)-->
   <arg name="bagfile_name" />
-  <arg name="feature_type" default="SIFTGPU"/>
+  <arg name="feature_type" default="ORB"/>
   <arg name="ransac_iterations" default="100"/>
   <arg name="optimizer_skip_step" default="10"/>
   <arg name="observability_threshold" default="0"/>
@@ -23,7 +23,7 @@
   <arg name="sampled_candidates" default="4"/>
   <arg name="gui" default="true"/>
 
-  <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" cwd="node" required="true" output="screen"  launch-prefix="$(arg launch_prefix)"> 
+  <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" required="true" output="screen"  launch-prefix="$(arg launch_prefix)"> 
     <!-- Input data settings-->
     <param name="config/topic_image_mono"              value="/camera/rgb/image_color"/> 
   	<param name="config/topic_image_depth"             value="/camera/depth/image"/>
@@ -39,22 +39,22 @@
     <param name="config/depth_camera_cx"                     value="331.0"/>
     <param name="config/depth_camera_cy"                     value="234.0"/>
     -->
-    <!--testing the values for fr1 from http://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats 
+    <!--testing the values for fr1 from http://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats -->
     <param name="config/depth_camera_fx"               value="517.3"/>
     <param name="config/depth_camera_fy"               value="516.5"/>
     <param name="config/depth_camera_cx"               value="318.6"/>
     <param name="config/depth_camera_cy"               value="255.3"/>
-    -->
-    <!-- FR2 from above url-->
+    <!-- FR2 from above url
     <param name="config/depth_camera_fx"               value="520.9"/>
     <param name="config/depth_camera_fy"               value="521.0"/>
     <param name="config/depth_camera_cx"               value="325.1"/>
     <param name="config/depth_camera_cy"               value="249.7"/>
+    -->
 
     <!-- TF information settings -->
   	<param name="config/fixed_frame_name"              value="/map"/>
     <param name="config/odom_frame_name"               value=""/>
-    <param name="config/ground_truth_frame_name"       value="/world"/><!--empty string if no ground truth-->
+    <param name="config/ground_truth_frame_name"       value=""/><!--empty string if no ground truth-->
     <param name="config/base_frame_name"               value="/openni_rgb_optical_frame"/> <!-- /openni_camera for hand-held kinect. For robot, e.g., /base_link -->
     <param name="config/fixed_camera"                  value="true"/> <!--is the kinect fixed with respect to base, or can it be moved (false makes sense only if transform betw. base_frame and openni_camera is sent via tf)-->
   	<param name="config/start_paused"                  value="false"/>
@@ -90,7 +90,7 @@
   	<param name="config/concurrent_edge_construction"  value="true"/>
   	<param name="config/concurrent_optimization"       value="true"/>
     <param name="config/optimizer_skip_step"           value="$(arg optimizer_skip_step)"/><!--optimize at end only -->
-    <param name="config/backend_solver"                value="csparse"/>
+    <param name="config/backend_solver"                value="pcg"/>
     <param name="config/pose_relative_to"              value="inaffected"/>
     <param name="config/optimize_landmarks"            value="false"/> <!-- Include feature poses as vertices in graph optimization-->
   	<param name="config/data_skip_step"                value="1"/><!-- skip every n-th frame completely -->
@@ -108,7 +108,8 @@
     <param name="config/emm__mark_outliers"            value="false"/> 
     <param name="config/observability_threshold"       value="$(arg observability_threshold)"/>  
   <!--      <param name="config/max_edge_error"       value="0.01"/>  -->
-    <param name="config/cloud_creation_skip_step"      value="4"/> <!-- Only active if cloud is computed (i.e. "topic_points" is empty. This value multiplies to emm__skip_step and visualization_skip_step-->
+    <param name="config/cloud_creation_skip_step"      value="8"/> <!-- Only active if cloud is computed (i.e. "topic_points" is empty. This value multiplies to emm__skip_step and visualization_skip_step-->
+    <param name="config/octomap_resolution"            value="0.01"/> <!-- Only active if cloud is computed (i.e. "topic_points" is empty. This value multiplies to emm__skip_step and visualization_skip_step-->
     <!--param name="config/g2o_transformation_refinement" value="1000"/--> <!-- Use g2o to refine the ransac result, i.e. optimize the Mahalanobis distance in a final step.-->
   </node>
 </launch>

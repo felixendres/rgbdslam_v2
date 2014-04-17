@@ -794,9 +794,7 @@ double errorFunction2(const Eigen::Vector4f& x1,
   static const double raster_stddev_y = 3*tan(cam_angle_y/cam_resol_y);  //5pix stddev in y
   static const double raster_cov_x = raster_stddev_x * raster_stddev_x;
   static const double raster_cov_y = raster_stddev_y * raster_stddev_y;/*}}}*/
-
-  ROS_DEBUG_COND(x1(3) != 1.0, "4th element of x1 should be 1.0, is %f", x1(3));
-  ROS_DEBUG_COND(x2(3) != 1.0, "4th element of x2 should be 1.0, is %f", x2(3));
+  static const bool use_error_shortcut = true;//ParameterServer::instance()->get<bool>("use_error_shortcut");
 
   bool nan1 = isnan(x1(2));
   bool nan2 = isnan(x2(2));
@@ -824,7 +822,7 @@ double errorFunction2(const Eigen::Vector4f& x1,
   Eigen::Vector3d mu_2 = x_2.head<3>();
   Eigen::Vector3d mu_1_in_frame_2 = (tf_12 * x_1).head<3>(); // μ₁⁽²⁾  = T₁₂ μ₁⁽¹⁾  
   //New Shortcut to determine clear outliers
-  if(ParameterServer::instance()->get<bool>("use_error_shortcut"))
+  if(use_error_shortcut)
   {
     double delta_sq_norm = (mu_1_in_frame_2 - mu_2).squaredNorm();
     double sigma_max_1 = std::max(raster_cov_x, depth_covariance(mu_1(2)));//Assuming raster_cov_x and _y to be approx. equal
@@ -859,22 +857,13 @@ double errorFunction2(const Eigen::Vector4f& x1,
   // Σc = (Σ₁ + Σ₂)
   Eigen::Matrix3d cov_mat_sum_in_frame_2 = cov1_in_frame_2 + cov2;     
   //ΔμT Σc⁻¹Δμ  
-  double sqrd_mahalanobis_distance = delta_mu_in_frame_2.transpose() * cov_mat_sum_in_frame_2.inverse() * delta_mu_in_frame_2;
+  //double sqrd_mahalanobis_distance = delta_mu_in_frame_2.transpose() * cov_mat_sum_in_frame_2.inverse() * delta_mu_in_frame_2;
+  double sqrd_mahalanobis_distance = delta_mu_in_frame_2.transpose() *cov_mat_sum_in_frame_2.ldlt().solve(delta_mu_in_frame_2);
   
-  if(nan1||nan2) ROS_DEBUG("Squared Mahalanobis Result for nan feature: %f", sqrd_mahalanobis_distance);
   if(!(sqrd_mahalanobis_distance >= 0.0))
   {
-    ROS_ERROR_STREAM_THROTTLE(0.5, "Non-Positive squared Mahalanobis distance " << sqrd_mahalanobis_distance << " for vectors\n" << x_1.transpose() << " and " << x_2.transpose() << "\nwith covariances\n" << cov1 << "\nand\n" << cov2);
-    ROS_ERROR_STREAM_THROTTLE(0.5, "Sigma 1 in Frame 2:\n" << cov1_in_frame_2 << "\nDelta mu: " << delta_mu_in_frame_2.transpose());
-    ROS_ERROR_STREAM_THROTTLE(0.5, "Covariance Matrix Sum:\n" << cov_mat_sum_in_frame_2);
     return std::numeric_limits<double>::max();
   }
-  //ROS_INFO_STREAM_NAMED("statistics", "Probability: " << std::setprecision(10) << probability << " Normalization: " << normalization);
-  ROS_DEBUG_STREAM_NAMED("statistics", "Mahalanobis Distance: " << sqrd_mahalanobis_distance);
-  ROS_DEBUG_STREAM_NAMED("statistics", "Covariance Matrix:\n" << cov_mat_sum_in_frame_2);
-  ROS_DEBUG_STREAM_NAMED("statistics", "Sigma 1:\n" << cov1 << "\nSigma 2:\n" << cov2);
-  ROS_DEBUG_STREAM_NAMED("statistics", "Sigma 1 in Frame 2:\n" << cov1_in_frame_2 << "\nDelta mu: " << delta_mu_in_frame_2);
-  ROS_DEBUG_STREAM_NAMED("statistics", "Transformation Matrix:\n" << tf_12 << "\nRotation:\n" << rotation_mat.transpose() * rotation_mat);
   return sqrd_mahalanobis_distance;
 }
 

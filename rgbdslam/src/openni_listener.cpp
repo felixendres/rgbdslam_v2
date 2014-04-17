@@ -305,9 +305,9 @@ void OpenNIListener::loadBag(std::string filename)
   //automatically save the result in a bagfile.
   //FIXME: The above assumption might not hold. Another parameter "save_bagfilename?"
   if(!ParameterServer::instance()->get<bool>("use_gui")){
-    graph_mgr_->saveBagfile((filename + "-reconstruction.bag").c_str());
+    //graph_mgr_->saveBagfile((filename + "-reconstruction.bag").c_str());
     Q_EMIT bagFinished();
-    usleep(10000000);//10sec to allow all threads to finish (don't know how much is required)
+    usleep(10);//10usec to allow all threads to finish (don't know how much is required)
   }
 }
 
@@ -353,12 +353,14 @@ void OpenNIListener::evaluation(std::string filename)
       ROS_WARN_NAMED("eval", "Finished with optimization iteration %i.", 3);
     }
 
+    /* OCTOMAP
     if(ParameterServer::instance()->get<bool>("octomap_online_creation")){
       graph_mgr_->writeOctomap(QString(filename.c_str()) + "-online.ot");
       //Now recreate (to have all clouds optimally positioned
       ParameterServer::instance()->set<bool>("octomap_online_creation", false);
       graph_mgr_->saveOctomap(QString(filename.c_str()) + "-offline.ot", false);
     }
+    */
     /*
     if(graph_mgr_->pruneEdgesWithErrorAbove(1) > 0){//Mahalanobis Distance
       graph_mgr_->optimizeGraph(-100, true, QString(filename.c_str()));//Non threaded call
@@ -377,7 +379,7 @@ void OpenNIListener::evaluation(std::string filename)
 
     if(!ParameterServer::instance()->get<bool>("use_gui")){
       Q_EMIT bagFinished();
-      usleep(10000000);//10sec to allow all threads to finish (don't know how much is required)
+      usleep(10);//10sec to allow all threads to finish (don't know how much is required)
     }
   std::cerr << "Evaluation Done\n";
 }

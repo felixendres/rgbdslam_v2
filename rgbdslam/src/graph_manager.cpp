@@ -961,7 +961,7 @@ void fixationOfVertices(std::string strategy,
 }
 double GraphManager::optimizeGraphImpl(double break_criterion)
 {
-  ScopedTimer s(__FUNCTION__);
+  ScopedTimer s(__FUNCTION__, false, true); // not only for logging
   ParameterServer* ps = ParameterServer::instance();
   double stop_cond = break_criterion > 0.0 ? break_criterion : ps->get<double>("optimizer_iterations");
   ROS_WARN_NAMED("eval", "Loop Closures: %u, Sequential Edges: %u", loop_closures_edges, sequential_edges);
@@ -998,7 +998,7 @@ double GraphManager::optimizeGraphImpl(double break_criterion)
      optimizer_->initializeOptimization(cam_cam_edges);
    }
 
-    ROS_WARN("Optimization with %zu cams, %zu nodes and %zu edges in the graph", graph_.size(), optimizer_->vertices().size(), optimizer_->edges().size());
+    ROS_WARN_NAMED("eval", "Optimization with %zu cams, %zu nodes and %zu edges in the graph", graph_.size(), optimizer_->vertices().size(), optimizer_->edges().size());
     Q_EMIT iamBusy(1, "Optimizing Graph", 0); 
     int currentIt = 0;
     //Optimize certain number of iterations

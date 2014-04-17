@@ -63,16 +63,12 @@ public:
      */
     template<typename T>
     void set(const std::string param, T value) {
+#ifdef RGBDSLAM_DEBUG
         if(config.count(param)==0){
           ROS_ERROR("ParameterServer: Ignoring invalid parameter: \"%s\"", param.c_str());
           return;
         }
-        try{
-          boost::any_cast<T>(value); //fails if wrong param type
-        } catch (boost::bad_any_cast e) {
-          ROS_ERROR("ParameterServer: Ignoring invalid parameter type: %s", e.what());
-          return;
-        }
+#endif
         config[param] = value;
         setOnParameterServer(pre+param, value);
     }
@@ -86,15 +82,17 @@ public:
      */
     template<typename T>
     T get(const std::string param) {
+#ifdef RGBDSLAM_DEBUG
         if(config.count(param)==0){
           ROS_FATAL("ParameterServer object queried for invalid parameter \"%s\"", param.c_str());
           assert(config.count(param)==0);
         }
+#endif
         boost::any value = config[param];
         try{
           return boost::any_cast<T>(value);
         } catch( boost::bad_any_cast bac){
-          ROS_ERROR_STREAM("Bad cast: Requested data type <" << typeid(T).name() << "> for parameter '" << param << "'");
+          std::cerr << "Bad cast: Requested data type <" << typeid(T).name() << "> for parameter '" << param << "'";
           throw; //Programmer needs to fix this. Rethrow.
         }
     }

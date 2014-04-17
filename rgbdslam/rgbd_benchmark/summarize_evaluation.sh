@@ -1,6 +1,7 @@
 #!/bin/bash
 
 DIR=`readlink -f $1`
+PACKAGEDIR=`rospack find rgbdslam`/
 if  test ! -d "$DIR"; then  
   echo "'$DIR' is not a directory" 
   echo "Usage: $0 <directory-where-results-are>"
@@ -41,7 +42,7 @@ for num in 0 1 2 3 4; do
     gunzip -c $BASENAME/logfile.gz > $BASENAME/logfile.txt
     EVAL_FILE=$ESTIMATE_FILE.evaluation
     #if rosrun rgbd_benchmark_tools evaluate_rpe.py --verbose $BASENAME/${BASENAME}-groundtruth.txt $ESTIMATE_FILE > $EVAL_FILE; then
-    if  rosrun rgbd_benchmark_tools evaluate_ate.py --plot $BASENAME/$BASENAME.difference_plot$num.png --verbose $BASENAME/${BASENAME}-groundtruth.txt $ESTIMATE_FILE > $EVAL_FILE.ate ; then
+    if  $PACKAGEDIR/bin/evaluate_ate.py --plot $BASENAME/$BASENAME.difference_plot$num.png --verbose $BASENAME/${BASENAME}-groundtruth.txt $ESTIMATE_FILE > $EVAL_FILE.ate ; then
       #rosrun rgbd_benchmark_tools align_and_plot.py --plot $BASENAME/$BASENAME.alignment_plot$num.png --verbose $BASENAME/${BASENAME}-groundtruth.txt $ESTIMATE_FILE > /dev/null
 
       #RMSE

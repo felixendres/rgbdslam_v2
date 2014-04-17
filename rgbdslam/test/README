@@ -22,43 +22,136 @@ If you omit the optional [TEST_NAME] the date will be chosen.
 
 
 The results will be displayed to the console. As an example, running the tests
-on the "desk" bagfiles would lead to output similar to the following:
-
-rgbd_dataset_freiburg1_desk ... rgbd_dataset_freiburg1_desk2 ... rgbd_dataset_freiburg2_desk ... 
-ATE Results at Level 0 are stored in /home/endres/catkin_rgbdslam_test/src/rgbdslam/rgbdslam/test/2014-03-28_17:42/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/300_Features/ate_evaluation_0.csv
-300 Features                                       "300 Features ATE RMSE"                "300 Features Duration"                        "300 Features Optimization Time"  x  x                      x   x
-FR1 desk        absolute translational error.rmse   0.104692                 m  Duration   134.089630324           s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
-FR1 desk2       absolute translational error.rmse   0.078796                 m  Duration   141.159545860           s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
-FR2 desk        absolute translational error.rmse   0.245620                 m  Duration   709.671456666           s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
-rgbd_dataset_freiburg1_desk ... rgbd_dataset_freiburg1_desk2 ... rgbd_dataset_freiburg2_desk ... 
-ATE Results at Level 1 are stored in /home/endres/catkin_rgbdslam_test/src/rgbdslam/rgbdslam/test/2014-03-28_17:42/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/300_Features/ate_evaluation_1.csv
-300 Features                                       "300 Features ATE RMSE"                "300 Features Duration"                        "300 Features Optimization Time"  x  x                      x      x
-FR1 desk        absolute translational error.rmse   0.023961                 m  Duration   134.933010898           s  Optimizer Runtime   0.837529                         s  Number of Nodes/Edges   550   5773
-FR1 desk2       absolute translational error.rmse   0.034096                 m  Duration   141.730226714           s  Optimizer Runtime   0.56463                          s  Number of Nodes/Edges   594   5470
-FR2 desk        absolute translational error.rmse   0.048512                 m  Duration   780.423595765           s  Optimizer Runtime   70.7199                          s  Number of Nodes/Edges   2866  36625
-rgbd_dataset_freiburg1_desk ... rgbd_dataset_freiburg1_desk2 ... rgbd_dataset_freiburg2_desk ... 
-ATE Results at Level 2 are stored in /home/endres/catkin_rgbdslam_test/src/rgbdslam/rgbdslam/test/2014-03-28_17:42/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/300_Features/ate_evaluation_2.csv
-300 Features                                       "300 Features ATE RMSE"                "300 Features Duration"                        "300 Features Optimization Time"  x  x                      x      x
-FR1 desk        absolute translational error.rmse   0.023961                 m  Duration   135.145054564           s  Optimizer Runtime   0.0978786                        s  Number of Nodes/Edges   550   5773
-FR1 desk2       absolute translational error.rmse   0.034096                 m  Duration   141.907890027           s  Optimizer Runtime   0.0673897                        s  Number of Nodes/Edges   594   5470
-FR2 desk        absolute translational error.rmse   0.048512                 m  Duration   806.566153972           s  Optimizer Runtime   25.3947                          s  Number of Nodes/Edges   2866  36625
-rgbd_dataset_freiburg1_desk ... rgbd_dataset_freiburg1_desk2 ... rgbd_dataset_freiburg2_desk ... 
-ATE Results at Level 3 are stored in /home/endres/catkin_rgbdslam_test/src/rgbdslam/rgbdslam/test/2014-03-28_17:42/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/300_Features/ate_evaluation_3.csv
-300 Features                                       "300 Features ATE RMSE"                "300 Features Duration"                        "300 Features Optimization Time"  x  x                      x      x
-FR1 desk        absolute translational error.rmse   0.023961                 m  Duration   135.419693301           s  Optimizer Runtime   0.16933                          s  Number of Nodes/Edges   550   5773
-FR1 desk2       absolute translational error.rmse   0.034096                 m  Duration   142.079034468           s  Optimizer Runtime   0.0677425                        s  Number of Nodes/Edges   594   5470
-FR2 desk        absolute translational error.rmse   0.048473                 m  Duration   884.704456684           s  Optimizer Runtime   77.4081                          s  Number of Nodes/Edges   2866  36625
-rgbd_dataset_freiburg1_desk ... rgbd_dataset_freiburg1_desk2 ... rgbd_dataset_freiburg2_desk ... 
-ATE Results at Level 4 are stored in /home/endres/catkin_rgbdslam_test/src/rgbdslam/rgbdslam/test/2014-03-28_17:42/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/300_Features/ate_evaluation_4.csv
-300 Features                                       "300 Features ATE RMSE"                "300 Features Duration"                        "300 Features Optimization Time"  x  x                      x      x
-FR1 desk        absolute translational error.rmse   0.023961                 m  Duration   135.602641509           s  Optimizer Runtime   0.0962021                        s  Number of Nodes/Edges   550   5773
-FR1 desk2       absolute translational error.rmse   0.033646                 m  Duration   142.712050755           s  Optimizer Runtime   0.560159                         s  Number of Nodes/Edges   594   5470
-FR2 desk        absolute translational error.rmse   0.048466                 m  Duration   962.852686238           s  Optimizer Runtime   77.5804                          s  Number of Nodes/Edges   2866  36625
-
+on the "desk" bagfiles would lead to output similar to that below.
 
 If you browse the output directory you can find the results.
-You can easily redisplay them by executing
-rosrun rgbdslam summarize_evaluation.sh /home/endres/catkin_rgbdslam_test/src/rgbdslam/rgbdslam/test/2014-03-28_17:42/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/300_Features/
+You can easily redisplay them by executing, e.g.,
+rosrun rgbdslam summarize_evaluation.sh /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/
 where you need to adapt the path accordingly.
 
+############### EXAMPLE OUTPUT ############### ############### ############### ############### ############### ############### ############### ############### ############### ############### ############### ############### ############### ###############
+Evaluating SIFTGPU
+Will evaluate RGBD-SLAM on the following bagfiles:
+rgbd_dataset_freiburg1_360.bag rgbd_dataset_freiburg1_desk2.bag rgbd_dataset_freiburg1_desk.bag rgbd_dataset_freiburg1_floor.bag rgbd_dataset_freiburg1_plant.bag rgbd_dataset_freiburg1_room.bag rgbd_dataset_freiburg1_rpy.bag rgbd_dataset_freiburg1_teddy.bag rgbd_dataset_freiburg1_xyz.bag rgbd_dataset_freiburg2_desk.bag rgbd_dataset_freiburg2_large_no_loop.bag rgbd_dataset_freiburg2_pioneer_360.bag rgbd_dataset_freiburg2_pioneer_slam2.bag rgbd_dataset_freiburg2_pioneer_slam3.bag rgbd_dataset_freiburg2_pioneer_slam.bag
+16:28:40 Results for rgbd_dataset_freiburg1_360 are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/rgbd_dataset_freiburg1_360
+16:29:32 Finished processing rgbd_dataset_freiburg1_360
+16:29:32 Results for rgbd_dataset_freiburg1_desk2 are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/rgbd_dataset_freiburg1_desk2
+16:30:15 Finished processing rgbd_dataset_freiburg1_desk2
+16:30:15 Results for rgbd_dataset_freiburg1_desk are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/rgbd_dataset_freiburg1_desk
+16:30:54 Finished processing rgbd_dataset_freiburg1_desk
+16:30:54 Results for rgbd_dataset_freiburg1_floor are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/rgbd_dataset_freiburg1_floor
+16:32:26 Finished processing rgbd_dataset_freiburg1_floor
+16:32:26 Results for rgbd_dataset_freiburg1_plant are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/rgbd_dataset_freiburg1_plant
+16:34:00 Finished processing rgbd_dataset_freiburg1_plant
+16:34:00 Results for rgbd_dataset_freiburg1_room are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/rgbd_dataset_freiburg1_room
+16:35:50 Finished processing rgbd_dataset_freiburg1_room
+16:35:50 Results for rgbd_dataset_freiburg1_rpy are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/rgbd_dataset_freiburg1_rpy
+16:37:37 Finished processing rgbd_dataset_freiburg1_rpy
+16:37:37 Results for rgbd_dataset_freiburg1_teddy are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/rgbd_dataset_freiburg1_teddy
+16:39:27 Finished processing rgbd_dataset_freiburg1_teddy
+16:39:27 Results for rgbd_dataset_freiburg1_xyz are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/rgbd_dataset_freiburg1_xyz
+16:44:42 Finished processing rgbd_dataset_freiburg1_xyz
+16:44:42 Results for rgbd_dataset_freiburg2_desk are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/rgbd_dataset_freiburg2_desk
+16:52:45 Finished processing rgbd_dataset_freiburg2_desk
+16:52:45 Results for rgbd_dataset_freiburg2_large_no_loop are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/rgbd_dataset_freiburg2_large_no_loop
+16:57:32 Finished processing rgbd_dataset_freiburg2_large_no_loop
+16:57:33 Results for rgbd_dataset_freiburg2_pioneer_360 are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/rgbd_dataset_freiburg2_pioneer_360
+16:59:43 Finished processing rgbd_dataset_freiburg2_pioneer_360
+16:59:43 Results for rgbd_dataset_freiburg2_pioneer_slam2 are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/rgbd_dataset_freiburg2_pioneer_slam2
+17:04:01 Finished processing rgbd_dataset_freiburg2_pioneer_slam2
+17:04:01 Results for rgbd_dataset_freiburg2_pioneer_slam3 are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/rgbd_dataset_freiburg2_pioneer_slam3
+17:08:54 Finished processing rgbd_dataset_freiburg2_pioneer_slam3
+17:08:54 Results for rgbd_dataset_freiburg2_pioneer_slam are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/rgbd_dataset_freiburg2_pioneer_slam
+17:13:21 Finished processing rgbd_dataset_freiburg2_pioneer_slam
+rgbd_dataset_freiburg1_360 ... rgbd_dataset_freiburg1_desk ... rgbd_dataset_freiburg1_desk2 ... rgbd_dataset_freiburg1_floor ... rgbd_dataset_freiburg1_plant ... rgbd_dataset_freiburg1_room ... rgbd_dataset_freiburg1_rpy ... rgbd_dataset_freiburg1_teddy ... rgbd_dataset_freiburg1_xyz ... rgbd_dataset_freiburg2_desk ... rgbd_dataset_freiburg2_large_no_loop ... rgbd_dataset_freiburg2_pioneer_360 ... rgbd_dataset_freiburg2_pioneer_slam ... rgbd_dataset_freiburg2_pioneer_slam2 ... rgbd_dataset_freiburg2_pioneer_slam3 ... 
+ATE Results at Level 0 are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/ate_evaluation_0.csv
+600 Features                                           "600 Features ATE RMSE"                "600 Features Duration"                        "600 Features Optimization Time"  x  x                      x   x
+FR1 360             absolute translational error.rmse   0.076510                 m  Duration   42.298172624            s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+FR1 desk            absolute translational error.rmse   0.075121                 m  Duration   32.146260343            s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+FR1 desk2           absolute translational error.rmse   0.079761                 m  Duration   36.850932206            s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+FR1 floor           absolute translational error.rmse   0.112347                 m  Duration   69.651897586            s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+FR1 plant           absolute translational error.rmse   0.084981                 m  Duration   67.618909906            s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+FR1 room            absolute translational error.rmse   0.159905                 m  Duration   78.830655591            s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+FR1 rpy             absolute translational error.rmse   0.026324                 m  Duration   41.078249223            s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+FR1 teddy           absolute translational error.rmse   0.220643                 m  Duration   76.333979514            s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+FR1 xyz             absolute translational error.rmse   0.015107                 m  Duration   47.241976901            s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+FR2 desk            absolute translational error.rmse   0.148734                 m  Duration   189.865066808           s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+FR2 large no loop   absolute translational error.rmse   3.832934                 m  Duration   201.753287978           s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+FR2 pioneer 360     absolute translational error.rmse   0.525455                 m  Duration   93.082549719            s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+FR2 pioneer slam    absolute translational error.rmse   1.323188                 m  Duration   228.062852120           s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+FR2 pioneer slam2   absolute translational error.rmse   1.292392                 m  Duration   161.647755064           s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+FR2 pioneer slam3   absolute translational error.rmse   0.901554                 m  Duration   194.351089801           s  Optimizer Runtime   0.0000                           s  Number of Nodes/Edges   1  1
+rgbd_dataset_freiburg1_360 ... rgbd_dataset_freiburg1_desk ... rgbd_dataset_freiburg1_desk2 ... rgbd_dataset_freiburg1_floor ... rgbd_dataset_freiburg1_plant ... rgbd_dataset_freiburg1_room ... rgbd_dataset_freiburg1_rpy ... rgbd_dataset_freiburg1_teddy ... rgbd_dataset_freiburg1_xyz ... rgbd_dataset_freiburg2_desk ... rgbd_dataset_freiburg2_large_no_loop ... rgbd_dataset_freiburg2_pioneer_360 ... rgbd_dataset_freiburg2_pioneer_slam ... rgbd_dataset_freiburg2_pioneer_slam2 ... rgbd_dataset_freiburg2_pioneer_slam3 ... 
+ATE Results at Level 1 are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/ate_evaluation_1.csv
+600 Features                                           "600 Features ATE RMSE"                "600 Features Duration"                        "600 Features Optimization Time"  x  x                      x      x
+FR1 360             absolute translational error.rmse   0.050809                 m  Duration   43.747798773            s  Optimizer Runtime   1.44239                          s  Number of Nodes/Edges   720   6480
+FR1 desk            absolute translational error.rmse   0.019477                 m  Duration   33.099863672            s  Optimizer Runtime   0.947742                         s  Number of Nodes/Edges   550   6075
+FR1 desk2           absolute translational error.rmse   0.027858                 m  Duration   37.440047681            s  Optimizer Runtime   0.583288                         s  Number of Nodes/Edges   594   5591
+FR1 floor           absolute translational error.rmse   0.029598                 m  Duration   74.174583123            s  Optimizer Runtime   4.51302                          s  Number of Nodes/Edges   1112  14316
+FR1 plant           absolute translational error.rmse   0.043785                 m  Duration   69.012282089            s  Optimizer Runtime   1.35167                          s  Number of Nodes/Edges   1095  11118
+FR1 room            absolute translational error.rmse   0.090984                 m  Duration   80.536028411            s  Optimizer Runtime   1.6697                           s  Number of Nodes/Edges   1324  14031
+FR1 rpy             absolute translational error.rmse   0.021560                 m  Duration   54.072469934            s  Optimizer Runtime   12.9679                          s  Number of Nodes/Edges   670   8831
+FR1 teddy           absolute translational error.rmse   0.058401                 m  Duration   80.067617283            s  Optimizer Runtime   3.72123                          s  Number of Nodes/Edges   1376  13263
+FR1 xyz             absolute translational error.rmse   0.011497                 m  Duration   115.889369449           s  Optimizer Runtime   68.6402                          s  Number of Nodes/Edges   766   12131
+FR2 desk            absolute translational error.rmse   0.049426                 m  Duration   231.759806440           s  Optimizer Runtime   41.8569                          s  Number of Nodes/Edges   2866  37366
+FR2 large no loop   absolute translational error.rmse   3.026149                 m  Duration   212.014992650           s  Optimizer Runtime   10.2045                          s  Number of Nodes/Edges   3256  38849
+FR2 pioneer 360     absolute translational error.rmse   0.433333                 m  Duration   96.059042697            s  Optimizer Runtime   2.96669                          s  Number of Nodes/Edges   1105  12157
+FR2 pioneer slam    absolute translational error.rmse   0.274171                 m  Duration   235.782041909           s  Optimizer Runtime   7.69719                          s  Number of Nodes/Edges   2727  30791
+FR2 pioneer slam2   absolute translational error.rmse   0.273093                 m  Duration   174.517861799           s  Optimizer Runtime   12.8407                          s  Number of Nodes/Edges   1956  23092
+FR2 pioneer slam3   absolute translational error.rmse   0.509317                 m  Duration   205.797739822           s  Optimizer Runtime   11.4083                          s  Number of Nodes/Edges   2441  30089
+rgbd_dataset_freiburg1_360 ... rgbd_dataset_freiburg1_desk ... rgbd_dataset_freiburg1_desk2 ... rgbd_dataset_freiburg1_floor ... rgbd_dataset_freiburg1_plant ... rgbd_dataset_freiburg1_room ... rgbd_dataset_freiburg1_rpy ... rgbd_dataset_freiburg1_teddy ... rgbd_dataset_freiburg1_xyz ... rgbd_dataset_freiburg2_desk ... rgbd_dataset_freiburg2_large_no_loop ... rgbd_dataset_freiburg2_pioneer_360 ... rgbd_dataset_freiburg2_pioneer_slam ... rgbd_dataset_freiburg2_pioneer_slam2 ... rgbd_dataset_freiburg2_pioneer_slam3 ... 
+ATE Results at Level 2 are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/ate_evaluation_2.csv
+600 Features                                           "600 Features ATE RMSE"                "600 Features Duration"                        "600 Features Optimization Time"  x  x                      x      x
+FR1 360             absolute translational error.rmse   0.050809                 m  Duration   44.312147859            s  Optimizer Runtime   0.556168                         s  Number of Nodes/Edges   720   6480
+FR1 desk            absolute translational error.rmse   0.019477                 m  Duration   33.227367633            s  Optimizer Runtime   0.102902                         s  Number of Nodes/Edges   550   6075
+FR1 desk2           absolute translational error.rmse   0.027858                 m  Duration   37.515345604            s  Optimizer Runtime   0.0685059                        s  Number of Nodes/Edges   594   5591
+FR1 floor           absolute translational error.rmse   0.029598                 m  Duration   74.674228244            s  Optimizer Runtime   0.484469                         s  Number of Nodes/Edges   1112  14316
+FR1 plant           absolute translational error.rmse   0.043815                 m  Duration   70.361729353            s  Optimizer Runtime   1.33108                          s  Number of Nodes/Edges   1095  11118
+FR1 room            absolute translational error.rmse   0.091103                 m  Duration   84.441224842            s  Optimizer Runtime   3.88838                          s  Number of Nodes/Edges   1324  14031
+FR1 rpy             absolute translational error.rmse   0.021560                 m  Duration   59.024306578            s  Optimizer Runtime   4.94291                          s  Number of Nodes/Edges   670   8831
+FR1 teddy           absolute translational error.rmse   0.058401                 m  Duration   81.656011408            s  Optimizer Runtime   1.57146                          s  Number of Nodes/Edges   1376  13263
+FR1 xyz             absolute translational error.rmse   0.011497                 m  Duration   141.949698572           s  Optimizer Runtime   26.0492                          s  Number of Nodes/Edges   766   12131
+FR2 desk            absolute translational error.rmse   0.049424                 m  Duration   273.711075230           s  Optimizer Runtime   41.8409                          s  Number of Nodes/Edges   2866  37366
+FR2 large no loop   absolute translational error.rmse   2.680321                 m  Duration   222.211145156           s  Optimizer Runtime   10.1333                          s  Number of Nodes/Edges   3256  38849
+FR2 pioneer 360     absolute translational error.rmse   0.412442                 m  Duration   99.309691834            s  Optimizer Runtime   3.21841                          s  Number of Nodes/Edges   1105  12157
+FR2 pioneer slam    absolute translational error.rmse   0.258612                 m  Duration   243.527669283           s  Optimizer Runtime   7.70894                          s  Number of Nodes/Edges   2727  30791
+FR2 pioneer slam2   absolute translational error.rmse   0.255024                 m  Duration   182.655410994           s  Optimizer Runtime   8.1087                           s  Number of Nodes/Edges   1956  23092
+FR2 pioneer slam3   absolute translational error.rmse   0.496615                 m  Duration   217.281118079           s  Optimizer Runtime   11.415                           s  Number of Nodes/Edges   2441  30089
+rgbd_dataset_freiburg1_360 ... rgbd_dataset_freiburg1_desk ... rgbd_dataset_freiburg1_desk2 ... rgbd_dataset_freiburg1_floor ... rgbd_dataset_freiburg1_plant ... rgbd_dataset_freiburg1_room ... rgbd_dataset_freiburg1_rpy ... rgbd_dataset_freiburg1_teddy ... rgbd_dataset_freiburg1_xyz ... rgbd_dataset_freiburg2_desk ... rgbd_dataset_freiburg2_large_no_loop ... rgbd_dataset_freiburg2_pioneer_360 ... rgbd_dataset_freiburg2_pioneer_slam ... rgbd_dataset_freiburg2_pioneer_slam2 ... rgbd_dataset_freiburg2_pioneer_slam3 ... 
+ATE Results at Level 3 are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/ate_evaluation_3.csv
+600 Features                                           "600 Features ATE RMSE"                "600 Features Duration"                        "600 Features Optimization Time"  x  x                      x      x
+FR1 360             absolute translational error.rmse   0.050576                 m  Duration   46.081793921            s  Optimizer Runtime   1.76142                          s  Number of Nodes/Edges   720   6480
+FR1 desk            absolute translational error.rmse   0.019477                 m  Duration   33.342535090            s  Optimizer Runtime   0.102992                         s  Number of Nodes/Edges   550   6075
+FR1 desk2           absolute translational error.rmse   0.027788                 m  Duration   38.101771011            s  Optimizer Runtime   0.579687                         s  Number of Nodes/Edges   594   5591
+FR1 floor           absolute translational error.rmse   0.029598                 m  Duration   75.172480184            s  Optimizer Runtime   0.483145                         s  Number of Nodes/Edges   1112  14316
+FR1 plant           absolute translational error.rmse   0.044077                 m  Duration   73.278058707            s  Optimizer Runtime   2.90272                          s  Number of Nodes/Edges   1095  11118
+FR1 room            absolute translational error.rmse   0.093651                 m  Duration   86.153549371            s  Optimizer Runtime   1.67113                          s  Number of Nodes/Edges   1324  14031
+FR1 rpy             absolute translational error.rmse   0.021484                 m  Duration   84.680335831            s  Optimizer Runtime   25.6473                          s  Number of Nodes/Edges   670   8831
+FR1 teddy           absolute translational error.rmse   0.058030                 m  Duration   86.764935444            s  Optimizer Runtime   5.09201                          s  Number of Nodes/Edges   1376  13263
+FR1 xyz             absolute translational error.rmse   0.011486                 m  Duration   233.300025140           s  Optimizer Runtime   91.3391                          s  Number of Nodes/Edges   766   12131
+FR2 desk            absolute translational error.rmse   0.049439                 m  Duration   315.599843568           s  Optimizer Runtime   41.847                           s  Number of Nodes/Edges   2866  37366
+FR2 large no loop   absolute translational error.rmse   2.515014                 m  Duration   232.500727440           s  Optimizer Runtime   10.2246                          s  Number of Nodes/Edges   3256  38849
+FR2 pioneer 360     absolute translational error.rmse   0.385009                 m  Duration   102.237421910           s  Optimizer Runtime   2.91352                          s  Number of Nodes/Edges   1105  12157
+FR2 pioneer slam    absolute translational error.rmse   0.239141                 m  Duration   251.533370666           s  Optimizer Runtime   7.96712                          s  Number of Nodes/Edges   2727  30791
+FR2 pioneer slam2   absolute translational error.rmse   0.235535                 m  Duration   191.134895832           s  Optimizer Runtime   8.41471                          s  Number of Nodes/Edges   1956  23092
+FR2 pioneer slam3   absolute translational error.rmse   0.488716                 m  Duration   228.815468392           s  Optimizer Runtime   11.4885                          s  Number of Nodes/Edges   2441  30089
+rgbd_dataset_freiburg1_360 ... rgbd_dataset_freiburg1_desk ... rgbd_dataset_freiburg1_desk2 ... rgbd_dataset_freiburg1_floor ... rgbd_dataset_freiburg1_plant ... rgbd_dataset_freiburg1_room ... rgbd_dataset_freiburg1_rpy ... rgbd_dataset_freiburg1_teddy ... rgbd_dataset_freiburg1_xyz ... rgbd_dataset_freiburg2_desk ... rgbd_dataset_freiburg2_large_no_loop ... rgbd_dataset_freiburg2_pioneer_360 ... rgbd_dataset_freiburg2_pioneer_slam ... 
+rgbd_dataset_freiburg2_pioneer_slam2 ... rgbd_dataset_freiburg2_pioneer_slam3 ... 
+ATE Results at Level 4 are stored in /SOMEPATH/emm__0.00/CANDIDATES_8/RANSAC_100/HellingerDistance_true/NN_0.9/OPT_SKIP_1000000/SIFTGPU/600_Features/ate_evaluation_4.csv
+600 Features                                           "600 Features ATE RMSE"                "600 Features Duration"                        "600 Features Optimization Time"  x  x                      x      x
+FR1 360             absolute translational error.rmse   0.048857                 m  Duration   47.067854598            s  Optimizer Runtime   0.977799                         s  Number of Nodes/Edges   720   6480
+FR1 desk            absolute translational error.rmse   0.019684                 m  Duration   36.195383320            s  Optimizer Runtime   2.83048                          s  Number of Nodes/Edges   550   6075
+FR1 desk2           absolute translational error.rmse   0.027074                 m  Duration   39.746336187            s  Optimizer Runtime   1.63785                          s  Number of Nodes/Edges   594   5591
+FR1 floor           absolute translational error.rmse   0.029575                 m  Duration   87.627300265            s  Optimizer Runtime   12.4395                          s  Number of Nodes/Edges   1112  14316
+FR1 plant           absolute translational error.rmse   0.043274                 m  Duration   75.428931488            s  Optimizer Runtime   2.12065                          s  Number of Nodes/Edges   1095  11118
+FR1 room            absolute translational error.rmse   0.087478                 m  Duration   89.792328017            s  Optimizer Runtime   3.6033                           s  Number of Nodes/Edges   1324  14031
+FR1 rpy             absolute translational error.rmse   0.021458                 m  Duration   94.718202820            s  Optimizer Runtime   10.0094                          s  Number of Nodes/Edges   670   8831
+FR1 teddy           absolute translational error.rmse   0.058357                 m  Duration   88.574845317            s  Optimizer Runtime   1.79299                          s  Number of Nodes/Edges   1376  13263
+FR1 xyz             absolute translational error.rmse   0.011494                 m  Duration   301.904405597           s  Optimizer Runtime   68.5931                          s  Number of Nodes/Edges   766   12131
+FR2 desk            absolute translational error.rmse   0.049514                 m  Duration   446.863398146           s  Optimizer Runtime   131.209                          s  Number of Nodes/Edges   2866  37366
+FR2 large no loop   absolute translational error.rmse   2.448782                 m  Duration   243.505229256           s  Optimizer Runtime   10.9482                          s  Number of Nodes/Edges   3256  38849
+FR2 pioneer 360     absolute translational error.rmse   0.351363                 m  Duration   105.341263357           s  Optimizer Runtime   3.07898                          s  Number of Nodes/Edges   1105  12157
+FR2 pioneer slam    absolute translational error.rmse   0.219934                 m  Duration   261.754249066           s  Optimizer Runtime   10.1796                          s  Number of Nodes/Edges   2727  30791
+FR2 pioneer slam2   absolute translational error.rmse   0.232754                 m  Duration   200.777686886           s  Optimizer Runtime   9.58271                          s  Number of Nodes/Edges   1956  23092
+FR2 pioneer slam3   absolute translational error.rmse   0.448235                 m  Duration   240.638494275           s  Optimizer Runtime   11.789                           s  Number of Nodes/Edges   2441  30089
 

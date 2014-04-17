@@ -41,5 +41,5 @@ void QtROS::run(){
   }
   ros::Duration d(0.5);
   d.sleep();
-  abort();
+  exit(0);
 }

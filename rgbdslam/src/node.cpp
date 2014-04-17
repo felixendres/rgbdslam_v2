@@ -614,12 +614,13 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
   //double min_depth = ps->get<double>("minimum_depth");
   int index = -1;
 
+  bool use_feature_min_depth = ParameterServer::instance()->get<bool>("use_feature_min_depth");
   for(unsigned int i = 0; i < feature_locations_2d.size(); /*increment at end of loop*/){
     ++index;
 
     p2d = feature_locations_2d[i].pt;
     float Z;
-    if(ParameterServer::instance()->get<bool>("use_feature_min_depth")){
+    if(use_feature_min_depth ){
       Z = getMinDepthInNeighborhood(depth, p2d, feature_locations_2d[i].size);
     } else {
       Z = depth.at<float>(p2d.y, p2d.x) * depth_scaling;
@@ -811,7 +812,7 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
     ROS_INFO("There is already 3D Information in the FrameInfo, clearing it");
     feature_locations_3d.clear();
   }
-
+  bool use_feature_min_depth = ParameterServer::instance()->get<bool>("use_feature_min_depth");
   for(unsigned int i = 0; i < feature_locations_2d.size(); /*increment at end of loop*/){
     p2d = feature_locations_2d[i].pt;
     if (p2d.x >= depth.cols || p2d.x < 0 ||
@@ -822,7 +823,7 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
       continue;
     }
     float Z;
-    if(ParameterServer::instance()->get<bool>("use_feature_min_depth")){
+    if(use_feature_min_depth){
       Z = getMinDepthInNeighborhood(depth, p2d, feature_locations_2d[i].size);
     } else {
       Z = depth.at<float>(p2d.y, p2d.x) * depth_scaling;

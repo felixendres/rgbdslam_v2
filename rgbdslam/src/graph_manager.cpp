@@ -118,11 +118,11 @@ void GraphManager::createOptimizer(std::string backend, g2o::SparseOptimizer* op
     }
     delete optimizer_; 
     optimizer_ = new g2o::SparseOptimizer();
-    optimizer_->setVerbose(true);
+    optimizer_->setVerbose(false);
   } else if (optimizer_ != optimizer){
     delete optimizer_; 
     optimizer_ = new g2o::SparseOptimizer();
-    optimizer_->setVerbose(true);
+    optimizer_->setVerbose(false);
   } 
 
   //optimizer_->setMethod(g2o::SparseOptimizer::LevenbergMarquardt);
@@ -176,7 +176,7 @@ void GraphManager::createOptimizer(std::string backend, g2o::SparseOptimizer* op
 
 
 
- optimizer_->setVerbose(true);
+ optimizer_->setVerbose(false);
  //optimizer_->setUserLambdaInit(100.);
 
 #ifdef DO_FEATURE_OPTIMIZATION

@@ -13,7 +13,9 @@ pushd $DIR > /dev/null
 for num in 0 1 2 3 4; do 
   if grep "absolute.*error" ate_evaluation_$num.csv &> /dev/null;then
     echo "[0;36mResult exists: ate_evaluation_$num.csv[1;36m[0m "
-    column '-s;' -t  ate_evaluation_$num.csv
+    #column '-s;' -t  ate_evaluation_$num.csv
+    #A bit fancier than the above:
+    sed 's/absolute translational error.rmse/AT-RMSE/' ate_evaluation_$num.csv | sed 's/"[0-9]* Features /"/g' | column '-s;' -t
     continue;
   fi
   rm -f ate_evaluation_$num.csv
@@ -64,7 +66,7 @@ for num in 0 1 2 3 4; do
       
       if [[ "$NO_OPTIMIZER_EVAL" == "" ]]; then 
         #OPTIMIZER RUNTIME
-        OPT_TIME=`grep timiz $BASENAME/logfile.txt |grep -B4 "Finished with optimization iteration $num[^0-9]"  |grep -o 'Optimizer Runtime; [0-9.]*'` #timestamp first relevant action
+        OPT_TIME=`grep timiz $BASENAME/logfile.txt |grep -B3 "Finished with optimization iteration $num[^0-9]"  |grep -o 'Optimizer Runtime; [0-9.]*'` #timestamp first relevant action
         if [[ "$OPT_TIME" == "" ]]; then 
           OPT_TIME='Optimizer Runtime; 0.0000'
         fi
@@ -72,7 +74,7 @@ for num in 0 1 2 3 4; do
 
 
         #NUMBER OF NODES
-        G2O_LINE=`grep timiz $BASENAME/logfile.txt |grep -B4 "Finished with optimization iteration $num[^0-9]" |grep "Optimization with"|tail -n1`
+        G2O_LINE=`grep timiz $BASENAME/logfile.txt |grep -B3 "Finished with optimization iteration $num[^0-9]" |grep "Optimization with"|tail -n1`
         NODE_NUM=`echo $G2O_LINE | grep -o '[0-9]* nodes'` #timestamp first relevant action
         EDGE_NUM=`echo $G2O_LINE | grep -o '[0-9]* edges'` #timestamp first relevant action
         if [[ $NODE_NUM == "" ]]; then
@@ -92,13 +94,15 @@ for num in 0 1 2 3 4; do
   #paste "-d;" eval_rotational.txt eval_translational.txt eval_runtime.txt |sed "s#$DIR/##g" | sed 's/rgbd_dataset_freiburg/FR/g' |sed 's/.evaluation//g' |sed 's/.bagafter._optimization_estimate.txt//g'|sed 's/.bag//g'|sed 's/flowerbouquet/flwrbqt/g' |sed 's/background/bg/g'|sed 's#/FR[^/]*/##g'|sed 's/_/ /g' > evaluation_$num.csv
   experiment=`basename $DIR`
   echo
-  echo "${experiment//_/ } ; ;\"${experiment//_/ } ATE RMSE\"; ; ;\"${experiment//_/ } Duration\"; ; ;\"${experiment//_/ } Optimization Time\";x;x;x;x;" > ate_evaluation_$num.csv
+  echo "${experiment//_/ } ; ;\"${experiment//_/ } ATE RMSE\"; ; ;\"${experiment//_/ } Duration\"; ; ;\"${experiment//_/ } Optimization Time\"; ; ;Nodes;Edges;" > ate_evaluation_$num.csv
   paste "-d;" eval_translational.ate.txt eval_runtime.txt |sed "s#$DIR/##g" | sed 's/rgbd_dataset_freiburg/FR/g' |sed 's/.evaluation//g' |sed 's/.bagafter._optimization_estimate.txt//g'|sed 's/.bag//g'|sed 's/flowerbouquet/flwrbqt/g' |sed 's/background/bg/g'|sed 's#/FR[^/]*/##g'|sed 's/_/ /g' >> ate_evaluation_$num.csv
   echo ATE Results at Level $num are stored in $DIR/ate_evaluation_$num.csv
-  column '-s;' -t  ate_evaluation_$num.csv
+  #column '-s;' -t  ate_evaluation_$num.csv
+  #A bit fancier than the above:
+  sed 's/absolute translational error.rmse/AT-RMSE/' ate_evaluation_$num.csv | sed 's/"[0-9]* Features /"/g' | column '-s;' -t
   #echo RPE Results at Level $num are stored in $DIR/evaluation_$num.csv
   #column '-s;' -t  evaluation_$num.csv
 done
-rm -f eval_translational.txt eval_translational.ate.txt eval_rotational.txt eval_runtime.txt 
+#rm -f eval_translational.txt eval_translational.ate.txt eval_rotational.txt eval_runtime.txt 
 
 popd > /dev/null

@@ -180,6 +180,7 @@ class GraphManager : public QObject {
     void deleteFeatureInformation();
     ///Only write (not create, not clear) existing octomap
     void writeOctomap(QString filename) const;
+    void setOptimizerVerbose(bool verbose);
 protected:
         
     ///Start over

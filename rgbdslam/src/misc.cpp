@@ -827,7 +827,7 @@ double errorFunction2(const Eigen::Vector4f& x1,
     double delta_sq_norm = (mu_1_in_frame_2 - mu_2).squaredNorm();
     double sigma_max_1 = std::max(raster_cov_x, depth_covariance(mu_1(2)));//Assuming raster_cov_x and _y to be approx. equal
     double sigma_max_2 = std::max(raster_cov_x, depth_covariance(mu_2(2)));//Assuming raster_cov_x and _y to be approx. equal
-    if(delta_sq_norm > 3.0 * (sigma_max_1+sigma_max_2)) //FIXME: Factor 3 for mahal dist should be gotten from caller
+    if(delta_sq_norm > 2.0 * (sigma_max_1+sigma_max_2)) //FIXME: Factor 3 for mahal dist should be gotten from caller
     {
       return std::numeric_limits<double>::max();
     }

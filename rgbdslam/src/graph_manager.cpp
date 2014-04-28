@@ -97,7 +97,9 @@ GraphManager::GraphManager() :
 }
 
 
-
+void GraphManager::setOptimizerVerbose(bool verbose){
+    optimizer_->setVerbose(verbose);
+}
 void GraphManager::createOptimizer(std::string backend, g2o::SparseOptimizer* optimizer)
 {
   QMutexLocker locker(&optimizer_mutex_);

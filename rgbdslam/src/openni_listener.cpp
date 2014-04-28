@@ -313,7 +313,7 @@ void OpenNIListener::loadBag(std::string filename)
 
 void OpenNIListener::evaluation(std::string filename)
 {
-    graph_mgr_->optimizer_->setVerbose(true);
+    graph_mgr_->setOptimizerVerbose(true);
     graph_mgr_->saveTrajectory(QString(filename.c_str()) + "iteration_" + QString::number(0));
     ROS_WARN_NAMED("eval", "Finished with optimization iteration %i.", 0);
 

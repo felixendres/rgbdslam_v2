@@ -19,8 +19,8 @@ export ROS_MASTER_URI=http://localhost:11386
 #echo Waiting for roscore
 #sleep 3
 for CANDIDATES in 8 16 4; do
-  for OBS_EVAL in  0.00 0.70 0.90; do
-    for RANSAC_ITER in 100 500; do
+  for OBS_EVAL in  0.70 0.00 0.90; do
+    for RANSAC_ITER in 500; do
       for DISTANCEMSR in false; do 
         for OPT_SKIP in 1 1000000; do #online/offline
           for FEAT_TYPE in SIFTGPU; do 

@@ -103,6 +103,6 @@ for num in 0 1 2 3 4; do
   #echo RPE Results at Level $num are stored in $DIR/evaluation_$num.csv
   #column '-s;' -t  evaluation_$num.csv
 done
-#rm -f eval_translational.txt eval_translational.ate.txt eval_rotational.txt eval_runtime.txt 
+rm -f eval_translational.txt eval_translational.ate.txt eval_rotational.txt eval_runtime.txt 
 
 popd > /dev/null

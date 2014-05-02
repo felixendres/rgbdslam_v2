@@ -130,6 +130,7 @@ GLViewer::GLViewer(QWidget *parent)
     ROS_DEBUG_COND(!this->format().stereo(), "Stereo not supported");
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding); //can make good use of more space
     viewpoint_tf_.setToIdentity();
+    this->renderText(0,0,0, "RGBDSLAMv2", QFont("Monospace", 14));
 }
 
 GLViewer::~GLViewer() { }
@@ -300,6 +301,23 @@ void GLViewer::paintGL() {
         glLoadIdentity();
         gluPerspective(fov_, ratio, 0.1, 1e4); 
         glMatrixMode(GL_MODELVIEW);
+    }
+    if(cloud_matrices->size() == 0){
+      glColor4f(1,0,0,1);    
+      this->renderText(-0.36,0.1,1, QString("R"),   QFont("Serif", 28, QFont::Bold, false));
+      glColor4f(0,1,0,1);    
+      this->renderText(-0.27,0.1,1, QString("G"),   QFont("Serif", 28, QFont::Bold, false));
+      glColor4f(0,0,1,1);    
+      this->renderText(-0.18,0.1,1, QString("B"),   QFont("Serif", 28, QFont::Bold, false));
+      glColor4f(.5,.5,.5,1); 
+      this->renderText(-0.09,0.1,1, QString("D"),   QFont("Serif", 28, QFont::Bold, false));
+      glColor4f(1-bg_col_[0],1-bg_col_[1],1-bg_col_[2],1.0); //inverse of bg color
+      this->renderText(0.01,0.1,1, QString("S"), QFont("Sans",  28, -1,false));
+      this->renderText(0.08,0.1,1, QString("L"), QFont("Sans",  28, -1,false));
+      this->renderText(0.15,0.1,1, QString("A"), QFont("Sans",  28, -1,false));
+      this->renderText(0.23,0.1,1, QString("M"), QFont("Sans",  28, -1,false));
+      glColor4f(1-bg_col_[0],1-bg_col_[1],1-bg_col_[2],0.2); //inverse of bg color
+      this->renderText(0.33,0.1,1, QString("v2"),   QFont("Sans",  28, -1, true));
     }
     drawClouds(0.0);
 }

@@ -48,22 +48,22 @@ Graphical_UI::Graphical_UI(QString title) : filename("quicksave.pcd"), glviewer(
 
 void Graphical_UI::setup(){
     infoText = new QString(tr(
-                "<p><b>RGBDSLAM</b> uses visual features to identify corresponding 3D locations "
-                "in RGBD data. The correspondences are used to reconstruct the camera motion. "
+                "<p><b>RGBDSLAMv2</b> uses visual features to identify corresponding 3D locations "
+                "in RGB-D data. The correspondences are used to reconstruct the camera motion. "
                 "The SLAM-backend g2o is used to integrate the transformations between"
                 "the RGBD-images and compute a globally consistent 6D trajectory.</p>"
                 "<p></p>"));
     licenseText = new QString(tr(
-                 "<p>RGBDSLAM is free software: you can redistribute it and/or modify"
+                 "<p>RGBDSLAMv2 is free software: you can redistribute it and/or modify"
                  "it under the terms of the GNU General Public License as published by"
                  "the Free Software Foundation, either version 3 of the License, or"
                  "(at your option) any later version.</p>"
-                 "<p>RGBDSLAM is distributed in the hope that it will be useful,"
+                 "<p>RGBDSLAMv2 is distributed in the hope that it will be useful,"
                  "but WITHOUT ANY WARRANTY; without even the implied warranty of"
                  "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the"
                  "GNU General Public License for more details.</p>"
                  "<p>You should have received a copy of the GNU General Public License"
-                 "along with RGBDSLAM.  If not, refer to <a href=\"http://www.gnu.org/licenses/\">http://www.gnu.org/licenses</a>.</p>"));
+                 "along with RGBDSLAMv2.  If not, refer to <a href=\"http://www.gnu.org/licenses/\">http://www.gnu.org/licenses</a>.</p>"));
     mouseHelpText = new QString(tr(
                 "<p><b>3D Viewer Mouse Commands:</b>"
                 "<ul><li><i>Left button:</i> Rotate view around x/y.</li>"
@@ -78,12 +78,19 @@ void Graphical_UI::setup(){
     feature_flow_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     if(ParameterServer::instance()->get<bool>("scalable_2d_display")) 
       feature_flow_image_label->setScaledContents(true);
-    visual_image_label = new QLabel("<i>Waiting for monochrome image...</i>");
+
+    std::string visual_topic = ParameterServer::instance()->get<std::string>("topic_image_mono");
+    QString vl("Waiting for visual image on topic<br/><i>\""); vl += visual_topic.c_str(); vl += "\"</i>";
+    visual_image_label = new QLabel(vl);
     visual_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     visual_image_label->setAlignment(Qt::AlignCenter);
     if(ParameterServer::instance()->get<bool>("scalable_2d_display")) 
       visual_image_label->setScaledContents(true);
-    depth_image_label = new QLabel(tr("<i>Waiting for depth image...</i>"));
+
+    std::string depth_topic = ParameterServer::instance()->get<std::string>("topic_image_depth");
+    QString dl("Waiting for depth image on topic<br/><i>\""); dl += depth_topic.c_str(); 
+    dl += "\"</i><br/>";
+    depth_image_label = new QLabel(dl);
     depth_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     depth_image_label->setAlignment(Qt::AlignCenter);
     if(ParameterServer::instance()->get<bool>("scalable_2d_display")) 
@@ -120,15 +127,17 @@ void Graphical_UI::setup(){
 
     tmpLabel = new QLabel();
     statusBar()->insertWidget(0,tmpLabel, 0);
-    QString message = tr("Ready for RGBDSLAM");
+    QString message = tr("Ready for RGB-D SLAM");
     statusBar()->showMessage(message);
-
-    infoLabel2 = new QLabel(tr("Waiting for motion information..."));
+    infoLabel2 = new QLabel(tr("Empty Map"));
     infoLabel2->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     infoLabel2->setAlignment(Qt::AlignRight);
     statusBar()->addPermanentWidget(infoLabel2, 0);
-
-    infoLabel = new QLabel(tr("<i>Press Enter or Space to Start</i>"));
+    if(ParameterServer::instance()->get<bool>("start_paused")){
+      infoLabel = new QLabel(tr("<i>Press Enter or Space to Start</i>"));
+    } else {
+      infoLabel = new QLabel(tr("<i>No data yet.</i>"));
+    }
     infoLabel->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     infoLabel->setAlignment(Qt::AlignRight);
     statusBar()->addPermanentWidget(infoLabel, 0);

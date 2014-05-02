@@ -1,58 +1,35 @@
-Last Modification: 2014-03-28 
+Last Modification: 2014-05-02 
 
-DISCLAIMER
-THIS IS NEITHER A PRODUCT NOR IS IT ADVERTISED AS ONE. THIS IS A RESEARCH
-PROJECT AND SUBJECT TO FREQUENT CHANGES. THERE IS NO QUALITY ASSURANCE.
+INSTALLATION ################################################################
+Here's a quick overview of the installation of RGBDSLAMv2 for hydro:
 
-VERSION WARNING 
-This software is an update of the ROS Fuerte version of RGBDSLAM. However
-many things have changed, so the documentation below may be outdated.
+1 Put RGBDSLAMv2 in a catkin workspace. See 
+  http://wiki.ros.org/catkin/Tutorials/create_a_workspace 
+  for details on how to create one.
 
-Here's a quick overview of installation for hydro:
+2 Extract RGBDSLAMv2 into your workspace's "src/" directory.
 
-Create a catkin workspace:
-http://wiki.ros.org/catkin/Tutorials/create_a_workspace
+3 Use rosdep (i.e. "rosdep install rgbdslam") to install missing 
+  dependencies. For details see http://wiki.ros.org/ROS/Tutorials/rosdep
 
-Then put RGBDSLAMv2 into your workspace's "src/" directory.
+4 To build RGBDSLAMv2 go to your catkine workspace and execute "catkin_make"
 
-To build RGBDSLAMv2 go to your workspace and execute 
-catkin_make
+Done!
 
+5a  Check out the launch files in rgbdslam/launch for examples and specific 
+    use cases.
 
-ORIGINAL (PARTLY OUTDATED) DOCUMENTATION OF RGBDSLAM (Fuerte Version) FOLLOWS
-
-WARNING TO USERS OF THE SERVICE CALL INTERFACE: 
-The service definitions have minor changes, which will break existing service
-calls! Most importantly: The field "comand" is now correctly spelled "command" 
-Another service "rgbdslam/ros_ui_s" has been created that expects a string 
-value. Some of the "save" commands of the "rgbdslam/ros_ui" service calls have 
-been moved to the new service: save_cloud,  save_g2o_graph,
-save_trajectory,  save_features,  save_individual. "save_octomap" has been 
-added. The string "value" is the respective filename to save to. See the 
-documentation below, or the file src/ros_service_ui.cpp.
+5b  Check out the README in rgbdslam/test for running, testing and evaluating
+    RGBDSLAMv2 on Juergen Sturm's RGB-D SLAM Dataset and Benchmark.
 
 Additional information can be found here:
 http://www.ros.org/wiki/rgbdslam
 
-INSTALLATION ################################################################### 
-Download rgbdslam with the following command to your ros workspace
 
-$ svn co http://alufr-ros-pkg.googlecode.com/svn/trunk/rgbdslam_freiburg
+IMPORTANT NOTE ################################################################
+This software is an update of the ROS Fuerte version of RGBDSLAM. However
+many things have changed, so the DOCUMENTATION BELOW MAY BE OUTDATED.
 
-If not yet installed, install rosdep first, then execute
-
-$ rosdep update rosdep install rgbdslam_freiburg
-
-This should take care of all system dependencies (e.g. libg2o). You can then
-compile it with
-
-$ rosmake rgbdslam_freiburg
-
-which will take a while.
-
-If you want to use RGB-D SLAM with a Kinect or Xtion Pro, you also need to
-install openni_launch (apt: ros-fuerte-openni-launch). 
-If you want to edit the saved point clouds you might want to install meshlab.
 
 Configuration
 
@@ -64,7 +41,7 @@ in the GUI Menu Settings->View Current Settings.
 
 The various use-case launch-files might not work correctly yet, as they are not
 regularly tested. You should get them running if you fiddle with the topics
-("rostopic list" and "rosnode info" will help you.  "rxgraph" is great too).
+("rostopic list" and "rosnode info" will help you.  "rqt_graph" is great too).
 
 
 
@@ -75,27 +52,36 @@ on /rgbdslam/batch_clouds when you command RGB-D SLAM to do so (see below). The
 clouds sent are actually the same as before, but the according transformation -
 by default from /map to /openni_camera - is sent out on /tf.
 
-This was also the way the octomap_server got the point clouds my making it
-listen to the mentioned topic and set the fixed frame_id to /map (See the
-launch file octomap_server.launch). Meanwhile, a variant of the
-octomap server node is compiled into the rgbdslam node. This allows to
-create the octomap directly without sending data. In the GUI this can be 
-done by selecting "Save Octomap" from the "Data" Menu.
+The octoMap library is compiled into the rgbdslam node. This allows to create
+the octomap directly. In the GUI this can be done by selecting "Save Octomap"
+from the "Data" Menu. Online octomapping is possible, but not recommended.
+
 
 USAGE with GUI #################################################################
 
-To start RGBDSLAM launch 
+To start RGBDSLAMv2 launch, e.g.,
 $ roslaunch rgbdslam kinect+rgbdslam.launch
 
-Alternatively you can start the openni nodes and RGBDSLAM separately, e.g.:
+Alternatively you can start the openni nodes and RGBDSLAMv2 separately, e.g.:
 roslaunch openni_camera openni_node.launch rosrun rgbdslam rgbdslam
 
 To capture models either press space to start recording a continuous stream or
 press enter to record a single frame. To reduce data redundancy, sequential
 frames from (almost) the same position are not included in the final model.
-The 3D visualization always shows the globally optimized model. Neighbouring
-points are triangulated except at missing values and depth jumps.
 
+Parameters
+RGBDSLAMv2 is customizable by parameters. These should be set in the launch
+file. Parameters can be changed during operation from the GUI, however, 
+changes from the GUI may have no effect for many parameters.
+
+Visualization
+The 3D visualization shows the globally optimized model (you might have
+to click into it to update the view after optimization). Neighbouring
+points can be triangulated except at missing values and depth jumps. With
+the shortcut "t", triangulation can be toggled. Since raw points render
+slightly faster the parameter "cloud_display_type" controls whether 
+triangulation is computed at all - at the time the cloud is received.
+The parameter "gl_point_size" may be useful to most users.
 
 
 USAGE without GUI ##############################################################

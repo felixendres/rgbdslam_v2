@@ -48,9 +48,9 @@ for CANDIDATES in 8 16 4; do
                   continue #don't overwrite existing results
                 fi
                 #Remove old summary results if a new individual one is computed (will be recomputed further below)
-                rm $PARAM_DIRECTORY/ate_evaluation_*.csv 
+                rm $PARAM_DIRECTORY/ate_evaluation_*.csv 2> /dev/null
                 echo `date +%H:%M:%S` Results for $BASE_NAME are stored in `readlink -f $DIRECTORY`
-                roslaunch rgbdslam `basename $LAUNCHFILE` bagfile_name:=`readlink -f $bagfile` match_candidates:=$CANDIDATES sampled_candidates:=$CANDIDATES feature_type:=$FEAT_TYPE max_keypoints:=$MAXFEATURES ransac_iterations:=$RANSAC_ITER optimizer_skip_step:=$OPT_SKIP observability_threshold:=$OBS_EVAL use_root_sift:=$DISTANCEMSR gui:=false         >  $DIRECTORY/logfile 2>&1
+                roslaunch rgbdslam `basename $LAUNCHFILE` bagfile_name:=`readlink -f $bagfile` match_candidates:=$CANDIDATES sampled_candidates:=$CANDIDATES feature_type:=$FEAT_TYPE max_keypoints:=$MAXFEATURES ransac_iterations:=$RANSAC_ITER optimizer_skip_step:=$OPT_SKIP observability_threshold:=$OBS_EVAL use_root_sift:=$DISTANCEMSR gui:=false >  $DIRECTORY/logfile 2>&1
                 #rosparam get /rgbdslam/config >>  $DIRECTORY/logfile 2>&1
                 echo `date +%H:%M:%S` Finished processing $BASE_NAME
 

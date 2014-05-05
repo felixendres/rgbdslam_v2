@@ -97,12 +97,6 @@ inline void setGLColor(const PointType& p){
 GLViewer::GLViewer(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::NoSampleBuffers), parent),
     //: QGLWidget(QGLFormat(QGL::SampleBuffers|QGL::StereoBuffers), parent),
-      xRot(180*16.0),
-      yRot(0),
-      zRot(0),
-      xTra(0),
-      yTra(0),
-      zTra(-50),//go back 50 (pixels?)
       polygon_mode(GL_FILL),
       cloud_list_indices(),
       cloud_matrices(new QList<QMatrix4x4>()),
@@ -125,6 +119,7 @@ GLViewer::GLViewer(QWidget *parent)
       button_pressed_(false),
       fast_rendering_step_(1)
 {
+    this->initialPosition();
     this->format().setSwapInterval(0);
     bg_col_[0] = bg_col_[1] = bg_col_[2] = bg_col_[3] = 0.01;//almost black background (almost, so that the see-through rendering bug on my pc doesn't occur
     ROS_DEBUG_COND(!this->format().stereo(), "Stereo not supported");
@@ -134,6 +129,15 @@ GLViewer::GLViewer(QWidget *parent)
 }
 
 GLViewer::~GLViewer() { }
+
+void GLViewer::initialPosition() {
+    xRot = 180*16.0;//180° turn around x
+    yRot = 0;
+    zRot = 0;
+    xTra = 0;
+    yTra = 0;
+    zTra = -50;//go back 50 (pixels?)
+}
 
 QSize GLViewer::minimumSizeHint() const {
     return QSize(400, 400);
@@ -255,10 +259,10 @@ void GLViewer::drawGrid(){
     //glDisable (GL_LINE_STIPPLE);
 }
 
-void GLViewer::drawAxis(float scale){
+void GLViewer::drawAxes(float scale, float thickness){
     glEnable(GL_BLEND); 
     glBegin(GL_LINES);
-    glLineWidth(4);
+    glLineWidth(thickness);
     glColor4f (0.9, 0, 0, 1.0);
     glVertex3f(0, 0, 0);
     glColor4f (0.9, 0, 0, 0.0);
@@ -341,17 +345,29 @@ void GLViewer::drawClouds(float xshift) {
     glLoadIdentity();
     //Camera transformation
     glTranslatef(xTra+xshift, yTra, zTra);
+    if(button_pressed_){ //Show axis of left-right movement
+      drawNavigationAxis(0, 0.5, "mouse up/down");
+    }
     int x_steps = (xRot / 16.0)/rotation_stepping_;
-    int y_steps = (yRot / 16.0)/rotation_stepping_;
-    int z_steps = (zRot / 16.0)/rotation_stepping_;
     glRotatef(x_steps*rotation_stepping_, 1.0, 0.0, 0.0);
+
+    if(button_pressed_){ //Show axis of left-right movement
+      drawNavigationAxis(1, 0.5, "mouse left/right");
+    }
+    int y_steps = (yRot / 16.0)/rotation_stepping_;
     glRotatef(y_steps*rotation_stepping_, 0.0, 1.0, 0.0);
+
+    int z_steps = (zRot / 16.0)/rotation_stepping_;
     glRotatef(z_steps*rotation_stepping_, 0.0, 0.0, 1.0);
+    if(button_pressed_){ 
+      drawNavigationAxis(2, 0.5, "ctrl + left/right");
+    }
+
     glMultMatrixd(static_cast<GLdouble*>( viewpoint_tf_.data() ));//works as long as qreal and GLdouble are typedefs to double (might depend on hardware)
     if(show_grid_) {
       drawGrid(); //Draw a 10x10 grid with 1m x 1m cells
     }
-    if(show_poses_) drawAxis(0.2);//Show origin as big axis
+    if(show_poses_) drawAxes(0.2);//Show origin as big axis
 
     ROS_DEBUG("Drawing %i PointClouds", cloud_list_indices.size());
     int step = button_pressed_ ? ParameterServer::instance()->get<int>("fast_rendering_step") + fast_rendering_step_ : 1; //if last_draw_duration_ was bigger than 100hz, skip clouds in drawing when button pressed
@@ -378,7 +394,7 @@ void GLViewer::drawClouds(float xshift) {
     for(int i = 0; i<cloud_list_indices.size() && i<cloud_matrices->size(); i++){
         glPushMatrix();
         glMultMatrixd(static_cast<GLdouble*>( (*cloud_matrices)[i].data() ));//works as long as qreal and GLdouble are typedefs to double (might depend on hardware)
-        if(show_poses_) drawAxis((i + 1 == cloud_list_indices.size()) ? 0.5:0.075); //Draw last pose Big
+        if(show_poses_) drawAxes((i + 1 == cloud_list_indices.size()) ? 0.5:0.075); //Draw last pose Big
         if(show_ids_) {
           glColor4f(1-bg_col_[0],1-bg_col_[1],1-bg_col_[2],1.0); //inverse of bg color
           this->renderText(0.,0.,0.,QString::number(i), QFont("Monospace", 8));
@@ -420,24 +436,19 @@ void GLViewer::resizeGL(int width, int height)
 }
 
 void GLViewer::mouseDoubleClickEvent(QMouseEvent *event) {
-    xRot=180*16.0;
-    yRot=0;
-    zRot=0;
-    xTra=0;
-    yTra=0;
+    //Initial position
+    this->initialPosition();
     if(cloud_matrices->size()>0){
       int id = 0;
       switch (QApplication::keyboardModifiers()){
+        //Pose selection only works if follow_mode_ = false
         case Qt::NoModifier:  
-            id = cloud_matrices->size()-1;
+            id = cloud_matrices->size()-1; //latest pose
         case Qt::ControlModifier:  
-            setViewPoint((*cloud_matrices)[id]);
+            setViewPoint((*cloud_matrices)[id]); //first pose
             break;
         case Qt::ShiftModifier:  
-            viewpoint_tf_.setToIdentity();
-      }
-      if (event->buttons() & Qt::MidButton) { 
-          zTra=-50;
+            viewpoint_tf_.setToIdentity(); //initial Pose (usually same as first pose)
       }
     }
     if(!setClickedPosition(event->x(), event->y())){
@@ -496,7 +507,7 @@ void GLViewer::toggleFollowMode(bool flag){
 /** Create context menu */
 void GLViewer::mouseReleaseEvent(QMouseEvent *event) {
   button_pressed_ = false;
-  //clearAndUpdate();
+  clearAndUpdate();
 
   if(event->button() == Qt::RightButton)
   {
@@ -1074,6 +1085,7 @@ bool GLViewer::setClickedPosition(int x, int y) {
     if(winZ != 1){ //default value, where nothing was rendered
       gluUnProject( winX, winY, winZ, modelview, projection, viewport, &posX, &posY, &posZ);
       ROS_INFO_STREAM((float)winZ << ", [" << posX << "," << posY << "," << posZ << "]");
+      viewpoint_tf_.setToIdentity();
       viewpoint_tf_(0,3) = -posX;
       viewpoint_tf_(1,3) = -posY;
       viewpoint_tf_(2,3) = -posZ;
@@ -1163,3 +1175,18 @@ void drawEllipsoid(float fA, float fB, float fC, const Eigen::Vector4f& p)
 	}
 }
 
+void GLViewer::drawNavigationAxis(int axis_idx, float scale, QString text){
+  float coords[3] = { 0.0, 0.0, 0.0 };
+  float colors[3] = { 1.0, 1.0, 1.0 };
+  colors[axis_idx] = 0.0;
+  glEnable(GL_BLEND); 
+  glBegin(GL_LINES);
+  glColor3fv(colors);
+  coords[axis_idx] = scale * 10;
+  glVertex3fv(coords);
+  coords[axis_idx] = -scale * 10;
+  glVertex3fv(coords);
+  glEnd();
+  coords[axis_idx] = -scale;
+  this->renderText(coords[0],coords[1]+0.01,coords[2],text, QFont("Monospace", 8));
+}

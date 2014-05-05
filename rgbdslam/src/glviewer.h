@@ -82,7 +82,7 @@ protected:
     ///If the background is clicked, the pivot will be the camera position itself
     void mouseDoubleClickEvent(QMouseEvent *event);
     ///Draw colored axis, scale long
-    void drawAxis(float scale);
+    void drawAxes(float scale, float thickness = 4.0);
     //!Draw pose graph edges in opengl 
     void drawEdges();
     //!Draw size x size grid into world coordinate system
@@ -108,6 +108,9 @@ protected:
     ///Only switch to own context if necessary
     void makeCurrent();
 
+    void initialPosition();
+    void drawNavigationAxis(int axis_idx, float scale, QString text);
+
 private:
     void clearAndUpdate();
     int xRot, yRot, zRot;
@@ -119,6 +122,7 @@ private:
     QList<QPair<int, int> > edge_list_;
     QList<QMatrix4x4>* cloud_matrices;
     QMatrix4x4 viewpoint_tf_;
+    //QMatrix4x4 world_tf_;//< To change the center of the world, i.e. about what are we rotating
     //!cam_pose_mat transforms the viewpoint from the origin
     ///cam_pose_mat is inverted, i.e. it should describes the transformation
     ///of the camera itself

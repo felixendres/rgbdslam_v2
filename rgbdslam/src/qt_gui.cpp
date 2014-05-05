@@ -70,9 +70,10 @@ void Graphical_UI::setup(){
                 "    <li><i>Ctrl + left button:</i> rotate view around x/z.</li>"
                 "    <li><i>Shift + left button:</i> Translate view.</li>"
                 "    <li><i>Wheel:</i> zoom view.</li>"
-                "    <li><i>Middle double click:</i> reset camera position.</li>"
-                "    <li><i>Double click on object:</i> set pivot to clicked point.</li>"
-                "    <li><i>Double click on background:</i> reset view to camera pose.</li><ul></p>")); feature_flow_image_label = new QLabel(*mouseHelpText);
+                "    <li><i>Double click (on background):</i> reset camera position to latest pose.</li>"
+                "    <li><i>Ctrl + Double click (on background):</i> reset camera position to first pose (only works if follow mode is off).</li>"
+                "    <li><i>Double click on object:</i> set pivot to clicked point (only works if follow mode is off).</li>"
+                "<ul></p>")); feature_flow_image_label = new QLabel(*mouseHelpText);
     // create widgets for image and map display
     feature_flow_image_label->setWordWrap(true);
     feature_flow_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
@@ -691,7 +692,7 @@ void Graphical_UI::createMenus() {
     dataMenu->addSeparator();
 
     QAction *exitAct = new QAction(tr("E&xit"), this);
-    exitAct->setShortcuts(QKeySequence::Quit);
+    exitAct->setShortcut(QString("Ctrl+Q")); //doesn't work: QKeySequence::Quit);
     exitAct->setStatusTip(tr("Exit the application"));
     exitAct->setIcon(QIcon::fromTheme("application-exit"));//doesn't work for gnome
     connect(exitAct, SIGNAL(triggered()), this, SLOT(close()));

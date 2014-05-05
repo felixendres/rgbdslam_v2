@@ -26,7 +26,7 @@ Done!
 Additional information can be found here:
 http://www.ros.org/wiki/rgbdslam
 
-![Screenshot](/media/rgbdslamv2_fr2desk.jpg?raw=true "RGBDSLAM on the RGB-D Benchmark Dataset")
+![Screenshot](../hydro/media/rgbdslamv2_fr2desk.jpg?raw=true "RGBDSLAM on the RGB-D Benchmark Dataset")
 
 IMPORTANT NOTE ################################################################
 This software is an update of the ROS Fuerte version of RGBDSLAM. However

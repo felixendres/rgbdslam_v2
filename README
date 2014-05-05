@@ -20,11 +20,13 @@ Done!
     use cases.
 
 5b  Check out the README in rgbdslam/test for running, testing and evaluating
-    RGBDSLAMv2 on Juergen Sturm's RGB-D SLAM Dataset and Benchmark.
+    RGBDSLAMv2 on Juergen Sturm's RGB-D SLAM Dataset and Benchmark:
+    http://vision.in.tum.de/data/datasets/rgbd-dataset
 
 Additional information can be found here:
 http://www.ros.org/wiki/rgbdslam
 
+![Screenshot](/media/rgbdslamv2_fr2desk.jpg?raw=true "RGBDSLAM on the RGB-D Benchmark Dataset")
 
 IMPORTANT NOTE ################################################################
 This software is an update of the ROS Fuerte version of RGBDSLAM. However

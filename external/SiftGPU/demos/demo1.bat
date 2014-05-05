@@ -1,1 +1,0 @@
-..\bin\TestWinGlut.exe -i ..\data\1600.jpg  

@@ -1,6 +1,24 @@
-Last Modification: 2014-05-02 
+# RGBDSLAM<i>v2</i> 
+... is a SLAM system for RGB-D cameras, e.g., the Microsoft Kinect.
+You can use it to create highly accurate 3D point clouds or OctoMaps.
 
-INSTALLATION ################################################################
+RGBDSLAMv2 is based on the ROS project, OpenCV, PCL, OctoMap, SiftGPU and more - thanks!
+
+A journal article with a system description and performance evaluation 
+can be found in the following publication:
+
+"3D Mapping with an RGB-D Camera",<br/>
+*F. Endres, J. Hess, J. Sturm, D. Cremers, W. Burgard*,<br/>
+IEEE Transactions on Robotics, 2014.
+
+Additional information can be found here:<br/>
+* www.informatik.uni-freiburg.de/~endres
+* http://www.ros.org/wiki/rgbdslam
+* http://answers.ros.org/questions/tags:rgbdslam
+
+![Screenshot](../hydro/media/rgbdslamv2_fr2desk.jpg?raw=true "RGBDSLAM on the RGB-D Benchmark Dataset")
+
+# INSTALLATION ################################################################
 Here's a quick overview of the installation of RGBDSLAMv2 for hydro:
 
 1 Put RGBDSLAMv2 in a catkin workspace. See 
@@ -23,17 +41,17 @@ Done!
     RGBDSLAMv2 on Juergen Sturm's RGB-D SLAM Dataset and Benchmark:
     http://vision.in.tum.de/data/datasets/rgbd-dataset
 
-Additional information can be found here:
-http://www.ros.org/wiki/rgbdslam
 
-![Screenshot](../hydro/media/rgbdslamv2_fr2desk.jpg?raw=true "RGBDSLAM on the RGB-D Benchmark Dataset")
+
+![Screenshot](../hydro/media/rgbdslamv2_empty.jpg?raw=true "RGBDSLAM after Startup")
+
 
 IMPORTANT NOTE ################################################################
 This software is an update of the ROS Fuerte version of RGBDSLAM. However
 many things have changed, so the DOCUMENTATION BELOW MAY BE OUTDATED.
 
 
-Configuration
+# Configuration ##############################################################
 
 There are several example launch-files that set the parameters of RGB-D SLAM
 for certain use cases. For a definitive list of all settings and their default
@@ -47,7 +65,7 @@ regularly tested. You should get them running if you fiddle with the topics
 
 
 
-Usage ##############################################################
+# Usage ##############################################################
 
 Most people seem to want the registered point cloud. It is by default sent out
 on /rgbdslam/batch_clouds when you command RGB-D SLAM to do so (see below). The
@@ -58,8 +76,9 @@ The octoMap library is compiled into the rgbdslam node. This allows to create
 the octomap directly. In the GUI this can be done by selecting "Save Octomap"
 from the "Data" Menu. Online octomapping is possible, but not recommended.
 
+![Screenshot](../hydro/media/rgbdslamv2_fr2desk_octomap.jpg?raw=true "OctoMap created from the RGB-D Benchmark sequence fr2/desk")
 
-USAGE with GUI #################################################################
+## USAGE with GUI #################################################################
 
 To start RGBDSLAMv2 launch, e.g.,
 $ roslaunch rgbdslam kinect+rgbdslam.launch
@@ -86,7 +105,7 @@ triangulation is computed at all - at the time the cloud is received.
 The parameter "gl_point_size" may be useful to most users.
 
 
-USAGE without GUI ##############################################################
+## USAGE without GUI ##############################################################
 
 The RosUI is an alternative to the Grapical_UI to run the rgbdslam headless,
 for example on the PR2.  rgbdslam can then be used via service-calls.
@@ -145,7 +164,7 @@ $ rosservice call /rgbdslam/ros_ui save_individual
 
 
 
-FURTHER HELP ##################################################################
+# FURTHER HELP ##################################################################
 
 1. If you are located in Germany and get errors loading the saved ply files
 into meshlab, try switching to U.S. locale or replace the decimal point with a
@@ -165,7 +184,7 @@ current directory.
 
 
 
-GICP AND SIFTGPU ###############################################################
+## GICP AND SIFTGPU ###############################################################
 
 If there are problems related to the compilation or linking of GICP or SIFTGPU,
 you can deactivate these features at the top of CMakeLists.txt. You might get
@@ -185,7 +204,7 @@ on Ubuntu 10.04 x64) To use SiftGPU you should install "libdevil-dev".
 
 
 
-LICENSE INFORMATION ############################################################
+# LICENSE INFORMATION ############################################################
 
 This software is distributed in the hope that it will be useful, but WITHOUT
 ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS

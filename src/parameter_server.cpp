@@ -102,7 +102,7 @@ void ParameterServer::defaultConfig() {
   addOption("use_icp",                       static_cast<bool> (false),                 "Activate ICP Fallback. Ignored if ICP is not compiled in (see top of CMakeLists.txt) ");
   addOption("icp_method",                    std::string("icp"),                        "gicp, icp or icp_nl");
   addOption("gicp_max_cloud_size",           static_cast<int> (10000),                  "Subsample for increased speed");
-  addOption("emm__skip_step",                static_cast<int> (5),                      "When evaluating the transformation, subsample rows and cols with this stepping");
+  addOption("emm__skip_step",                static_cast<int> (8),                      "When evaluating the transformation, subsample rows and cols with this stepping");
   addOption("emm__mark_outliers",            static_cast<bool> (false),                 "Mark outliers in the observation likelihood evaluation with colors. Red: point would have blocked the view of an earlier observation. Cyan: An earlier observation should have blocked the view to this point");
   addOption("observability_threshold",       static_cast<double> (-0.6),                "What fraction of the aligned points are required to be in observable position (i.e. don't contradict the sensor physics)");
 

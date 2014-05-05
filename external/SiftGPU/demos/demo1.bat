@@ -1,1 +1,1 @@
-..\bin\TestWinGlut.exe -i ..\data\1600.jpg  
+../bin/TestWinGlut.exe -i ../data/1600.jpg  

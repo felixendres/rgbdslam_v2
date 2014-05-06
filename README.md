@@ -1,5 +1,5 @@
 # RGBDSLAM<i>v2</i> 
-... is a SLAM system for RGB-D cameras, e.g., the Microsoft Kinect.
+... is a state-of-the-art SLAM system for RGB-D cameras, e.g., the Microsoft Kinect.
 You can use it to create highly accurate 3D point clouds or OctoMaps.
 
 RGBDSLAMv2 is based on the ROS project, OpenCV, PCL, OctoMap, SiftGPU and more - thanks!
@@ -18,26 +18,28 @@ Additional information can be found here:<br/>
 
 ![Screenshot](../hydro/media/rgbdslamv2_fr2desk.jpg?raw=true "RGBDSLAM on the RGB-D Benchmark Dataset")
 
-# INSTALLATION ################################################################
-Here's a quick overview of the installation of RGBDSLAMv2 for hydro:
+# Prerequisites  ################################################################
+- Ubuntu 12.04 - 13.04
+- [ROS hydro](http://wiki.ros.org/hydro/)
+- Problems may occur when using a version of the PCL library different from the ROS hydro version.
 
-1 Put RGBDSLAMv2 in a catkin workspace. See 
-  http://wiki.ros.org/catkin/Tutorials/create_a_workspace 
-  for details on how to create one.
+# Installation ################################################################
+Here's a quick overview of the installation of RGBDSLAMv2 for ROS hydro:
 
-2 Extract RGBDSLAMv2 into your workspace's "src/" directory.
+1. Put RGBDSLAMv2 in a catkin workspace: See [the catkin tutorial](http://wiki.ros.org/catkin/Tutorials/create_a_workspace) 
+  for details on how to create a workspace. You can either download RGBDSLAMv2 as an [archive](http://codeload.github.com/felixendres/rgbdslam_v2/zip/hydro) and extract it into your workspace's "src/" directory. Or use git to clone this repository.
 
-3 Use rosdep (i.e. "rosdep install rgbdslam") to install missing 
+3. Use rosdep (i.e. "rosdep install rgbdslam") to install missing 
   dependencies. For details see http://wiki.ros.org/ROS/Tutorials/rosdep
 
-4 To build RGBDSLAMv2 go to your catkine workspace and execute "catkin_make"
+4. To build RGBDSLAMv2 go to your catkine workspace and execute "catkin_make"
 
-Done!
+Installation done! What's next?
 
-5a  Check out the launch files in rgbdslam/launch for examples and specific 
+5. a)  Check out the launch files in rgbdslam/launch for examples and specific 
     use cases.
 
-5b  Check out the README in rgbdslam/test for running, testing and evaluating
+5. b)  Check out the README in rgbdslam/test for running, testing and evaluating
     RGBDSLAMv2 on Juergen Sturm's RGB-D SLAM Dataset and Benchmark:
     http://vision.in.tum.de/data/datasets/rgbd-dataset
 
@@ -46,10 +48,10 @@ Done!
 ![Screenshot](../hydro/media/rgbdslamv2_empty.jpg?raw=true "RGBDSLAM after Startup")
 
 
-IMPORTANT NOTE ################################################################
+## IMPORTANT NOTE ################################################################
 This software is an update of the ROS Fuerte version of RGBDSLAM. However
-many things have changed, so the DOCUMENTATION BELOW MAY BE OUTDATED.
-
+many things have changed, so some of the DOCUMENTATION BELOW MAY BE OUTDATED.
+Please report problems with the documentation. Thanks.
 
 # Configuration ##############################################################
 
@@ -78,7 +80,7 @@ from the "Data" Menu. Online octomapping is possible, but not recommended.
 
 ![Screenshot](../hydro/media/rgbdslamv2_fr2desk_octomap.jpg?raw=true "OctoMap created from the RGB-D Benchmark sequence fr2/desk")
 
-## USAGE with GUI #################################################################
+## Usage with GUI #################################################################
 
 To start RGBDSLAMv2 launch, e.g.,
 $ roslaunch rgbdslam kinect+rgbdslam.launch
@@ -105,7 +107,7 @@ triangulation is computed at all - at the time the cloud is received.
 The parameter "gl_point_size" may be useful to most users.
 
 
-## USAGE without GUI ##############################################################
+## Usage without GUI ##############################################################
 
 The RosUI is an alternative to the Grapical_UI to run the rgbdslam headless,
 for example on the PR2.  rgbdslam can then be used via service-calls.
@@ -164,7 +166,7 @@ $ rosservice call /rgbdslam/ros_ui save_individual
 
 
 
-# FURTHER HELP ##################################################################
+# Further Help ##################################################################
 
 1. If you are located in Germany and get errors loading the saved ply files
 into meshlab, try switching to U.S. locale or replace the decimal point with a
@@ -176,7 +178,7 @@ for four parallel jobs.
 If you have questions regarding installation or usage of RGBDSLAM please refer
 to http://answers.ros.org/questions/?tags=RGBDSLAM For further questions,
 suggestions, corrections of this README or to submit patches, please contact
-Felix Endres (endres@informatik.uni-freiburg.de)
+Felix Endres (endres@informatik.uni-freiburg.de).
 
 Apart from this manual, detailed code documentation can be created using rosdoc
 ("rosrun rosdoc rosdoc rgbdslam"), which will create a "doc" folder in your
@@ -184,7 +186,7 @@ current directory.
 
 
 
-## GICP AND SIFTGPU ###############################################################
+## GICP and SIFTGPU ###############################################################
 
 If there are problems related to the compilation or linking of GICP or SIFTGPU,
 you can deactivate these features at the top of CMakeLists.txt. You might get
@@ -204,13 +206,11 @@ on Ubuntu 10.04 x64) To use SiftGPU you should install "libdevil-dev".
 
 
 
-# LICENSE INFORMATION ############################################################
+# License Information ############################################################
 
 This software is distributed in the hope that it will be useful, but WITHOUT
 ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-FOR A PARTICULAR PURPOSE.  The authors allow the users to use and modify the
-source code for their own research. Any commercial application, redistribution,
-etc has to be arranged between users and authors individually.
+FOR A PARTICULAR PURPOSE.
 
-RGBDSLAM is licenced under GPL v.3.
+RGBDSLAM is licenced under GPL v.3. See the accompanying file "COPYING".
 

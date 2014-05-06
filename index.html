@@ -35,7 +35,7 @@
 <a name="rgbdslamv2" class="anchor" href="#rgbdslamv2"><span class="octicon octicon-link"></span></a>RGBDSLAM<i>v2</i>
 </h1>
 
-<p>... is a SLAM system for RGB-D cameras, e.g., the Microsoft Kinect.
+<p>... is a state-of-the-art SLAM system for RGB-D cameras, e.g., the Microsoft Kinect.
 You can use it to create highly accurate 3D point clouds or OctoMaps.</p>
 
 <p>RGBDSLAMv2 is based on the ROS project, OpenCV, PCL, OctoMap, SiftGPU and more - thanks!</p>
@@ -51,39 +51,44 @@ IEEE Transactions on Robotics, 2014.</p>
 <ul>
 <li><a href="http://www.informatik.uni-freiburg.de/%7Eendres">www.informatik.uni-freiburg.de/~endres</a></li>
 <li><a href="http://www.ros.org/wiki/rgbdslam">http://www.ros.org/wiki/rgbdslam</a></li>
-<li><a href="http://answers.ros.org/questions/tags:rgbdslam">http://answers.ros.org/questions/tags:rgbdslam</a></li>
-</ul><p><img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_fr2desk.jpg" alt="RGBDSLAM on the RGB-D Benchmark Dataset" width="600"></p>
+<li>
+<a href="http://answers.ros.org/questions/tags:rgbdslam">http://answers.ros.org/questions/tags:rgbdslam</a>
+<img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_fr2desk.jpg" alt="RGBDSLAM on the RGB-D Benchmark Dataset" width="600">
+</li>
+</ul><h1>
+<a name="prerequisites" class="anchor" href="#prerequisites"><span class="octicon octicon-link"></span></a>Prerequisites</h1>
 
-<h1>
-<a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>INSTALLATION</h1>
+<ul>
+<li>Ubuntu 12.04 - 13.04</li>
+<li><a href="http://wiki.ros.org/hydro/">ROS hydro</a></li>
+<li>Problems may occur when using a version of the PCL library different from the ROS hydro version.</li>
+</ul><h1>
+<a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h1>
 
-<p>Here's a quick overview of the installation of RGBDSLAMv2 for hydro:</p>
+<p>Here's a quick overview of the installation of RGBDSLAMv2 for ROS hydro:</p>
 
-<p>1 Put RGBDSLAMv2 in a catkin workspace. See 
-  <a href="http://wiki.ros.org/catkin/Tutorials/create_a_workspace">http://wiki.ros.org/catkin/Tutorials/create_a_workspace</a> 
-  for details on how to create one.</p>
+<ol>
+<li><p>Put RGBDSLAMv2 in a catkin workspace: See <a href="http://wiki.ros.org/catkin/Tutorials/create_a_workspace">the catkin tutorial</a> 
+for details on how to create a workspace. You can either download RGBDSLAMv2 as an <a href="http://codeload.github.com/felixendres/rgbdslam_v2/zip/hydro">archive</a> and extract it into your workspace's "src/" directory. Or use git to clone this repository.</p></li>
+<li><p>Use rosdep (i.e. "rosdep install rgbdslam") to install missing 
+dependencies. For details see <a href="http://wiki.ros.org/ROS/Tutorials/rosdep">http://wiki.ros.org/ROS/Tutorials/rosdep</a></p></li>
+<li><p>To build RGBDSLAMv2 go to your catkine workspace and execute "catkin_make"</p></li>
+</ol><p>Installation done! What's next?</p>
 
-<p>2 Extract RGBDSLAMv2 into your workspace's "src/" directory.</p>
+<ol>
+<li><p>a)  Check out the launch files in rgbdslam/launch for examples and specific 
+use cases.</p></li>
+<li><p>b)  Check out the README in rgbdslam/test for running, testing and evaluating
+RGBDSLAMv2 on Juergen Sturm's RGB-D SLAM Dataset and Benchmark:
+<a href="http://vision.in.tum.de/data/datasets/rgbd-dataset">http://vision.in.tum.de/data/datasets/rgbd-dataset</a></p></li>
+</ol><p><img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_empty.jpg" alt="RGBDSLAM right after startup" width="600"></p>
 
-<p>3 Use rosdep (i.e. "rosdep install rgbdslam") to install missing 
-  dependencies. For details see <a href="http://wiki.ros.org/ROS/Tutorials/rosdep">http://wiki.ros.org/ROS/Tutorials/rosdep</a></p>
+<h2>
+<a name="important-note" class="anchor" href="#important-note"><span class="octicon octicon-link"></span></a>IMPORTANT NOTE</h2>
 
-<p>4 To build RGBDSLAMv2 go to your catkine workspace and execute "catkin_make"</p>
-
-<p>Done!</p>
-
-<p>5a  Check out the launch files in rgbdslam/launch for examples and specific 
-    use cases.</p>
-
-<p>5b  Check out the README in rgbdslam/test for running, testing and evaluating
-    RGBDSLAMv2 on Juergen Sturm's RGB-D SLAM Dataset and Benchmark:
-    <a href="http://vision.in.tum.de/data/datasets/rgbd-dataset">http://vision.in.tum.de/data/datasets/rgbd-dataset</a></p>
-
-<p><img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_empty.jpg" alt="RGBDSLAM right after startup" width="600"></p>
-
-<p>IMPORTANT NOTE ################################################################
-This software is an update of the ROS Fuerte version of RGBDSLAM. However
-many things have changed, so the DOCUMENTATION BELOW MAY BE OUTDATED.</p>
+<p>This software is an update of the ROS Fuerte version of RGBDSLAM. However
+many things have changed, so some of the DOCUMENTATION BELOW MAY BE OUTDATED.
+Please report problems with the documentation. Thanks.</p>
 
 <h1>
 <a name="configuration" class="anchor" href="#configuration"><span class="octicon octicon-link"></span></a>Configuration</h1>
@@ -108,12 +113,11 @@ by default from /map to /openni_camera - is sent out on /tf.</p>
 
 <p>The octoMap library is compiled into the rgbdslam node. This allows to create
 the octomap directly. In the GUI this can be done by selecting "Save Octomap"
-from the "Data" Menu. Online octomapping is possible, but not recommended.</p>
-
-<p><img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_fr2desk_octomap.jpg" width="600" alt="OctoMap created from the RGB-D Benchmark sequence fr2/desk"></p>
+from the "Data" Menu. Online octomapping is possible, but not recommended.
+<img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_fr2desk_octomap.jpg" width="600" alt="OctoMap created from the RGB-D Benchmark sequence fr2/desk"></p>
 
 <h2>
-<a name="usage-with-gui" class="anchor" href="#usage-with-gui"><span class="octicon octicon-link"></span></a>USAGE with GUI</h2>
+<a name="usage-with-gui" class="anchor" href="#usage-with-gui"><span class="octicon octicon-link"></span></a>Usage with GUI</h2>
 
 <p>To start RGBDSLAMv2 launch, e.g.,
 $ roslaunch rgbdslam kinect+rgbdslam.launch</p>
@@ -140,7 +144,7 @@ triangulation is computed at all - at the time the cloud is received.
 The parameter "gl_point_size" may be useful to most users.</p>
 
 <h2>
-<a name="usage-without-gui" class="anchor" href="#usage-without-gui"><span class="octicon octicon-link"></span></a>USAGE without GUI</h2>
+<a name="usage-without-gui" class="anchor" href="#usage-without-gui"><span class="octicon octicon-link"></span></a>Usage without GUI</h2>
 
 <p>The RosUI is an alternative to the Grapical_UI to run the rgbdslam headless,
 for example on the PR2.  rgbdslam can then be used via service-calls.
@@ -199,7 +203,7 @@ $ rosservice call /rgbdslam/ros_ui save_individual</p>
 <li>save_octomap  ''saves the cloud to the given filename''</li>
 <li>save_trajectory   ''saves the sensor trajectory to the file _estimate.txt''</li>
 </ul><h1>
-<a name="further-help" class="anchor" href="#further-help"><span class="octicon octicon-link"></span></a>FURTHER HELP</h1>
+<a name="further-help" class="anchor" href="#further-help"><span class="octicon octicon-link"></span></a>Further Help</h1>
 
 <ol>
 <li>If you are located in Germany and get errors loading the saved ply files
@@ -211,14 +215,14 @@ for four parallel jobs.</li>
 </ol><p>If you have questions regarding installation or usage of RGBDSLAM please refer
 to <a href="http://answers.ros.org/questions/?tags=RGBDSLAM">http://answers.ros.org/questions/?tags=RGBDSLAM</a> For further questions,
 suggestions, corrections of this README or to submit patches, please contact
-Felix Endres (<a href="mailto:endres@informatik.uni-freiburg.de">endres@informatik.uni-freiburg.de</a>)</p>
+Felix Endres (<a href="mailto:endres@informatik.uni-freiburg.de">endres@informatik.uni-freiburg.de</a>).</p>
 
 <p>Apart from this manual, detailed code documentation can be created using rosdoc
 ("rosrun rosdoc rosdoc rgbdslam"), which will create a "doc" folder in your
 current directory.</p>
 
 <h2>
-<a name="gicp-and-siftgpu" class="anchor" href="#gicp-and-siftgpu"><span class="octicon octicon-link"></span></a>GICP AND SIFTGPU</h2>
+<a name="gicp-and-siftgpu" class="anchor" href="#gicp-and-siftgpu"><span class="octicon octicon-link"></span></a>GICP and SIFTGPU</h2>
 
 <p>If there are problems related to the compilation or linking of GICP or SIFTGPU,
 you can deactivate these features at the top of CMakeLists.txt. You might get
@@ -237,15 +241,13 @@ on Ubuntu 10.04 x64) To use SiftGPU you should install "libdevil-dev".</p>
   more information see <a href="http://stanford.edu/%7Eavsegal/generalized_icp.html">http://stanford.edu/~avsegal/generalized_icp.html</a></p>
 
 <h1>
-<a name="license-information" class="anchor" href="#license-information"><span class="octicon octicon-link"></span></a>LICENSE INFORMATION</h1>
+<a name="license-information" class="anchor" href="#license-information"><span class="octicon octicon-link"></span></a>License Information</h1>
 
 <p>This software is distributed in the hope that it will be useful, but WITHOUT
 ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-FOR A PARTICULAR PURPOSE.  The authors allow the users to use and modify the
-source code for their own research. Any commercial application, redistribution,
-etc has to be arranged between users and authors individually.</p>
+FOR A PARTICULAR PURPOSE.</p>
 
-<p>RGBDSLAM is licenced under GPL v.3.</p>
+<p>RGBDSLAM is licenced under GPL v.3. See the accompanying file "COPYING".</p>
       </section>
     </div>
 

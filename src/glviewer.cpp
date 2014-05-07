@@ -367,7 +367,7 @@ void GLViewer::drawClouds(float xshift) {
     if(show_grid_) {
       drawGrid(); //Draw a 10x10 grid with 1m x 1m cells
     }
-    if(show_poses_) drawAxes(0.2);//Show origin as big axis
+    if(show_poses_) drawAxes(0.5);//Show origin as big axis
 
     ROS_DEBUG("Drawing %i PointClouds", cloud_list_indices.size());
     int step = button_pressed_ ? ParameterServer::instance()->get<int>("fast_rendering_step") + fast_rendering_step_ : 1; //if last_draw_duration_ was bigger than 100hz, skip clouds in drawing when button pressed

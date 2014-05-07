@@ -721,7 +721,7 @@ void GraphManager::localizationUpdate(Node* new_node, QMatrix4x4 motion_estimate
 // returns true, iff node could be added to the cloud
 bool GraphManager::addNode(Node* new_node) 
 {
-  ScopedTimer s(__FUNCTION__);
+  ScopedTimer s(__FUNCTION__, false);
 
   if(reset_request_) resetGraph(); 
 

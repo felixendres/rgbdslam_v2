@@ -1,8 +1,9 @@
 <!-- This file shows the most important parameters in their default settings,
      to make them easily available for beginners.
 
-     The openni driver has to be started seperately, e.g. with "roslaunch openni_launch openni.launch" -->
+     The openni driver is started automatically -->
 <launch>
+  <include file="$(find openni_launch)/launch/openni.launch"/>
   <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" cwd="node" required="true" output="screen"> 
     <!-- Input data settings-->
     <param name="config/topic_image_mono"              value="/camera/rgb/image_color"/> 

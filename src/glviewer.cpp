@@ -441,18 +441,22 @@ void GLViewer::mouseDoubleClickEvent(QMouseEvent *event) {
     if(cloud_matrices->size()>0){
       int id = 0;
       switch (QApplication::keyboardModifiers()){
-        //Pose selection only works if follow_mode_ = false
         case Qt::NoModifier:  
             id = cloud_matrices->size()-1; //latest pose
+            follow_mode_ = true;
+            setViewPoint((*cloud_matrices)[id]); //first pose
+            break;
         case Qt::ControlModifier:  
+            follow_mode_ = false;
             setViewPoint((*cloud_matrices)[id]); //first pose
             break;
         case Qt::ShiftModifier:  
             viewpoint_tf_.setToIdentity(); //initial Pose (usually same as first pose)
       }
     }
-    if(!setClickedPosition(event->x(), event->y())){
-      ROS_INFO("Clicked into space");
+    if(setClickedPosition(event->x(), event->y())){
+      //Pose selection only works if follow_mode_ = false
+      follow_mode_ = false;
     }
     clearAndUpdate();
 }
@@ -725,8 +729,8 @@ void GLViewer::pointCloud2GLStrip(pointcloud_type * pc){
         ROS_ERROR("No display list could be created");
         return;
     }
-    float mesh_thresh = ParameterServer::instance()->get<double>("squared_meshing_threshold");
-    float max_depth = ParameterServer::instance()->get<double>("maximum_depth");
+    const float mesh_thresh = ParameterServer::instance()->get<double>("squared_meshing_threshold");
+    const float max_depth = ParameterServer::instance()->get<double>("maximum_depth");
     glNewList(cloud_list_index, GL_COMPILE);
     //ROS_INFO_COND(!pc->is_dense, "Expected dense cloud for opengl drawing");
     point_type origin;
@@ -879,7 +883,7 @@ void GLViewer::pointCloud2GLEllipsoids(pointcloud_type * pc){
     origin.y = 0;
     origin.z = 0;
 
-    float max_depth = ParameterServer::instance()->get<double>("maximum_depth");
+    const float max_depth = ParameterServer::instance()->get<double>("maximum_depth");
     float depth;
     unsigned int w=pc->width, h=pc->height;
     for(unsigned int x = 0; x < w; x++){
@@ -913,7 +917,7 @@ void GLViewer::pointCloud2GLPoints(pointcloud_type * pc){
     origin.y = 0;
     origin.z = 0;
 
-    float max_depth = ParameterServer::instance()->get<double>("maximum_depth");
+    const float max_depth = ParameterServer::instance()->get<double>("maximum_depth");
     float depth;
     unsigned int w=pc->width, h=pc->height;
     for(unsigned int x = 0; x < w; x++){
@@ -938,7 +942,7 @@ void GLViewer::pointCloud2GLTriangleList(pointcloud_type const * pc){
         ROS_ERROR("No display list could be created");
         return;
     }
-    float mesh_thresh = ParameterServer::instance()->get<double>("squared_meshing_threshold");
+    const float mesh_thresh = ParameterServer::instance()->get<double>("squared_meshing_threshold");
     cloud_list_indices.push_back(cloud_list_index);
     glNewList(cloud_list_index, GL_COMPILE);
     glBegin(GL_TRIANGLES);
@@ -948,7 +952,7 @@ void GLViewer::pointCloud2GLTriangleList(pointcloud_type const * pc){
     origin.y = 0;
     origin.z = 0;
 
-    float max_depth = ParameterServer::instance()->get<double>("maximum_depth");
+    const float max_depth = ParameterServer::instance()->get<double>("maximum_depth");
     float depth;
     unsigned int w=pc->width, h=pc->height;
     for(unsigned int x = 0; x < w-1; x++){

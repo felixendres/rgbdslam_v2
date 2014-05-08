@@ -121,6 +121,9 @@ class GraphManager : public QObject {
       //The following SLOT methods are in graph_mgr_io.cpp:
       ///iterate over all Nodes, sending their transform and pointcloud
       void sendAllClouds(bool threaded_if_available=true);
+      ///iterate over all Nodes, writing their transform and pointcloud to a bagfile. 
+      ///If parameter concurrent_io is set, do it in a background thread
+      void saveBagfileAsync(QString filename);
       ///iterate over all Nodes, writing their transform and pointcloud to a bagfile
       void saveBagfile(QString filename);
       ///Call saveIndividualCloudsToFile, as background thread if threaded=true and possible 

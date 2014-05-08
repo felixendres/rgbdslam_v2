@@ -18,11 +18,11 @@ export ROS_MASTER_URI=http://localhost:11386
 #ROSCOREPID=$!
 #echo Waiting for roscore
 #sleep 3
-for CANDIDATES in 8 16 4; do
-  for OBS_EVAL in  0.70 0.00 0.90; do
-    for RANSAC_ITER in 500; do
+for CANDIDATES in 4; do
+  for OBS_EVAL in  0.00; do
+    for RANSAC_ITER in 100; do
       for DISTANCEMSR in false; do 
-        for OPT_SKIP in 1 1000000; do #online/offline
+        for OPT_SKIP in 10; do #online/offline
           for FEAT_TYPE in SIFTGPU; do 
             echo Evaluating $FEAT_TYPE
 
@@ -30,7 +30,7 @@ for CANDIDATES in 8 16 4; do
             SELECTION=`ls *.bag`
             echo $SELECTION
 
-            for MAXFEATURES in 300 600; do
+            for MAXFEATURES in 600; do
               #PARAM_DIRECTORY="$BASE_DIRECTORY/$1/emm__$OBS_EVAL/CANDIDATES_$CANDIDATES/RANSAC_$RANSAC_ITER/SOLVER_$DISTANCEMSR/NN_$NN_RATIO/OPT_SKIP_$OPT_SKIP/${FEAT_TYPE}/${MAXFEATURES}_Features/"
               PARAM_DIRECTORY="$BASE_DIRECTORY/$TESTNAME/emm__$OBS_EVAL/CANDIDATES_$CANDIDATES/RANSAC_$RANSAC_ITER/HellingerDistance_$DISTANCEMSR/NN_0.9/OPT_SKIP_$OPT_SKIP/${FEAT_TYPE}/${MAXFEATURES}_Features/"
               for bagfile in $SELECTION; do
@@ -50,7 +50,7 @@ for CANDIDATES in 8 16 4; do
                 #Remove old summary results if a new individual one is computed (will be recomputed further below)
                 rm $PARAM_DIRECTORY/ate_evaluation_*.csv 2> /dev/null
                 echo `date +%H:%M:%S` Results for $BASE_NAME are stored in `readlink -f $DIRECTORY`
-                roslaunch rgbdslam `basename $LAUNCHFILE` bagfile_name:=`readlink -f $bagfile` match_candidates:=$CANDIDATES sampled_candidates:=$CANDIDATES feature_type:=$FEAT_TYPE max_keypoints:=$MAXFEATURES ransac_iterations:=$RANSAC_ITER optimizer_skip_step:=$OPT_SKIP observability_threshold:=$OBS_EVAL use_root_sift:=$DISTANCEMSR gui:=false >  $DIRECTORY/logfile 2>&1
+                roslaunch rgbdslam `basename $LAUNCHFILE` bagfile_name:=`readlink -f $bagfile` match_candidates:=$CANDIDATES sampled_candidates:=$CANDIDATES feature_type:=$FEAT_TYPE max_keypoints:=$MAXFEATURES ransac_iterations:=$RANSAC_ITER optimizer_skip_step:=$OPT_SKIP observability_threshold:=$OBS_EVAL use_root_sift:=$DISTANCEMSR gui:=false         >  $DIRECTORY/logfile 2>&1
                 #rosparam get /rgbdslam/config >>  $DIRECTORY/logfile 2>&1
                 echo `date +%H:%M:%S` Finished processing $BASE_NAME
 

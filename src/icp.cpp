@@ -1,3 +1,8 @@
+#ifdef USE_ICP_CODE
+
+#ifdef HEMACLOUDS
+#define PCL_NO_PRECOMPILE
+#endif
 #include <iostream>
 #include "parameter_server.h"
 #include <pcl/io/pcd_io.h>
@@ -83,3 +88,4 @@ Eigen::Matrix4f icpAlignment(pointcloud_type::Ptr cloud_1, pointcloud_type::Ptr 
 }
 
 
+#endif

@@ -56,6 +56,11 @@ void printQMatrix4x4(const char* name, const QMatrix4x4& m){
     ROS_DEBUG("%f\t%f\t%f\t%f", m(3,0), m(3,1), m(3,2), m(3,3));
 }
 
+void printTransform(const char* name, const tf::StampedTransform t) {
+    ROS_INFO_STREAM(name << ": Translation " << t.getOrigin().x() << " " << t.getOrigin().y() << " " << t.getOrigin().z());
+    ROS_INFO_STREAM(name << ": Rotation " << t.getRotation().getX() << " " << t.getRotation().getY() << " " << t.getRotation().getZ() << " " << t.getRotation().getW());
+    ROS_INFO_STREAM(name << ": From " << t.frame_id_ << " to " << t.child_frame_id_ << " at " << t.stamp_.sec << ":" << std::setfill('0') << std::setw(9) << t.stamp_.nsec);
+}
 void printTransform(const char* name, const tf::Transform t) {
     ROS_INFO_STREAM(name << ": Translation " << t.getOrigin().x() << " " << t.getOrigin().y() << " " << t.getOrigin().z());
     ROS_INFO_STREAM(name << ": Rotation " << t.getRotation().getX() << " " << t.getRotation().getY() << " " << t.getRotation().getZ() << " " << t.getRotation().getW());
@@ -95,6 +100,7 @@ tf::Transform g2o2TF(const g2o::SE3Quat se3) {
     return result;
 }
 
+#ifdef HEMACLOUDS
 void transformAndAppendPointCloud (const pointcloud_type &cloud_in, 
                                    pcl::PointCloud<hema::PointXYZRGBCamSL> &cloud_to_append_to,
                                    const tf::Transform transformation, float max_Depth, int idx)
@@ -140,6 +146,7 @@ void transformAndAppendPointCloud (const pointcloud_type &cloud_in,
 }
 
 
+#else //Now #if HEMACLOUDS
 //From: /opt/ros/unstable/stacks/perception_pcl/pcl/src/pcl/registration/transforms.hpp
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /** \brief Apply an affine transform defined by an Eigen Transform
@@ -208,6 +215,7 @@ void transformAndAppendPointCloud (const pointcloud_type &cloud_in,
       cloud_to_append_to.height   = j+cloud_to_append_to_original_size;
 	}
 }
+#endif //HEMACLOUDS
 
 //do spurious type conversions
 geometry_msgs::Point pointInWorldFrame(const Eigen::Vector4f& point3d, const g2o::VertexSE3::EstimateType& transf)
@@ -293,7 +301,7 @@ bool isSmallTrafo(const g2o::SE3Quat& t, double seconds){
     float angle_around_axis = 2.0*acos(t.rotation().w()) *180.0 / M_PI;
     float dist = t.translation().norm();
     QString infostring;
-    ROS_INFO("Rotation:% 4.2f, Distance: % 4.3fm", angle_around_axis, dist);
+    ROS_DEBUG("Rotation:% 4.2f, Distance: % 4.3fm", angle_around_axis, dist);
     infostring.sprintf("Rotation:% 4.2f, Distance: % 4.3fm", angle_around_axis, dist);
     //Q_EMIT setGUIInfo2(infostring);
     ParameterServer* ps =  ParameterServer::instance();
@@ -306,7 +314,7 @@ bool isBigTrafo(const g2o::SE3Quat& t){
     float angle_around_axis = 2.0*acos(t.rotation().w()) *180.0 / M_PI;
     float dist = t.translation().norm();
     QString infostring;
-    ROS_INFO("Rotation:% 4.2f, Distance: % 4.3fm", angle_around_axis, dist);
+    ROS_DEBUG("Rotation:% 4.2f, Distance: % 4.3fm", angle_around_axis, dist);
     infostring.sprintf("Rotation:% 4.2f, Distance: % 4.3fm", angle_around_axis, dist);
     //Q_EMIT setGUIInfo2(infostring);
     ParameterServer* ps =  ParameterServer::instance();
@@ -357,7 +365,6 @@ g2o::SE3Quat eigen2G2O(const Eigen::Matrix4d& eigen_mat)
 
   return result;
 }
-
 using namespace cv;
 ///Analog to opencv example file and modified to use adjusters
 FeatureDetector* createDetector( const string& detectorType ) 
@@ -386,7 +393,7 @@ FeatureDetector* createDetector( const string& detectorType )
         fd = new SiftFeatureDetector();
 #endif
     }
-    else if( !detectorType.compare( "SURF" ) ) {
+    else if( !detectorType.compare( "SURF" ) || !detectorType.compare( "SURF128" ) ) {
       /* fd = new SurfFeatureDetector(200.0, 6, 5); */
         fd = new DynamicAdaptedFeatureDetector(new SurfAdjuster(),
         										params->get<int>("min_keypoints"),
@@ -434,13 +441,17 @@ DescriptorExtractor* createDescriptorExtractor( const string& descriptorType )
     else if( !descriptorType.compare( "SURF" ) ) {
         extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
     }
+    else if( !descriptorType.compare( "SURF128" ) ) {
+        extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
+        extractor->set("extended", 1);
+    }
 #if CV_MAJOR_VERSION > 2 || CV_MINOR_VERSION >= 3
     else if( !descriptorType.compare( "ORB" ) ) {
         extractor = new OrbDescriptorExtractor();
     }
 #endif
     else if( !descriptorType.compare( "SIFTGPU" ) ) {
-      ROS_INFO("%s is to be used as extractor, creating SURF descriptor extractor as fallback.", descriptorType.c_str());
+      ROS_DEBUG("%s is to be used as extractor, creating SURF descriptor extractor as fallback.", descriptorType.c_str());
       extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
     }
     else {
@@ -589,9 +600,7 @@ pointcloud_type* createXYZRGBPointCloud (const cv::Mat& depth_img,
       }
       point_type& pt = *pt_iter;
       if(u < 0 || v < 0 || u >= depth_img.cols || v >= depth_img.rows){
-        pt.x = std::numeric_limits<float>::quiet_NaN();
-        pt.y = std::numeric_limits<float>::quiet_NaN();
-        pt.z = std::numeric_limits<float>::quiet_NaN();
+        pt.x = pt.y = pt.z = std::numeric_limits<float>::quiet_NaN();
         continue;
       }
 
@@ -784,7 +793,6 @@ double errorFunction2(const Eigen::Vector4f& x1,
                       const Eigen::Vector4f& x2,
                       const Eigen::Matrix4d& transformation)
 {
-  ScopedTimer s(__FUNCTION__);
   //FIXME: Take from paramter_server or cam info
   static const double cam_angle_x = 58.0/180.0*M_PI;/*{{{*/
   static const double cam_angle_y = 45.0/180.0*M_PI;
@@ -853,7 +861,10 @@ double errorFunction2(const Eigen::Vector4f& x1,
 
   // Δμ⁽²⁾ =  μ₁⁽²⁾ - μ₂⁽²⁾
   Eigen::Vector3d delta_mu_in_frame_2 = mu_1_in_frame_2 - mu_2;
-  delta_mu_in_frame_2(2) = isnan(delta_mu_in_frame_2(2)) ? 0.0 : delta_mu_in_frame_2(2);//FIXME: Hack: set depth error to 0 if NaN 
+  if(isnan(delta_mu_in_frame_2(2))){
+    ROS_WARN("Unexpected NaN");
+    delta_mu_in_frame_2(2) = 0.0;//FIXME: Hack: set depth error to 0 if NaN 
+  }
   // Σc = (Σ₁ + Σ₂)
   Eigen::Matrix3d cov_mat_sum_in_frame_2 = cov1_in_frame_2 + cov2;     
   //ΔμT Σc⁻¹Δμ  

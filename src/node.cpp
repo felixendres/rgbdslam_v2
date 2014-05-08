@@ -37,10 +37,19 @@
 //#ifdef USE_ICP_CODE
 //#include "../external/gicp/transform.h"
 //#endif
+#ifdef USE_ICP_BIN
+#include "gicp-fallback.h"
+#endif
+
+#ifdef USE_ICP_CODE
+#include "gicp/gicp.h"
+#include "gicp/transform.h"
+#endif
 
 //#include <iostream>
 #include "misc.h"
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/impl/voxel_grid.hpp>
 #include <opencv/highgui.h>
 #ifdef USE_PCL_ICP
 #include "icp.h"
@@ -114,6 +123,8 @@ Node::Node(const cv::Mat& visual,
   if(ps->get<std::string>("feature_detector_type") == "SIFTGPU" 
      && descriptors.size() > 0){
     projectTo3DSiftGPU(feature_locations_2d_, feature_locations_3d_, depth, cam_info, descriptors, feature_descriptors_); 
+    ROS_INFO("Feature Descriptors size: %d x %d", feature_descriptors_.rows, feature_descriptors_.cols);
+    //std::cout << "feature descriptors = "<< std::endl << std::setprecision(3)  << feature_descriptors_<< std::endl;
   }
   else
 #endif
@@ -121,6 +132,7 @@ Node::Node(const cv::Mat& visual,
     projectTo3D(feature_locations_2d_, feature_locations_3d_, depth, cam_info);
     ScopedTimer s("Feature Extraction");
     extractor->compute(gray_img, feature_locations_2d_, feature_descriptors_); //fill feature_descriptors_ with information 
+    ROS_INFO("Feature Descriptors size: %d x %d", feature_descriptors_.rows, feature_descriptors_.cols);
   }
   assert(feature_locations_2d_.size() == feature_locations_3d_.size());
   assert(feature_locations_3d_.size() == (unsigned int)feature_descriptors_.rows); 
@@ -595,12 +607,6 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
   float fy = 1./ (ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : cam_info->K[4]); //(cloud->width >> 1) - 0.5f;
   float cx = ps->get<double>("depth_camera_cx") > 0 ? ps->get<double>("depth_camera_cx") : cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
   float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") : cam_info->K[5]; //(cloud->width >> 1) - 0.5f;
-  /*
-  float cx = 325.1;//cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
-  float cy = 249.7;//cam_info->K[5]; //(cloud->height >> 1) - 0.5f;
-  float fx = 1.0/521.0;//1.0f / cam_info->K[0]; 
-  float fy = 1.0/521.0;//1.0f / cam_info->K[4]; 
-  */
   cv::Point2f p2d;
 
   if(feature_locations_3d.size()){
@@ -628,13 +634,6 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
     // Check for invalid measurements
     if (std::isnan (Z))
     {
-      ROS_DEBUG("Feature %d has been extracted at NaN depth. Using pixel coordinates", i);
-      /*
-      //FIXME Use parameter here to choose whether to use
-      //FIXME Bad hack: using pixel coords
-      x = (p2d.x - cx) * 1.0 * fx;
-      y = (p2d.y - cy) * 1.0 * fy;
-      */
       feature_locations_2d.erase(feature_locations_2d.begin()+i);
       continue;
     }
@@ -647,38 +646,28 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
     feature_locations_3d.push_back(Eigen::Vector4f(x,y, Z, 1.0));
     featuresUsed.push_back(index);  //save id for constructing the descriptor matrix
     i++; //Only increment if no element is removed from vector
-    if(feature_locations_3d.size() > max_keyp) break;
+    if(feature_locations_3d.size() >= max_keyp) break;
   }
 
   //create descriptor matrix
   int size = feature_locations_3d.size();
   descriptors_out = cv::Mat(size, 128, CV_32F);
   siftgpu_descriptors.resize(size * 128);
-  for (int y = 0; y < size && featuresUsed.size() > 0; ++y) {
+  assert(featuresUsed.size() == feature_locations_3d.size());
+  for (int y = 0; y < size; ++y) {
     int id = featuresUsed.front();
     featuresUsed.pop_front();
 
     for (int x = 0; x < 128; ++x) {
-      descriptors_out.at<float>(y, x) = descriptors_in[id * 128 + x];
-      siftgpu_descriptors[y * 128 + x] = descriptors_in[id * 128 + x];
+      float tmp = descriptors_in[id * 128 + x];
+      descriptors_out.at<float>(y, x) = tmp;
+      siftgpu_descriptors[y * 128 + x] = tmp;
     }
   }
 
   feature_locations_2d.resize(feature_locations_3d.size());
-  /*
-  //create descriptor matrix
-  int size = feature_locations_3d.size();
-  descriptors_out = cv::Mat(size, 128, CV_32F);
-  for (int y = 0; y < size && featuresUsed.size() > 0; ++y) {
-    int id = featuresUsed.front();
-    featuresUsed.pop_front();
-
-    for (int x = 0; x < 128; ++x) {
-      descriptors_out.at<float>(y, x) = descriptors_in[id * 128 + x];
-    }
-  }
-  */
 }
+
 
 void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
                               std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f> >& feature_locations_3d,
@@ -704,30 +693,25 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
     point_type p3d = point_cloud->at((int) p2d.x,(int) p2d.y);
 
     // Check for invalid measurements
-    if (isnan(p3d.z))
+    if (std::isnan(p3d.z))
     {
       ROS_DEBUG("Feature %d has been extracted at NaN depth. Using pixel coordinates", i);
-      //feature_locations_2d.erase(feature_locations_2d.begin()+i);
-      //continue;
-      //FIXME Use parameter here to choose whether to use
-      //FIXME Bad hack: using pixel coords
-      p3d.x = (p2d.x - point_cloud->width/2 - 0.5)  / 521.0; //Focal length of kinect
-      p3d.y = (p2d.y - point_cloud->height/2 - 0.5) / 521.0;
+      feature_locations_2d.erase(feature_locations_2d.begin()+i);
+      continue;
     }
     
-    featuresUsed.push_back(index);  //save id for constructing the descriptor matrix
-#ifndef HEMACLOUDS
-    feature_locations_3d.push_back(Eigen::Vector4f(p3d.x, p3d.y, p3d.z, 1));
-#else
-    int target_segment = ParameterServer::instance()->get<int>("segment_to_optimize");
-    if(target_segment >= 0){ // Optimize transformation estimation specifically for features in segment
-      feature_locations_3d.push_back(Eigen::Vector4f(p3d.x, p3d.y, p3d.z, (p3d.segment == target_segment) + 0.5));
-    } else {
-      feature_locations_3d.push_back(Eigen::Vector4f(p3d.x, p3d.y, p3d.z, 1));
+#ifdef HEMACLOUDS
+    int target_label = ParameterServer::instance()->get<int>("segment_to_optimize");
+    //FIXME: Reversed: Label must not be there
+    if(target_label >= 0 && searchLabelInNeighborhood(point_cloud, p2d, 1, target_label)){ // Optimize transformation estimation specifically for features in segment
+      feature_locations_2d.erase(feature_locations_2d.begin()+i);
+      continue;
     }
 #endif
+    feature_locations_3d.push_back(Eigen::Vector4f(p3d.x, p3d.y, p3d.z, 1));
     i++; //Only increment if no element is removed from vector
-    if(feature_locations_3d.size() > max_keyp) break;
+    featuresUsed.push_back(index);  //save id for constructing the descriptor matrix
+    if(feature_locations_3d.size() >= max_keyp) break;
   }
 
   //create descriptor matrix
@@ -785,7 +769,7 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
 
     feature_locations_3d.push_back(Eigen::Vector4f(p3d.x, p3d.y, p3d.z, 1.0));
     i++; //Only increment if no element is removed from vector
-    if(feature_locations_3d.size() > max_keyp) break;
+    if(feature_locations_3d.size() >= max_keyp) break;
   }
 
   feature_locations_2d.resize(feature_locations_3d.size());
@@ -841,7 +825,7 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
 
     feature_locations_3d.push_back(Eigen::Vector4f(x,y, Z, 1.0));
     i++; //Only increment if no element is removed from vector
-    if(feature_locations_3d.size() > max_keyp) break;
+    if(feature_locations_3d.size() >= max_keyp) break;
   }
 
   feature_locations_2d.resize(feature_locations_3d.size());
@@ -858,7 +842,6 @@ void Node::computeInliersAndError(const std::vector<cv::DMatch> & all_matches,
                                   //std::vector<double>& errors,
                                   double squaredMaxInlierDistInM) const
 { 
-  ScopedTimer s(__FUNCTION__);
   inliers.clear();
   assert(all_matches.size() > 0);
   inliers.reserve(all_matches.size());
@@ -879,8 +862,9 @@ void Node::computeInliersAndError(const std::vector<cv::DMatch> & all_matches,
        continue;
     }
     double mahal_dist = errorFunction2(origin, target, transformation4d);
-    if(mahal_dist > squaredMaxInlierDistInM)
+    if(mahal_dist > squaredMaxInlierDistInM){
       continue; //ignore outliers
+    }
     if(!(mahal_dist >= 0.0)){
       ROS_WARN_STREAM("Mahalanobis_ML_Error: "<<mahal_dist);
       ROS_WARN_STREAM("Transformation for error !>= 0:\n" << transformation4d << "Matches: " << all_matches.size());
@@ -968,6 +952,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
                                        std::vector<cv::DMatch>& matches) const
 {
   ScopedTimer s(__FUNCTION__);
+  static const bool allow_features_without_depth = ParameterServer::instance()->get<bool>("allow_features_without_depth");
   //VALIDATION
   assert(initial_matches != NULL);
   
@@ -1002,26 +987,26 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
   const unsigned int sample_size = 4;// chose this many randomly from the correspondences:
   bool valid_tf = false; // valid is false iff the sampled points clearly aren't inliers themself 
 
-  std::vector<cv::DMatch> matches_with_depth; //matches without depth can validate but not create the trafo
-  matches_with_depth.reserve(initial_matches->size());
-  {
-    ScopedTimer s("Filtering matches");
+  std::vector<cv::DMatch>* matches_with_depth = initial_matches;
+  if(allow_features_without_depth){ 
+      matches_with_depth = new std::vector<cv::DMatch>(); //matches without depth can validate but not create the trafo
+      matches_with_depth->reserve(initial_matches->size());
     BOOST_FOREACH(const cv::DMatch& m, *initial_matches){
         if(!isnan(this->feature_locations_3d_[m.queryIdx](2)) 
            && !isnan(earlier_node->feature_locations_3d_[m.trainIdx](2)))
-          matches_with_depth.push_back(m);
+            matches_with_depth->push_back(m);
     }
-    std::sort(matches_with_depth.begin(), matches_with_depth.end()); //sort by distance, which is the nn_ratio
   }
+  std::sort(matches_with_depth->begin(), matches_with_depth->end()); //sort by distance, which is the nn_ratio
 
   int real_iterations = 0;
-  for(int n = 0; (n < ransac_iterations && matches_with_depth.size() >= sample_size); n++) //Without the minimum number of matches, the transformation can not be computed as usual TODO: implement monocular motion est
+  for(int n = 0; (n < ransac_iterations && matches_with_depth->size() >= sample_size); n++) //Without the minimum number of matches, the transformation can not be computed as usual TODO: implement monocular motion est
   {
     //Initialize Results of refinement
     double refined_error = 1e6;
     std::vector<cv::DMatch> refined_matches; 
-    std::vector<cv::DMatch> inlier = sample_matches_prefer_by_distance(sample_size, matches_with_depth); //initialization with random samples 
-    //std::vector<cv::DMatch> inlier = sample_matches(sample_size, matches_with_depth); //initialization with random samples 
+    std::vector<cv::DMatch> inlier = sample_matches_prefer_by_distance(sample_size, *matches_with_depth); //initialization with random samples 
+    //std::vector<cv::DMatch> inlier = sample_matches(sample_size, *matches_with_depth); //initialization with random samples 
     Eigen::Matrix4f refined_transformation = Eigen::Matrix4f::Identity();
 
     real_iterations++;
@@ -1110,7 +1095,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
 
   //G2O Refinement (minimize mahalanobis distance, include depthless features in optimization)
   //Optimize transform based on latest inliers (in "matches") and initial guess (in "resulting_transformation")
-  int g2o_iterations = ParameterServer::instance()->get<int>( "g2o_transformation_refinement");
+  const int g2o_iterations = ParameterServer::instance()->get<int>( "g2o_transformation_refinement");
   if(g2o_iterations > 0 && matches.size() > min_inlier_threshold)//Do not do this if RANSAC didn't succeed. Can't handle outliers
   {
     Eigen::Matrix4f transformation = resulting_transformation;//current hypothesis
@@ -1424,6 +1409,7 @@ void squareroot_descriptor_space(cv::Mat& descriptors)
   descriptors = cv::abs(descriptors); //otherwise we draw sqrt of negative vals
   cv::reduce(descriptors, sums_vec, 1 /*sum over columns*/, CV_REDUCE_SUM, CV_32FC1);
   for(unsigned int row = 0; row < descriptors.rows; row++){
+    if(sums_vec.at<float>(row) == 0) continue; //Do not normalize norm-zero vectors
     int offset = row*descriptors.cols;
     for(unsigned int col = 0; col < descriptors.cols; col++){
       descriptors.at<float>(offset + col) = 

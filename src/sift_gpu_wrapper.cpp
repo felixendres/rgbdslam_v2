@@ -46,7 +46,7 @@ SiftGPUWrapper::SiftGPUWrapper() {
     sprintf(max_feat_char, "%d", max_features);
     //ROS_INFO("Max_feat_char %s", max_feat_char);
     char subpixelKey[] = {"-s"};
-    char subpixelValue[] = {"0"};
+    char subpixelValue[] = {"1"};
     char max_flag[] = {"-tc2"};
     //char resize_storage_on_demand[] = {"-tight"};
     char unnormalized_descriptors[] = {"-unn"};
@@ -54,13 +54,12 @@ SiftGPUWrapper::SiftGPUWrapper() {
     char verbosity_val[] = {"0"};//nothing but errors
     //char * argv[] = {method, "-t", "10", subpixelKey, subpixelValue, max_flag, max_feat_char};
     char first_octave[] = {"-fo"};
-    char first_octave_val[] = {"0"};
+    char first_octave_val[] = {"-1"};
     char * argv[] = {method,  subpixelKey, subpixelValue, \
                      max_flag, max_feat_char, first_octave,  \
-                     first_octave_val, verbosity, verbosity_val}; /*, resize_storage_on_demand};
-                     unnormalized_descriptors, \
-                     "-e", "50.0" };//, "-t", "0.005"};*/
-    siftgpu->ParseParam(9, argv);
+                     first_octave_val, verbosity, verbosity_val, //}; /*, resize_storage_on_demand};
+                     unnormalized_descriptors,  "-e", "5.0" , "-t", "0.005"};//*/
+    siftgpu->ParseParam(14, argv);
 
     if (siftgpu->CreateContextGL() != SiftGPU::SIFTGPU_FULL_SUPPORTED) {
         ROS_ERROR("Can't create OpenGL context! SiftGPU cannot be used.");

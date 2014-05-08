@@ -1,25 +1,30 @@
 <!-- This file demonstrates the use of SIFT features for online SLAM with a Kinect.
      The openni driver has to be started seperately -->
 <launch>
-  <arg name="debug" default="false"/>
+  <arg name="debug" default="true"/>
   <arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/xterm -rv -e gdb -ex run -args"/>
   <arg unless="$(arg debug)" name="launch_prefix" value=""/>
 
   <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" cwd="node" required="true" output="screen"  launch-prefix="$(arg launch_prefix)"> 
+    <param name="config/topic_image_mono"              value="/camera/rgb/image_color"/> <!--could also be color -->
+  	<param name="config/topic_image_depth"             value="/camera/depth/image"/>
     <param name="config/feature_detector_type"         value="SIFTGPU"/>
     <param name="config/feature_extractor_type"        value="SIFTGPU"/>
-    <param name="config/nn_distance_ratio"             value="0.95"/> <!-- Feature correspondence is valid if distance to nearest neighbour is smaller than this parameter times the distance to the 2nd neighbour -->
+    <param name="config/nn_distance_ratio"             value="0.5"/> <!-- Feature correspondence is valid if distance to nearest neighbour is smaller than this parameter times the distance to the 2nd neighbour -->
     <param name="config/max_keypoints"                 value="700"/>
     <param name="config/cloud_creation_skip_step"      value="4"/>
+    <param name="config/data_skip_step"                value="2"/>
     <param name="config/subscriber_queue_size"         value="2"/>
-    <param name="config/concurrent_node_construction"  value="false"/>
-    <param name="config/concurrent_edge_construction"  value="false"/>
-    <param name="config/concurrent_io"                 value="false"/>
+    <param name="config/concurrent_node_construction"  value="true"/>
+    <param name="config/concurrent_edge_construction"  value="true"/>
+    <param name="config/concurrent_io"                 value="true"/>
     <param name="config/start_paused"                  value="false"/>
     <param name="config/observability_threshold"       value="-1"/>
-    <param name="config/encoding_bgr"                  value="false"/>
+    <param name="config/encoding_bgr"                  value="true"/>
     <param name="config/gl_point_size"                 value="3"/>
     <param name="config/segment_to_optimize"           value="1778"/>
+    <param name="config/adjuster_max_iterations"       value="1"/>
+
 
     <!-- Algortithm settings -->
     <param name="config/backend_solver"                value="pcg"/> <!-- Which solver to use in g2o for matrix inversion: "csparse" , "cholmod" or "pcg"  -->

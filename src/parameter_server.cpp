@@ -22,16 +22,16 @@ ParameterServer* ParameterServer::_instance = NULL;
 void ParameterServer::defaultConfig() {
   double dInf = std::numeric_limits<double>::infinity();
   // Input data settings
-  addOption("topic_image_mono",              std::string("/camera/rgb/image_rect_color"),    "Color or grayscale image ros topic");
+  addOption("topic_image_mono",              std::string("/camera/rgb/image_color"),    "Color or grayscale image ros topic");
   addOption("camera_info_topic",             std::string("/camera/rgb/camera_info"),    "Required for backprojection if no pointcloud topic is given");
-  addOption("topic_image_depth",             std::string("/camera/depth_registered/image_rect"),        "Depth image ros topic");
+  addOption("topic_image_depth",             std::string("/camera/depth_registered/sw_registered/image_rect_raw"),        "Depth image ros topic");
   addOption("topic_points",                  std::string(""),                           "If omitted, xyz will be computed from depth image. ");
   addOption("wide_topic",                    std::string(""),                           "Topics for stereo cam, e.g. /wide_stereo/left/image_mono");
   addOption("wide_cloud_topic",              std::string(""),                           "Topics for stereo cam e.g. /wide_stereo/points2");
+  addOption("bagfile_name",                  std::string(""),                           "Read data from a bagfile, make sure to enter the right topics above");
   addOption("subscriber_queue_size",         static_cast<int> (3),                      "Cache incoming data (carefully, RGB-D Clouds are 10MB each)");
   addOption("drop_async_frames",             static_cast<bool> (false),                 "Check timestamps of depth and visual image, reject if not in sync ");
   addOption("depth_scaling_factor",          static_cast<double> (1.0),                 "Some kinects have a wrongly scaled depth");
-  addOption("bagfile_name",                  std::string(""),                           "Read data from a bagfile, make sure to enter the right topics above");
   addOption("data_skip_step",                static_cast<int> (1),                      "Skip every n-th frame completely  ");
   addOption("cloud_creation_skip_step",      static_cast<int> (1),                      "Downsampling factor (rows and colums, so size reduction is quadratic) for the point cloud. Only active if cloud is computed (i.e. \"topic_points\" is empty. This value multiplies to emm__skip_step and visualization_skip_step.");
   addOption("maximum_depth",                 static_cast<double> (dInf),                "Clip far points when reconstructing the cloud. In meter.");
@@ -76,11 +76,11 @@ void ParameterServer::defaultConfig() {
   addOption("feature_detector_type",         std::string("SURF"),                       "SURF, SIFT or ORB");
   addOption("feature_extractor_type",        std::string("SURF"),                       "SURF, SIFT or ORB");
   addOption("matcher_type",                  std::string("FLANN"),                      "SIFTGPU (matching on the gpu) or FLANN or BRUTEFORCE");
-  addOption("max_keypoints",                 static_cast<int> (1000),                   "Extract no more than this many keypoints ");
+  addOption("max_keypoints",                 static_cast<int> (600),                   "Extract no more than this many keypoints ");
   addOption("min_keypoints",                 static_cast<int> (000),                    "Extract no less than this many keypoints ");
   addOption("min_matches",                   static_cast<int> (20),                     "Don't try RANSAC if less than this many matches (if using SiftGPU and GLSL you should use max. 60 matches)");
   addOption("sufficient_matches",            static_cast<int> (1e9),                    "Extract no less than this many only honored by the adjustable SURF and FAST features");
-  addOption("adjuster_max_iterations",       static_cast<int> (10),                     "If outside of bounds for max_kp and min_kp, retry this many times with adapted threshold");
+  addOption("adjuster_max_iterations",       static_cast<int> (1),                     "If outside of bounds for max_kp and min_kp, retry this many times with adapted threshold");
   addOption("use_feature_min_depth",         static_cast<bool>(true),                   "Consider the nearest point in the neighborhood of the feature as its depth, as it will dominate the motion");
   addOption("use_feature_mask",              static_cast<bool>(false),                  "Whether to extract features without depth");
   addOption("use_root_sift",                 static_cast<bool>(true),                   "Whether to use euclidean distance or Hellman kernel for feature comparison");
@@ -91,7 +91,7 @@ void ParameterServer::defaultConfig() {
   addOption("min_translation_meter",         static_cast<double> (0.0),                 "Frames with motion less than this, will be omitted ");
   addOption("min_rotation_degree",           static_cast<double> (0.0),                 "Frames with motion less than this, will be omitted ");
   addOption("max_dist_for_inliers",          static_cast<double> (3),                   "Mahalanobis distance for matches to be considered inliers by ransac");
-  addOption("ransac_iterations",             static_cast<int> (100),                    "Number of iterations for registration");
+  addOption("ransac_iterations",             static_cast<int> (200),                    "Number of iterations for registration");
   addOption("ransac_termination_inlier_pct", static_cast<double> (60.0),                "Percentage of matches that need to be inliers to succesfully terminate ransac before the 'ransac_iterations' have been reached");
   addOption("g2o_transformation_refinement", static_cast<int> (0),                      "Use g2o to refine the ransac result for that many iterations, i.e. optimize the Mahalanobis distance in a final step. Use zero to disable.");
   addOption("max_connections",               static_cast<int> (-1),                     "Stop frame comparisons after this many succesfully found spation relations. Negative value: No limit.");
@@ -105,6 +105,7 @@ void ParameterServer::defaultConfig() {
   addOption("emm__skip_step",                static_cast<int> (8),                      "When evaluating the transformation, subsample rows and cols with this stepping");
   addOption("emm__mark_outliers",            static_cast<bool> (false),                 "Mark outliers in the observation likelihood evaluation with colors. Red: point would have blocked the view of an earlier observation. Cyan: An earlier observation should have blocked the view to this point");
   addOption("observability_threshold",       static_cast<double> (-0.6),                "What fraction of the aligned points are required to be in observable position (i.e. don't contradict the sensor physics)");
+  addOption("allow_features_without_depth",  static_cast<bool> (false),                 "Keep matches without depth (currently has no benefit)");
 
   //Backend
   addOption("pose_relative_to",              std::string("first"),                      "This option allows to choose which frame(s) should be set fixed during optimization: first, previous, inaffected, largest_loop. The latter sets all frames as fixed to which no transformation has been found.");
@@ -139,7 +140,7 @@ void ParameterServer::defaultConfig() {
   addOption("concurrent_edge_construction",  static_cast<bool> (true),                  "Compare current frame to many predecessors in parallel. Note that SIFTGPU matcher and GICP are mutex'ed for thread-safety");
   addOption("concurrent_io",                 static_cast<bool> (true),                  "Whether saving/sending should be done in background threads.");
   addOption("voxelfilter_size",              static_cast<double> (-1.0),                "In meter voxefilter displayed and stored pointclouds, useful to reduce the time for, e.g., octomap generation. Set negative to disable");
-  addOption("nn_distance_ratio",             static_cast<double> (0.99),                 "Feature correspondence is valid if distance to nearest neighbour is smaller than this parameter times the distance to the 2nd neighbour. This needs to be 0.9-1.0 for SIFTGPU w/ FLANN, since SIFTGPU Features are normalized");
+  addOption("nn_distance_ratio",             static_cast<double> (0.50),                 "Feature correspondence is valid if distance to nearest neighbour is smaller than this parameter times the distance to the 2nd neighbour. This needs to be 0.9-1.0 for SIFTGPU w/ FLANN, since SIFTGPU Features are normalized");
   addOption("keep_all_nodes",                static_cast<bool> (false),                 "Keep all nodes with 'no motion' assumption");
   addOption("keep_good_nodes",               static_cast<bool> (false),                 "Keep nodes without transformation estimation but enough features (according to min_keypoints) with 'no motion' assumption. These are not rendered in visualization.");
   addOption("clear_non_keyframes",           static_cast<bool> (false),                 "Remove the net data of nodes when it becomes clear that they will not be used as keyframe. However, this makes matching against them impossible.");

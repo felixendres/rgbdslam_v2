@@ -62,6 +62,8 @@
   <build_depend>libg2o</build_depend>
   <build_depend>message_generation</build_depend>
   <build_depend>image_transport</build_depend>
+  <build_depend>rosbag</build_depend>
+  <run_depend>rosbag</run_depend>
 
   <run_depend>cv_bridge</run_depend>
   <run_depend>libpcl-all</run_depend>

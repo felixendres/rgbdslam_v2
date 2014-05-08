@@ -87,6 +87,16 @@ tf::StampedTransform GraphManager::computeFixedToBaseTransform(Node* node, bool 
     }
 }
 
+// If QT Concurrent is available, run the saving in a seperate thread
+void GraphManager::saveBagfileAsync(QString filename){
+    if (ParameterServer::instance()->get<bool>("concurrent_io")) {
+        QFuture<void> f1 = QtConcurrent::run(this, &GraphManager::saveBagfile, filename);
+        //f1.waitForFinished();
+    }
+    else {// Otherwise just call it without threading
+        saveBagfile(filename);
+    }
+}
 void GraphManager::saveBagfile(QString filename)
 {
   ScopedTimer s(__FUNCTION__);
@@ -95,6 +105,7 @@ void GraphManager::saveBagfile(QString filename)
     return;
   }
 
+  Q_EMIT iamBusy(0, "Saving Bagfile", graph_.size());
   rosbag::Bag bag;
   bag.open(qPrintable(filename), rosbag::bagmode::Write);
   if(ParameterServer::instance()->get<bool>("compress_output_bagfile"))
@@ -128,9 +139,11 @@ void GraphManager::saveBagfile(QString filename)
     bag.write("/tf", node->header_.stamp, tfmsg);
     bag.write("/rgbdslam/batch_clouds", node->header_.stamp, node->pc_col);
 
+    Q_EMIT progress(0, "Saving Bagfile", it->first+1);
     QString message;
     Q_EMIT setGUIInfo(message.sprintf("Writing pointcloud and map transform (%i/%i) to bagfile %s", it->first, (int)graph_.size(), qPrintable(filename)));
   }
+  Q_EMIT progress(0, "Finished Saving Bagfile", 1e6);
   bag.close();
 }
 

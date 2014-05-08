@@ -15,10 +15,15 @@
  */
 
 
+#ifdef HEMACLOUDS
+#define PCL_NO_PRECOMPILE
+#endif
 #include "parameter_server.h"
 //Documentation see header file
 #include "pcl/ros/conversions.h"
+#include <pcl/common/distances.h>
 #include <pcl/io/io.h>
+#include <pcl/io/impl/pcd_io.hpp>
 //#include "pcl/common/transform.h"
 #include "pcl_ros/transforms.h"
 #include "openni_listener.h"
@@ -402,15 +407,15 @@ void calculateDepthMask(cv::Mat_<uchar>& depth_img, const pointcloud_type::Ptr p
 }
 
 void OpenNIListener::pcdCallback(const sensor_msgs::ImageConstPtr visual_img_msg, 
-                                 sensor_msgs::PointCloud2::Ptr point_cloud)
-                                 //pointcloud_type::Ptr pcl_cloud)
+                                 //sensor_msgs::PointCloud2::Ptr point_cloud)
+                                 pointcloud_type::Ptr pcl_cloud)
 {
     ScopedTimer s(__FUNCTION__);
     ROS_INFO("Received data from pcd file reader");
     ROS_WARN_ONCE_NAMED("eval", "First RGBD-Data Received");
 
-    pointcloud_type::Ptr pcl_cloud(new pointcloud_type());//will belong to node
-    pcl::fromROSMsg(*point_cloud,*pcl_cloud);
+    //pointcloud_type::Ptr pcl_cloud(new pointcloud_type());//will belong to node
+    //pcl::fromROSMsg(*point_cloud,*pcl_cloud);
     //Get images into OpenCV format
     cv::Mat visual_img =  cv_bridge::toCvCopy(visual_img_msg)->image;
     cv::Mat_<uchar> depth_img(visual_img_msg->height, visual_img_msg->width);
@@ -961,11 +966,10 @@ bool readOneFile(const QString& qfilename, sensor_msgs::PointCloud2& cloud)
       ROS_ERROR ("Couldn't read file %s", qPrintable(qfilename));
       return false;
     } 
-    /*FIXME convert to sensor_msgs::PointCloud2
-    if(cloud.size() == 640*480){
+    //FIXME
       cloud.width = 640;
       cloud.height = 480;
-    }
+    /*FIXME convert to sensor_msgs::PointCloud2
 #ifdef HEMACLOUDS
     pointcloud_type tmp_pc(cloud);
 //#pragma omp parallel for
@@ -984,6 +988,38 @@ bool readOneFile(const QString& qfilename, sensor_msgs::PointCloud2& cloud)
     return true;
 }
 
+bool readOneFile(const QString& qfilename, pointcloud_type::Ptr cloud){
+  static int index = 0;
+  if (pcl::io::loadPCDFile<point_type>(qPrintable(qfilename), *cloud) == -1) 
+  {
+    ROS_ERROR ("Couldn't read file %s", qPrintable(qfilename));
+    return false;
+  } 
+  //FIXME
+  std::cout << "Frame Id: " << cloud->header.frame_id << " Stamp: " << cloud->header.stamp << std::endl;
+  if( cloud->header.frame_id.empty()){
+    myHeader header(index++, ros::Time::now(),  "/pcd_file_frame");
+    cloud->header = header;
+  }
+  cloud->width = 640;
+  cloud->height = 480;
+#ifdef HEMACLOUDS
+  //pointcloud_type tmp_pc(*cloud);
+#pragma omp parallel for
+  for(size_t i = 0; i < cloud->size(); i++)
+  {
+    float x = cloud->at(i).x;
+    if(x==x){//not nan
+      cloud->at(i).x = -cloud->at(i).y;
+      cloud->at(i).y = -cloud->at(i).z;
+      cloud->at(i).z = x;
+      //cloud.at(i).segment = nearest_segment(tmp_pc, i);
+    }
+  }
+#endif
+//*/
+    return true;
+}
 
 void OpenNIListener::loadPCDFiles(QStringList file_list)
 {
@@ -997,20 +1033,34 @@ void OpenNIListener::loadPCDFilesAsync(QStringList file_list)
 
   for (int i = 0; i < file_list.size(); i++)
   {
+    try{
     do{ 
       usleep(150);
       if(!ros::ok()) return;
     } while(pause_);
 
     ROS_INFO("Processing file %s", qPrintable(file_list.at(i))); 
+      //Create shared pointers to data structures
     sensor_msgs::Image::Ptr sm_img(new sensor_msgs::Image());
-    sensor_msgs::PointCloud2::Ptr current_cloud(new sensor_msgs::PointCloud2());
-    //pointcloud_type::Ptr current_cloud(new pointcloud_type());
-    if (!readOneFile(file_list.at(i), *current_cloud)) continue;
-    pcl::toROSMsg(*current_cloud, *sm_img);
+      sensor_msgs::PointCloud2::Ptr currentROSCloud(new sensor_msgs::PointCloud2());
+      pointcloud_type::Ptr currentPCLCloud(new pointcloud_type());
+
+      if (!readOneFile(file_list.at(i), currentPCLCloud)) {
+        continue;
+      } else {
+        //std::string filename(qPrintable(file_list.at(i)));
+        //pcl::io::loadPCDFile<point_type>(filename, *currentPCLCloud);
+        //currentPCLCloud->width=640;
+        //currentPCLCloud->height=480;
+        pcl::toROSMsg<point_type>(*currentPCLCloud, *currentROSCloud);
+        pcl::toROSMsg(*currentROSCloud, *sm_img);
     sm_img->encoding = "bgr8";
     this->image_encoding_ = "bgr8";
-    pcdCallback(sm_img, current_cloud);
+        pcdCallback(sm_img, currentPCLCloud);
+      }
+    } catch (...) {
+      ROS_ERROR("Caught exception when processing pcd file %s",qPrintable(file_list.at(i)));
+    }
   }
 
   pause_ = prior_state;

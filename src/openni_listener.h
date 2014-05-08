@@ -126,8 +126,8 @@ class OpenNIListener : public QObject {
                           const sensor_msgs::CameraInfoConstPtr& cam_info_msg) ;
     //! No depth image but pointcloud, e.g., for stereo cameras
     void stereoCallback(const sensor_msgs::ImageConstPtr& visual_img_msg, const sensor_msgs::PointCloud2ConstPtr& point_cloud);
-    //void pcdCallback(const sensor_msgs::ImageConstPtr visual_img_msg, pointcloud_type::Ptr point_cloud);
-    void pcdCallback(const sensor_msgs::ImageConstPtr visual_img_msg, sensor_msgs::PointCloud2::Ptr point_cloud);
+    void pcdCallback(const sensor_msgs::ImageConstPtr visual_img_msg, pointcloud_type::Ptr point_cloud);
+    //void pcdCallback(const sensor_msgs::ImageConstPtr visual_img_msg, sensor_msgs::PointCloud2::Ptr point_cloud);
 
   protected:
     void loadBag(std::string filename);

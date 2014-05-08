@@ -21,11 +21,14 @@
 #include <sensor_msgs/CameraInfo.h>
 #include <cv.h>
 #include "point_types.h"
+#include "g2o/types/slam3d/vertex_se3.h"
 
 ///Overlay the monochrom edges and depth jumps
 void overlay_edges(cv::Mat visual, cv::Mat depth, cv::Mat& visual_edges, cv::Mat& depth_edges);
-#include "g2o/types/slam3d/vertex_se3.h"
+///Print tf::Transform via ROS_INFO
 void printTransform(const char* name, const tf::Transform t) ;
+///Print tf::Transform via ROS_INFO
+void printTransform(const char* name, const tf::StampedTransform t) ;
 ///Write Transformation to textstream
 void logTransform(QTextStream& out, const tf::Transform& t, double timestamp, const char* label = NULL);
 void printQMatrix4x4(const char* name, const QMatrix4x4& m);
@@ -82,15 +85,18 @@ void mat2dist(const Eigen::Matrix4f& t, double &dist);
 pointcloud_type* createXYZRGBPointCloud (const sensor_msgs::ImageConstPtr& depth_msg, const sensor_msgs::ImageConstPtr& rgb_msg, const sensor_msgs::CameraInfoConstPtr& cam_info); 
 pointcloud_type* createXYZRGBPointCloud (const cv::Mat& depth_msg, const cv::Mat& rgb_msg, const sensor_msgs::CameraInfoConstPtr& cam_info); 
 
+#ifndef HEMACLOUDS
 ///Helper function to aggregate pointclouds in a single coordinate frame. idx is only for compatibilty to the
 ///Alternative function below
 void transformAndAppendPointCloud (const pointcloud_type &cloud_in, pointcloud_type &cloud_to_append_to,
                                    const tf::Transform transformation, float Max_Depth, int idx=0);
 
+#else
 ///Same as other but different output cloud type
 void transformAndAppendPointCloud (const pointcloud_type &cloud_in, 
                                    pcl::PointCloud<hema::PointXYZRGBCamSL> &cloud_to_append_to,
                                    const tf::Transform transformation, float max_Depth, int idx);
+#endif
 
 //geometry_msgs::Point pointInWorldFrame(const Eigen::Vector4f& point3d, g2o::SE3Quat transf);
 geometry_msgs::Point pointInWorldFrame(const Eigen::Vector4f& point3d, const g2o::VertexSE3::EstimateType& transf);

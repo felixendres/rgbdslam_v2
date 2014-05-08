@@ -18,6 +18,9 @@
 #ifndef RGBD_SLAM_NODE_H_
 #define RGBD_SLAM_NODE_H_
 
+#ifdef HEMACLOUDS
+#define PCL_NO_PRECOMPILE
+#endif
 
 #include "ros/ros.h"
 #include <vector>
@@ -28,7 +31,9 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <pcl/registration/icp.h>
+#include <pcl/registration/impl/icp.hpp>
 #include <pcl/registration/registration.h>
+#include <pcl/registration/impl/registration.hpp>
 #include "parameter_server.h"
 //for ground truth
 #include <tf/transform_datatypes.h>

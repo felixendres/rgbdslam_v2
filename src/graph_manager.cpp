@@ -724,6 +724,10 @@ bool GraphManager::addNode(Node* new_node)
   ScopedTimer s(__FUNCTION__, false);
 
   if(reset_request_) resetGraph(); 
+  ParameterServer* ps = ParameterServer::instance();
+  if (new_node->feature_locations_2d_.size() < ps->get<int>("min_matches")) {
+      ROS_WARN("Skipping node because it has only %zu features (minimum is %d)",new_node->feature_locations_2d_.size(), ps->get<int>("min_matches"));
+      }
 
   //First Node, so only build its index, insert into storage and add a
   //vertex at the origin, of which the position is very certain
@@ -746,7 +750,6 @@ bool GraphManager::addNode(Node* new_node)
     }
     else //Mapping
     {
-      ParameterServer* ps = ParameterServer::instance();
       //This needs to be done before rendering, so deleting the cloud always works
       graph_[new_node->id_] = new_node; //Node->id_ == Graph_ Index
       //First render the cloud with the best frame-to-frame estimate

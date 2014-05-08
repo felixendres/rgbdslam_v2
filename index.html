@@ -22,8 +22,8 @@
           <h2 id="project_tagline">RGB-D SLAM for ROS Hydro</h2>
 
             <section id="downloads">
-              <a class="zip_download_link" href="https://github.com/felixendres/rgbdslam_v2/zipball/hydro">Download this project as a .zip file</a>
-              <a class="tar_download_link" href="https://github.com/felixendres/rgbdslam_v2/tarball/hydro">Download this project as a tar.gz file</a>
+              <a class="zip_download_link" href="https://github.com/felixendres/rgbdslam_v2/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/felixendres/rgbdslam_v2/tarball/master">Download this project as a tar.gz file</a>
             </section>
         </header>
     </div>
@@ -51,11 +51,10 @@ IEEE Transactions on Robotics, 2014.</p>
 <ul>
 <li><a href="http://www.informatik.uni-freiburg.de/%7Eendres">www.informatik.uni-freiburg.de/~endres</a></li>
 <li><a href="http://www.ros.org/wiki/rgbdslam">http://www.ros.org/wiki/rgbdslam</a></li>
-<li>
-<a href="http://answers.ros.org/questions/tags:rgbdslam">http://answers.ros.org/questions/tags:rgbdslam</a>
-<img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_fr2desk.jpg" alt="RGBDSLAM on the RGB-D Benchmark Dataset" width="600">
-</li>
-</ul><h1>
+<li><a href="http://answers.ros.org/questions/tags:rgbdslam">http://answers.ros.org/questions/tags:rgbdslam</a></li>
+</ul><p><img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_fr2desk.jpg" alt="RGBDSLAM on the RGB-D Benchmark Dataset" width="600"></p>
+
+<h1>
 <a name="prerequisites" class="anchor" href="#prerequisites"><span class="octicon octicon-link"></span></a>Prerequisites</h1>
 
 <ul>
@@ -75,13 +74,16 @@ dependencies. For details see <a href="http://wiki.ros.org/ROS/Tutorials/rosdep"
 <li><p>To build RGBDSLAMv2 go to your catkine workspace and execute "catkin_make"</p></li>
 </ol><p>Installation done! What's next?</p>
 
-<ol>
-<li><p>a)  Check out the launch files in rgbdslam/launch for examples and specific 
-use cases.</p></li>
-<li><p>b)  Check out the README in rgbdslam/test for running, testing and evaluating
+<ul>
+<li><p>Check out the launch files in rgbdslam/launch for examples and specific 
+use cases. If you want to use RGBDSLAMv2 with an RGB-D camera you may have
+to install openni (sudo apt-get install ros-hydro-openni-launch).
+roslaunch rgbdslam openni+rgbdslam.launch is a good starting point for live
+mapping.</p></li>
+<li><p>Check out the README in rgbdslam/test for running, testing and evaluating
 RGBDSLAMv2 on Juergen Sturm's RGB-D SLAM Dataset and Benchmark:
 <a href="http://vision.in.tum.de/data/datasets/rgbd-dataset">http://vision.in.tum.de/data/datasets/rgbd-dataset</a></p></li>
-</ol><p><img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_empty.jpg" alt="RGBDSLAM right after startup" width="600"></p>
+</ul><p><img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_empty.jpg" alt="RGBDSLAM right after startup" width="600"></p>
 
 <h2>
 <a name="important-note" class="anchor" href="#important-note"><span class="octicon octicon-link"></span></a>IMPORTANT NOTE</h2>
@@ -113,17 +115,19 @@ by default from /map to /openni_camera - is sent out on /tf.</p>
 
 <p>The octoMap library is compiled into the rgbdslam node. This allows to create
 the octomap directly. In the GUI this can be done by selecting "Save Octomap"
-from the "Data" Menu. Online octomapping is possible, but not recommended.
-<img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_fr2desk_octomap.jpg" width="600" alt="OctoMap created from the RGB-D Benchmark sequence fr2/desk"></p>
+from the "Data" Menu. Online octomapping is possible, but not recommended.</p>
+
+<p><img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_fr2desk_octomap.jpg" width="600" alt="OctoMap created from the RGB-D Benchmark sequence fr2/desk"></p>
 
 <h2>
 <a name="usage-with-gui" class="anchor" href="#usage-with-gui"><span class="octicon octicon-link"></span></a>Usage with GUI</h2>
 
 <p>To start RGBDSLAMv2 launch, e.g.,
-$ roslaunch rgbdslam kinect+rgbdslam.launch</p>
+$ roslaunch rgbdslam openni+rgbdslam.launch</p>
 
 <p>Alternatively you can start the openni nodes and RGBDSLAMv2 separately, e.g.:
-roslaunch openni_camera openni_node.launch rosrun rgbdslam rgbdslam</p>
+roslaunch openni_camera openni_node.launch 
+roslaunch rgbdslam rgbdslam.launch</p>
 
 <p>To capture models either press space to start recording a continuous stream or
 press enter to record a single frame. To reduce data redundancy, sequential

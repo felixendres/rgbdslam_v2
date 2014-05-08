@@ -16,7 +16,7 @@ Additional information can be found here:<br/>
 * http://www.ros.org/wiki/rgbdslam
 * http://answers.ros.org/questions/tags:rgbdslam
 
-![Screenshot](../hydro/media/rgbdslamv2_fr2desk.jpg?raw=true "RGBDSLAM on the RGB-D Benchmark Dataset")
+<img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_fr2desk.jpg" alt="RGBDSLAM on the RGB-D Benchmark Dataset" width="600">
 
 # Prerequisites  ################################################################
 - Ubuntu 12.04 - 13.04
@@ -36,17 +36,19 @@ Here's a quick overview of the installation of RGBDSLAMv2 for ROS hydro:
 
 Installation done! What's next?
 
-5. a)  Check out the launch files in rgbdslam/launch for examples and specific 
-    use cases.
+-   Check out the launch files in rgbdslam/launch for examples and specific 
+    use cases. If you want to use RGBDSLAMv2 with an RGB-D camera you may have
+    to install openni (sudo apt-get install ros-hydro-openni-launch).
+    roslaunch rgbdslam openni+rgbdslam.launch is a good starting point for live
+    mapping.
 
-5. b)  Check out the README in rgbdslam/test for running, testing and evaluating
+-   Check out the README in rgbdslam/test for running, testing and evaluating
     RGBDSLAMv2 on Juergen Sturm's RGB-D SLAM Dataset and Benchmark:
     http://vision.in.tum.de/data/datasets/rgbd-dataset
 
 
 
-![Screenshot](../hydro/media/rgbdslamv2_empty.jpg?raw=true "RGBDSLAM after Startup")
-
+<img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_empty.jpg" alt="RGBDSLAM right after startup" width="600">
 
 ## IMPORTANT NOTE ################################################################
 This software is an update of the ROS Fuerte version of RGBDSLAM. However
@@ -78,15 +80,15 @@ The octoMap library is compiled into the rgbdslam node. This allows to create
 the octomap directly. In the GUI this can be done by selecting "Save Octomap"
 from the "Data" Menu. Online octomapping is possible, but not recommended.
 
-![Screenshot](../hydro/media/rgbdslamv2_fr2desk_octomap.jpg?raw=true "OctoMap created from the RGB-D Benchmark sequence fr2/desk")
-
+<img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_fr2desk_octomap.jpg" width="600" alt="OctoMap created from the RGB-D Benchmark sequence fr2/desk">
 ## Usage with GUI #################################################################
 
 To start RGBDSLAMv2 launch, e.g.,
-$ roslaunch rgbdslam kinect+rgbdslam.launch
+$ roslaunch rgbdslam openni+rgbdslam.launch
 
 Alternatively you can start the openni nodes and RGBDSLAMv2 separately, e.g.:
-roslaunch openni_camera openni_node.launch rosrun rgbdslam rgbdslam
+roslaunch openni_camera openni_node.launch 
+roslaunch rgbdslam rgbdslam.launch
 
 To capture models either press space to start recording a continuous stream or
 press enter to record a single frame. To reduce data redundancy, sequential

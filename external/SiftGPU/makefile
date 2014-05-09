@@ -57,7 +57,7 @@ SRC_SIFTGPU = src/SiftGPU
 SRC_DRIVER = src/TestWin
 SRC_SERVER = src/ServerSiftGPU
 CC = g++
-CFLAGS = -I$(INC_DIR) -fPIC -L/usr/lib64 -L/usr/lib -L./bin -L./lib -Wall -Wno-deprecated -pthread  
+CFLAGS = -I$(INC_DIR) -fPIC -L/usr/lib64 -L/usr/lib -L./bin -L./lib -Wall -Wno-write-strings -Wno-deprecated -Wno-int-to-pointer-cast -pthread  
 
 #simple hack to repalce the native flat on OSX because gcc version is low
 ifneq ($(DARWIN),) 

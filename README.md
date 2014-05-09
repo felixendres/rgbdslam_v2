@@ -1,6 +1,6 @@
 # RGBDSLAM<i>v2</i> 
 ... is a state-of-the-art SLAM system for RGB-D cameras, e.g., the Microsoft Kinect.
-You can use it to create highly accurate 3D point clouds or OctoMaps.
+You can use it to create highly accurate 3D point clouds or OctoMaps. 
 
 RGBDSLAMv2 is based on the ROS project, OpenCV, PCL, OctoMap, SiftGPU and more - thanks!
 
@@ -24,29 +24,57 @@ Additional information can be found here:<br/>
 - Problems may occur when using a version of the PCL library different from the ROS hydro version.
 
 # Installation ################################################################
-Here's a quick overview of the installation of RGBDSLAMv2 for ROS hydro:
+The installation of RGBDSLAMv2 for ROS hydro should be straigh.
+A copy-pastable walkthrough can be found below
 
 1. Put RGBDSLAMv2 in a catkin workspace: See [the catkin tutorial](http://wiki.ros.org/catkin/Tutorials/create_a_workspace) 
-  for details on how to create a workspace. You can either download RGBDSLAMv2 as an [archive](http://codeload.github.com/felixendres/rgbdslam_v2/zip/hydro) and extract it into your workspace's "src/" directory. Or use git to clone this repository.
+  for details. Use git to clone this repository into your workspace's "src/" directory. Or download RGBDSLAMv2 as an [archive](http://codeload.github.com/felixendres/rgbdslam_v2/zip/hydro) and extract it to "src/".
 
 3. Use rosdep (i.e. "rosdep install rgbdslam") to install missing 
   dependencies. For details see http://wiki.ros.org/ROS/Tutorials/rosdep
 
-4. To build RGBDSLAMv2 go to your catkine workspace and execute "catkin_make"
+4. To build RGBDSLAMv2 go to your catkine workspace and execute "catkin_make". 
+   If you get an error about the missing siftgpu library, execute "catkin_make" again.
 
-Installation done! What's next?
 
--   Check out the launch files in rgbdslam/launch for examples and specific 
-    use cases. If you want to use RGBDSLAMv2 with an RGB-D camera you may have
+##Installation from Scratch #####################################################
+Assuming you have installed ROS hydro on Ubuntu, issue the following commands in 
+a terminal (or copy-paste the whole sequence at once)
+
+	#Prepare Workspace
+	source /opt/ros/hydro/setup.bash
+	mkdir -p ~/rgbdslam_catkin_ws/src
+	cd ~/rgbdslam_catkin_ws/src
+	catkin_init_workspace
+	cd ~/rgbdslam_catkin_ws/
+	catkin_make
+	source devel/setup.bash
+	
+	#Get RGBDSLAM
+	cd ~/rgbdslam_catkin_ws/src
+	wget -q http://github.com/felixendres/rgbdslam_v2/archive/hydro.zip
+	unzip -q hydro.zip
+	cd ~/rgbdslam_catkin_ws/
+	
+	#Install
+	rosdep update
+	rosdep install rgbdslam
+	catkin_make && catkin_make
+
+# Installation done! What's next?
+See the sections below for more details on the usage. 
+But to get you started quickly here's the most important pointers:
+
+-   If you want to use RGBDSLAMv2 with an RGB-D camera you may have
     to install openni (sudo apt-get install ros-hydro-openni-launch).
-    roslaunch rgbdslam openni+rgbdslam.launch is a good starting point for live
-    mapping.
 
--   Check out the README in rgbdslam/test for running, testing and evaluating
+-   Check out the launch files in "launch/" for examples and specific 
+    use cases. roslaunch rgbdslam openni+rgbdslam.launch is a good starting 
+    point for live mapping.
+
+-   Check out the README in "test/" for running, testing and evaluating
     RGBDSLAMv2 on Juergen Sturm's RGB-D SLAM Dataset and Benchmark:
     http://vision.in.tum.de/data/datasets/rgbd-dataset
-
-
 
 <img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_empty.jpg" alt="RGBDSLAM right after startup" width="600">
 

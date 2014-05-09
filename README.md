@@ -59,7 +59,8 @@ a terminal (or copy-paste the whole sequence at once)
 	#Install
 	rosdep update
 	rosdep install rgbdslam
-	catkin_make && catkin_make
+	catkin_make 
+	catkin_make
 
 # Installation done! What's next?
 See the sections below for more details on the usage. 
@@ -198,19 +199,16 @@ $ rosservice call /rgbdslam/ros_ui save_individual
 
 # Further Help ##################################################################
 
-1. If you are located in Germany and get errors loading the saved ply files
+If you are located in Germany and get errors loading the saved ply files
 into meshlab, try switching to U.S. locale or replace the decimal point with a
 comma in your .ply file 
-2. To speed up compile times consider to use "export ROS_PARALLEL_JOBS=-j<#cpus>"
-before rosmake, but you should have lots of memory as gcc may take up to 2GB 
-for four parallel jobs.
 
 If you have questions regarding installation or usage of RGBDSLAM please refer
 to http://answers.ros.org/questions/?tags=RGBDSLAM For further questions,
 suggestions, corrections of this README or to submit patches, please contact
 Felix Endres (endres@informatik.uni-freiburg.de).
 
-Apart from this manual, detailed code documentation can be created using rosdoc
+Apart from this manual, code documentation can be created using rosdoc
 ("rosrun rosdoc rosdoc rgbdslam"), which will create a "doc" folder in your
 current directory.
 

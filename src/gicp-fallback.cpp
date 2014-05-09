@@ -22,6 +22,8 @@
  *      Author: engelhar
  */
 
+#ifdef USE_ICP_BIN
+#define PCL_NO_PRECOMPILE
 #include "gicp-fallback.h"
 
 #include <fstream>
@@ -29,6 +31,10 @@
 #include <iostream>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/impl/voxel_grid.hpp>
+#include <pcl/registration/icp.h>
+#include <pcl/registration/impl/icp.hpp>
+#include <pcl/registration/registration.h>
+#include <pcl/registration/impl/registration.hpp>
 using namespace std;
 
 void saveCloud(const char* filename, const pointcloud_type& pc, const int max_cnt, const bool color){
@@ -176,3 +182,4 @@ bool gicpfallback(const pointcloud_type& from, const pointcloud_type& to, Eigen:
     // ROS_DEBUG_STREAM("Matrix read from ICP process: " << transform);
     // ROS_INFO_STREAM("Paper: time for icp1 (internal): " << ((std::clock()-starttime_gicp*1.0) / (double)CLOCKS_PER_SEC));
 }
+#endif

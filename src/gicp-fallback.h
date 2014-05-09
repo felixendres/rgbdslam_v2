@@ -25,8 +25,7 @@
 #ifndef GICP_FALLBACK_H_
 #define GICP_FALLBACK_H_
 
-#include <pcl/registration/icp.h>
-#include <pcl/registration/registration.h>
+#ifdef USE_ICP_BIN
 #include <Eigen/Core>
 #include "parameter_server.h"
 
@@ -39,4 +38,5 @@ bool gicpfallback(const pointcloud_type& from, const pointcloud_type& to, Eigen:
 
 
 
+#endif //USE_ICP_BIN
 #endif /* GICP_FALLBACK_H_ */

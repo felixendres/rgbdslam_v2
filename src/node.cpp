@@ -51,9 +51,9 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/impl/voxel_grid.hpp>
 #include <opencv/highgui.h>
-#ifdef USE_PCL_ICP
-#include "icp.h"
-#endif
+//#ifdef USE_PCL_ICP
+//#include "icp.h"
+//#endif
 #include <string>
 #include <iostream>
 
@@ -668,6 +668,25 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
   feature_locations_2d.resize(feature_locations_3d.size());
 }
 
+#ifdef HEMACLOUDS
+bool searchLabelInNeighborhood( const pointcloud_type::Ptr point_cloud, cv::Point2f center, float diameter, int label)
+{
+    // Get neighbourhood area of keypoint
+    int radius = (diameter - 1)/2;
+    int top   = center.y - radius; top   = top   < 0 ? 0 : top;
+    int left  = center.x - radius; left  = left  < 0 ? 0 : left;
+    int bot   = center.y + radius; bot   = bot   >= point_cloud->height ? point_cloud->height-1 : bot;
+    int right = center.x + radius; right = right >= point_cloud->width ? point_cloud->width-1 : right;
+    for(int x = left; x <= right; ++x){
+      for(int y = top; y <= bot; ++y){
+        if(point_cloud->at(x,y).label == label){
+          return true;
+        }
+      } 
+    } 
+    return false;
+}
+#endif
 
 void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
                               std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f> >& feature_locations_3d,
@@ -850,8 +869,8 @@ void Node::computeInliersAndError(const std::vector<cv::DMatch> & all_matches,
   double mean_error = 0.0;
   Eigen::Matrix4d transformation4d = transformation4f.cast<double>();
 
-//parallelization doesn't seem to have any effect...
-#pragma omp parallel for reduction (+: mean_error)
+//parallelization is detrimental here
+//#pragma omp parallel for reduction (+: mean_error)
   for(int i=0; i < all_matches_size; ++i)
   //BOOST_FOREACH(const cv::DMatch& m, all_matches)
   {
@@ -871,7 +890,7 @@ void Node::computeInliersAndError(const std::vector<cv::DMatch> & all_matches,
       continue;
     }
     mean_error += mahal_dist;
-#pragma omp critical
+//#pragma omp critical
     inliers.push_back(m); //include inlier
     /* Too ineffective (seldom happens and then mostly skips the last 5 iterations)
     //if remaining items < yet to find items

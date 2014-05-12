@@ -1,4 +1,4 @@
-# RGBDSLAM<i>v2</i> 
+# RGBDSLAM<i>v2</i> ```beta version```
 ... is a state-of-the-art SLAM system for RGB-D cameras, e.g., the Microsoft Kinect.
 You can use it to create highly accurate 3D point clouds or OctoMaps. 
 

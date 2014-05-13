@@ -53,7 +53,7 @@ void ParameterServer::defaultConfig() {
   // Octomap data settings
   addOption("octomap_resolution",            static_cast<double> (0.05),                "Minimal voxel size of the OctoMap, when saved directly (not when used in conjunction with octomap_server)");
   addOption("octomap_autosave_step",         static_cast<int> (50),                     "Automatically save the octomap repeatedly after insertion of this many clouds");
-  addOption("octomap_clear_after_save",      static_cast<bool> (true),                  "Clear out octomap after (final) saving.");
+  addOption("octomap_clear_after_save",      static_cast<bool> (false),                  "Clear out octomap after (final) saving.");
   addOption("octomap_clear_raycasted_clouds",static_cast<bool> (false),                  "Clear out point clouds after raycasting.");
   addOption("octomap_occupancy_threshold",   static_cast<double> (0.5),                 "Occupancy threshold for binary OctoMap");
   addOption("octomap_clamping_max",          static_cast<double> (0.999),               "Maximum value for clamping of occupancy threshold in voxels");
@@ -64,6 +64,7 @@ void ParameterServer::defaultConfig() {
   addOption("screencast_path_prefix",        std::string(""),                           "If set: capture frames for a screencast with this path as filename-prefix.");
   addOption("transform_individual_clouds",   static_cast<bool> (false),                 "If set: Transform individually saved pcds into common coordinate frame.");
   addOption("compress_output_bagfile",       static_cast<bool> (true),                  "Whether to enable bz2 compression when saving bagfiles");
+  addOption("occupancy_filter_threshold",    static_cast<double> (0.9),                 "Remove points located at voxels with occupancy probability below this.");
 
   // TF information settings 
   addOption("fixed_frame_name",              std::string("/map"),                       "The computed camera transforms are with respect to this frame. It is set to the identity for the first frame processed or, if ground truth is available, to the ground truth of the first frame");
@@ -123,6 +124,7 @@ void ParameterServer::defaultConfig() {
   addOption("visualization_skip_step",       static_cast<int> (1),                      "Draw only every nth pointcloud row and line, high values require higher squared_meshing_threshold ");
   addOption("visualize_keyframes_only",      static_cast<bool> (false),                 "Do not render point cloud of non-keyframes.");
   addOption("fast_rendering_step",           static_cast<int> (1),                      "Draw only every nth pointcloud during user interaction");
+  addOption("octomap_display_level",         static_cast<int> (16),                     "Show this level of OctoMap octree");
   addOption("gl_point_size",                 static_cast<double> (1.0),                 "Point size, when not triangulating. See documentation of GL_POINT_SIZE.");
   addOption("gl_grid_size_xy",               static_cast<int> (0),                      "Grid size in the xy plane (sidelength in number of cell). Zero disables. Note that this is in the coordinate system of the point cloud");
   addOption("gl_grid_size_xz",               static_cast<int> (20),                     "Grid size in the xz plane (sidelength in number of cell). Zero disables. Note that this is in the coordinate system of the point cloud");

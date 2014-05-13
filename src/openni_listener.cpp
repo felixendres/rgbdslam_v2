@@ -192,7 +192,9 @@ void OpenNIListener::loadBag(std::string filename)
   bool eval_landmarks = ps->get<bool>("optimize_landmarks");
   ps->set<bool>("optimize_landmarks", false);
 
+
   ROS_INFO("Loading Bagfile %s", filename.c_str());
+  Q_EMIT iamBusy(4, "Loading Bagfile", 0);
   { //bag will be destructed after this block (hopefully frees memory for the optimizer)
     rosbag::Bag bag;
     try{
@@ -216,7 +218,7 @@ void OpenNIListener::loadBag(std::string filename)
     topics.push_back(tf_tpc);
 
     rosbag::View view(bag, rosbag::TopicQuery(topics));
-   // int lc=0; 
+    Q_EMIT iamBusy(4, "Processing Bagfile", view.size());
     // Simulate sending of the messages in the bagfile
     std::deque<sensor_msgs::Image::ConstPtr> vis_images;
     std::deque<sensor_msgs::Image::ConstPtr> dep_images;
@@ -224,9 +226,10 @@ void OpenNIListener::loadBag(std::string filename)
     std::deque<sensor_msgs::PointCloud2::ConstPtr> pointclouds;
     //ros::Time last_tf=ros::Time(0);
     ros::Time last_tf=ros::Time::now();
+    int counter = 0;
     BOOST_FOREACH(rosbag::MessageInstance const m, view)
     {
-    //  if(lc++ > 1000) break;
+      Q_EMIT progress(4, "Processing Bagfile", counter++);
       do{ 
         usleep(150);
         if(!ros::ok()) return;
@@ -236,7 +239,7 @@ void OpenNIListener::loadBag(std::string filename)
       {
         sensor_msgs::Image::ConstPtr rgb_img = m.instantiate<sensor_msgs::Image>();
         if (rgb_img) vis_images.push_back(rgb_img);
-        ROS_INFO("Found Message of %s", visua_tpc.c_str());
+        ROS_DEBUG("Found Message of %s", visua_tpc.c_str());
       }
       
       if (m.getTopic() == depth_tpc || ("/" + m.getTopic() == depth_tpc))
@@ -244,21 +247,21 @@ void OpenNIListener::loadBag(std::string filename)
         sensor_msgs::Image::ConstPtr depth_img = m.instantiate<sensor_msgs::Image>();
         //if (depth_img) depth_img_sub_->newMessage(depth_img);
         if (depth_img) dep_images.push_back(depth_img);
-        ROS_INFO("Found Message of %s", depth_tpc.c_str());
+        ROS_DEBUG("Found Message of %s", depth_tpc.c_str());
       }
       if (m.getTopic() == points_tpc || ("/" + m.getTopic() == points_tpc))
       {
         sensor_msgs::PointCloud2::ConstPtr pointcloud = m.instantiate<sensor_msgs::PointCloud2>();
         //if (cam_info) cam_info_sub_->newMessage(cam_info);
         if (pointcloud) pointclouds.push_back(pointcloud);
-        ROS_INFO("Found Message of %s", points_tpc.c_str());
+        ROS_DEBUG("Found Message of %s", points_tpc.c_str());
       }
       if (m.getTopic() == cinfo_tpc || ("/" + m.getTopic() == cinfo_tpc))
       {
         sensor_msgs::CameraInfo::ConstPtr cam_info = m.instantiate<sensor_msgs::CameraInfo>();
         //if (cam_info) cam_info_sub_->newMessage(cam_info);
         if (cam_info) cam_infos.push_back(cam_info);
-        ROS_INFO("Found Message of %s", cinfo_tpc.c_str());
+        ROS_DEBUG("Found Message of %s", cinfo_tpc.c_str());
       }
       if (m.getTopic() == tf_tpc|| ("/" + m.getTopic() == tf_tpc)){
         tf::tfMessage::ConstPtr tf_msg = m.instantiate<tf::tfMessage>();
@@ -268,7 +271,7 @@ void OpenNIListener::loadBag(std::string filename)
           boost::shared_ptr<std::map<std::string, std::string> > msg_header_map = tf_msg->__connection_header;
           (*msg_header_map)["callerid"] = "rgbdslam";
           tf_pub_.publish(tf_msg);
-          ROS_INFO("Found Message of %s", tf_tpc.c_str());
+          ROS_DEBUG("Found Message of %s", tf_tpc.c_str());
           last_tf = tf_msg->transforms[0].header.stamp;
           last_tf -= ros::Duration(1.0);
         }
@@ -294,6 +297,7 @@ void OpenNIListener::loadBag(std::string filename)
     ROS_WARN_NAMED("eval", "Finished processing of Bagfile");
     bag.close();
   }
+  Q_EMIT progress(4, "Processing Bagfile", 1e6);
   do{ 
     if(!future_.isFinished()){
       future_.waitForFinished(); //Wait if GraphManager ist still computing. 
@@ -1033,15 +1037,16 @@ void OpenNIListener::loadPCDFilesAsync(QStringList file_list)
 
   for (int i = 0; i < file_list.size(); i++)
   {
+    Q_EMIT progress(3, "Loading PCD files", i);
     try{
-    do{ 
-      usleep(150);
-      if(!ros::ok()) return;
-    } while(pause_);
+      do{ 
+        usleep(150);
+        if(!ros::ok()) return;
+      } while(pause_);
 
-    ROS_INFO("Processing file %s", qPrintable(file_list.at(i))); 
+      ROS_INFO("Processing file %s", qPrintable(file_list.at(i))); 
       //Create shared pointers to data structures
-    sensor_msgs::Image::Ptr sm_img(new sensor_msgs::Image());
+      sensor_msgs::Image::Ptr sm_img(new sensor_msgs::Image());
       sensor_msgs::PointCloud2::Ptr currentROSCloud(new sensor_msgs::PointCloud2());
       pointcloud_type::Ptr currentPCLCloud(new pointcloud_type());
 
@@ -1054,14 +1059,15 @@ void OpenNIListener::loadPCDFilesAsync(QStringList file_list)
         //currentPCLCloud->height=480;
         pcl::toROSMsg<point_type>(*currentPCLCloud, *currentROSCloud);
         pcl::toROSMsg(*currentROSCloud, *sm_img);
-    sm_img->encoding = "bgr8";
-    this->image_encoding_ = "bgr8";
+        sm_img->encoding = "bgr8";
+        this->image_encoding_ = "bgr8";
         pcdCallback(sm_img, currentPCLCloud);
       }
     } catch (...) {
       ROS_ERROR("Caught exception when processing pcd file %s",qPrintable(file_list.at(i)));
     }
   }
+  Q_EMIT progress(3, "Loading PCD files", 1e6);
 
   pause_ = prior_state;
 

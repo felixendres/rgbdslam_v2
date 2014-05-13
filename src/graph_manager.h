@@ -97,6 +97,7 @@ class GraphManager : public QObject {
       void setGraph(const g2o::OptimizableGraph*);
       void iamBusy(int id, const char* message, int max);
       void progress(int id, const char* message, int val);
+      void renderableOctomap(Renderable* r);
     
     public Q_SLOTS:
       /// Start over with new graph
@@ -138,6 +139,8 @@ class GraphManager : public QObject {
       void saveTrajectory(QString filebasename, bool with_ground_truth = false);
       ///Save graph in g2o format
       void saveG2OGraph(QString filename);
+      ///Remove points in free space for all nodes (requires octomapping to be done)
+      void occupancyFilterClouds();
 
     public:
       GraphManager();

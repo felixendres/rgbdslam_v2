@@ -9,8 +9,9 @@
 #include <qtconcurrentrun.h>
 #include <memory>
 #include <boost/shared_ptr.hpp>
+#include "renderable.h"
 
-  class ColorOctomapServer {
+  class ColorOctomapServer : public Renderable {
   public:
     ColorOctomapServer();
     virtual ~ColorOctomapServer();
@@ -27,6 +28,12 @@
                                            pointcloud_type::ConstPtr colors,
                                            const octomap::point3d& origin, double max_range = -1.0);
 
+    ///Filter cloud by occupancy of voxels, e.g. remove points in free space
+    void occupancyFilter(pointcloud_type::ConstPtr input, 
+                         pointcloud_type::Ptr output, 
+                         double occupancy_threshold);
+
+    virtual void render();
   protected:
     octomap::ColorOcTree m_octoMap;
     //octomap::OctomapROS<octomap::ColorOcTree> m_octoMap;

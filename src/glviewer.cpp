@@ -106,6 +106,7 @@ GLViewer::GLViewer(QWidget *parent)
       show_tfs_(false), 
       show_edges_(ParameterServer::instance()->get<bool>("show_axis")),
       show_clouds_(true),
+      show_octomap_(true),
       show_features_(false),
       follow_mode_(true),
       stereo_(false),
@@ -117,7 +118,8 @@ GLViewer::GLViewer(QWidget *parent)
       rotation_stepping_(1.0),
       myparent(parent),
       button_pressed_(false),
-      fast_rendering_step_(1)
+      fast_rendering_step_(1),
+      external_renderable(NULL) 
 {
     this->initialPosition();
     this->format().setSwapInterval(0);
@@ -197,7 +199,7 @@ void GLViewer::initializeGL() {
     glEnable(GL_LINE_SMOOTH);
     //glEnable(GL_POINT_SMOOTH);
     //glShadeModel(GL_SMOOTH);
-    //glEnable(GL_LIGHTING);
+    glDisable(GL_LIGHTING);
     //glEnable(GL_LIGHT0);
     //glEnable(GL_MULTISAMPLE);
     //gluPerspective(fov_, 1.00, 0.01, 1e9); //1.38 = tan(57/2°)/tan(43/2°)
@@ -324,8 +326,14 @@ void GLViewer::paintGL() {
       this->renderText(0.33,0.1,1, QString("v2"),   QFont("Sans",  28, -1, true));
     }
     drawClouds(0.0);
+    drawRenderable();
 }
 
+void GLViewer::drawRenderable() {
+  if(show_octomap_ && external_renderable != NULL){
+    external_renderable->render();
+  }
+}
 void GLViewer::drawOneCloud(int i) {
         glPushMatrix();
         glMultMatrixd(static_cast<GLdouble*>( (*cloud_matrices)[i].data() ));//works as long as qreal and GLdouble are typedefs to double (might depend on hardware)
@@ -480,6 +488,10 @@ void GLViewer::toggleShowFeatures(bool flag){
   show_features_ = flag;
   clearAndUpdate();
 }
+void GLViewer::toggleShowOctoMap(bool flag){
+  show_octomap_ = flag;
+  clearAndUpdate();
+}
 void GLViewer::toggleShowClouds(bool flag){
   show_clouds_ = flag;
   clearAndUpdate();
@@ -525,6 +537,14 @@ void GLViewer::mouseReleaseEvent(QMouseEvent *event) {
       toggleCloudDisplay->setStatusTip(tr("Toggle whether point clouds should be rendered"));
       connect(toggleCloudDisplay, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowClouds(bool)));
       viewMenu->addAction(toggleCloudDisplay);
+
+      QAction *toggleOctoMapDisplay = new QAction(tr("Show &Octomap"), this);
+      toggleOctoMapDisplay->setShortcut(QString("O"));
+      toggleOctoMapDisplay->setCheckable(true);
+      toggleOctoMapDisplay->setChecked(show_octomap_);
+      toggleOctoMapDisplay->setStatusTip(tr("Toggle whether octomap should be displayed"));
+      connect(toggleOctoMapDisplay, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowOctoMap(bool)));
+      viewMenu->addAction(toggleOctoMapDisplay);
 
       QAction *toggleShowPosesAct = new QAction(tr("Show &Poses of Graph"), this);
       toggleShowPosesAct->setShortcut(QString("P"));
@@ -1193,4 +1213,8 @@ void GLViewer::drawNavigationAxis(int axis_idx, float scale, QString text){
   glEnd();
   coords[axis_idx] = -scale;
   this->renderText(coords[0],coords[1]+0.01,coords[2],text, QFont("Monospace", 8));
+}
+void GLViewer::setRenderable(Renderable* r){
+  ROS_INFO("Setting Renderable");
+  external_renderable = (Renderable*)r;
 }

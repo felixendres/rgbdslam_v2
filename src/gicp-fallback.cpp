@@ -182,4 +182,5 @@ bool gicpfallback(const pointcloud_type& from, const pointcloud_type& to, Eigen:
     // ROS_DEBUG_STREAM("Matrix read from ICP process: " << transform);
     // ROS_INFO_STREAM("Paper: time for icp1 (internal): " << ((std::clock()-starttime_gicp*1.0) / (double)CLOCKS_PER_SEC));
 }
+
 #endif

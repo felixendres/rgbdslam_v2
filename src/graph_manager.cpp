@@ -354,6 +354,7 @@ void GraphManager::addOutliers(Node* new_node, std::vector<cv::DMatch> inlier_ma
 */
 void GraphManager::firstNode(Node* new_node) 
 {
+    Q_EMIT renderableOctomap(&co_server_);
     //set the node id only if the node is actually added to the graph
     //needs to be done here as the graph size can change inside this function
     new_node->id_ = graph_.size();
@@ -1333,4 +1334,14 @@ void GraphManager::filterNodesByPosition(float x, float y, float z)
           Node *node = it->second;
           Node* clone = node->copy_filtered(center, radius);
     }
+}
+void GraphManager::occupancyFilterClouds(){
+  Q_EMIT iamBusy(0, "Filtering Clouds by Occupancy", graph_.size());
+  BOOST_FOREACH(GraphNodeType entry, graph_){ 
+    ROS_INFO("Filtering points of Node %d", entry.first);
+    co_server_.occupancyFilter(entry.second->pc_col, entry.second->pc_col, ParameterServer::instance()->get<double>("occupancy_filter_threshold"));
+    Q_EMIT progress(0, "Filtering  Clouds by Occupancy", entry.first);
+  }
+    Q_EMIT progress(0,  "Filtering  Clouds by Occupancy", 1e6);
+  ROS_INFO("Done Filtering, display will not be updated!");
 }

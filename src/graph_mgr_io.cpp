@@ -253,7 +253,7 @@ void GraphManager::saveOctomapImpl(QString filename)
   ScopedTimer s(__FUNCTION__);
 
   batch_processing_runs_ = true;
-  Q_EMIT iamBusy(0, "Saving Octomap", 0);
+  Q_EMIT iamBusy(1, "Saving Octomap", 0);
   std::list<Node*> nodes_for_octomapping;
   unsigned int points_to_render = 0;
   { //Get the transformations from the optimizer and store them in the node's point cloud header
@@ -269,7 +269,7 @@ void GraphManager::saveOctomapImpl(QString filename)
   // Now (this takes long) render the clouds into the octomap
   int counter = 0;
   co_server_.reset();
-  Q_EMIT iamBusy(0, "Saving Octomap", nodes_for_octomapping.size());
+  Q_EMIT iamBusy(1, "Saving Octomap", nodes_for_octomapping.size());
   unsigned int rendered_points = 0;
   double delay_seconds = ParameterServer::instance()->get<double>("save_octomap_delay");
   BOOST_FOREACH(Node* node, nodes_for_octomapping)
@@ -286,7 +286,7 @@ void GraphManager::saveOctomapImpl(QString filename)
       this->renderToOctomap(node);
       rendered_points += node->pc_col->size();
       ROS_INFO("Rendered %u points of %u", rendered_points, points_to_render);
-      Q_EMIT progress(0, "Saving Octomap", counter);
+      Q_EMIT progress(1, "Saving Octomap", counter);
       if(counter % ParameterServer::instance()->get<int>("octomap_autosave_step") == 0){
         Q_EMIT setGUIStatus(QString("Autosaving preliminary octomap to ") + filename);
         this->writeOctomap(filename);
@@ -296,13 +296,14 @@ void GraphManager::saveOctomapImpl(QString filename)
 
   Q_EMIT setGUIStatus(QString("Saving final octomap to ") + filename);
   co_server_.save(qPrintable(filename));
-  Q_EMIT progress(0, "Finished Saving Octomap", 1e6);
+  Q_EMIT progress(1, "Finished Saving Octomap", 1e6);
   ROS_INFO ("Saved Octomap to %s", qPrintable(filename));
   if(ParameterServer::instance()->get<bool>("octomap_clear_after_save")){
     co_server_.reset();
     ROS_INFO ("Reset Octomap to free memory");
   }
 
+  Q_EMIT renderableOctomap(&co_server_);
   batch_processing_runs_ = false;
 }
 

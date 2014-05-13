@@ -87,5 +87,4 @@ Eigen::Matrix4f icpAlignment(pointcloud_type::Ptr cloud_1, pointcloud_type::Ptr 
 
 }
 
-
 #endif

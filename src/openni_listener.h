@@ -92,6 +92,8 @@ class OpenNIListener : public QObject {
     ///Set the temporary status-message in the GUI
     void setGUIStatus(QString message);
     void bagFinished();
+    void iamBusy(int id, const char* message, int max);
+    void progress(int id, const char* message, int val);
 
   public Q_SLOTS:
     ///Switch between processing or ignoring new incoming data

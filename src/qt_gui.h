@@ -78,10 +78,12 @@ Q_SIGNALS:
     void saveAllFeatures(QString filename);
     void saveTrajectory(QString filename);
     void saveOctomapSig(QString filename);
+    void computeOctomapSig(QString filename);
     ///User wants the current world model to be saved to one pcd-file per node
     void saveIndividualClouds(QString file_basename);
     void evaluation();
     void optimizeGraph();
+    void occupancyFilterClouds();
     void printEdgeErrors(QString);
     void pruneEdgesWithErrorAbove(float);
     void toggleMapping(bool);
@@ -107,6 +109,7 @@ private Q_SLOTS:
     void setRotationGrid();
     void saveAll();
     void saveOctomap();
+    void computeOctomap();
     void saveIndividual();
     void quickSaveAll();
     void saveFeatures();
@@ -137,6 +140,7 @@ private Q_SLOTS:
     //Display a Dialog to change the value of the mentioned parameter
     void setParam(QString param_name);
     void setOctoMapResolution();
+    void triggerCloudFiltering();
 private:
     void setup();
     //!Menus and Menu elements are defined here

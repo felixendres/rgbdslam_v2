@@ -22,6 +22,7 @@
 #include <QPair>
 #include <QMatrix4x4>
 #include "parameter_server.h"
+#include "renderable.h"
 
 //!OpenGL based display of the 3d model 
 class GLViewer : public QGLWidget {
@@ -47,6 +48,7 @@ public Q_SLOTS:
     void toggleShowTFs(bool on);
     void toggleShowPoses(bool on);
     void toggleShowClouds(bool on);
+    void toggleShowOctoMap(bool on);
     void toggleShowFeatures(bool on);
     void toggleBackgroundColor(bool on);
     void toggleStereo(bool on);
@@ -60,6 +62,7 @@ public Q_SLOTS:
     void reset();
     void toggleTriangulation();
     void drawToPS(QString filname);
+    void setRenderable(Renderable* r);
 Q_SIGNALS:
     void cloudRendered(pointcloud_type *);
     void clickedPosition(float x,float y,float z);
@@ -110,6 +113,7 @@ protected:
 
     void initialPosition();
     void drawNavigationAxis(int axis_idx, float scale, QString text);
+    void drawRenderable() ;
 
 private:
     void clearAndUpdate();
@@ -134,6 +138,7 @@ private:
     bool show_tfs_;
     bool show_edges_;
     bool show_clouds_;
+    bool show_octomap_;
     bool show_features_;
     bool follow_mode_;
     bool stereo_;
@@ -144,6 +149,7 @@ private:
     QWidget* myparent;
     bool button_pressed_;
     unsigned int fast_rendering_step_;
+    Renderable* external_renderable;
 };
 
 void drawEllipsoid(float fA, float fB, float fC, const Eigen::Vector4f& p);

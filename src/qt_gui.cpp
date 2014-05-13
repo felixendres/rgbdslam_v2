@@ -255,6 +255,11 @@ void Graphical_UI::saveFeatures() {
     }
     statusBar()->showMessage(message);
 }
+
+void Graphical_UI::computeOctomap() {
+  Q_EMIT computeOctomapSig(filename);
+}
+
 void Graphical_UI::saveOctomap() {
     filename = QFileDialog::getSaveFileName(this, "Create and Save Octomap to File", filename, tr("OcTree (*.ot)"));
     QString message;
@@ -483,6 +488,9 @@ void Graphical_UI::bagRecording(bool pause_on) {
         //infoLabel->setText(message);
     }
 }
+void Graphical_UI::triggerCloudFiltering() {
+  Q_EMIT occupancyFilterClouds();
+}
 void Graphical_UI::setOctoMapResolution() {
   this->setParam("octomap_resolution");
 }
@@ -554,7 +562,7 @@ void Graphical_UI::createMenus() {
     QMenu *helpMenu;
 
     //Graph Menu
-    dataMenu = menuBar()->addMenu(tr("&Data"));
+    dataMenu = menuBar()->addMenu(tr("&I/O"));
 
     QAction *openPCDFilesAct = new QAction(tr("&Open PCD files"), this);
     openPCDFilesAct->setShortcuts(QKeySequence::Open);
@@ -590,8 +598,7 @@ void Graphical_UI::createMenus() {
     this->addAction(saveFeaturesAct);
 
     QAction *saveOctoAct = new QAction(tr("Save Octomap"), this);
-    //saveOctoAct->setShortcuts(QKeySequence::SaveAs);
-    saveOctoAct->setStatusTip(tr("Create octomap from stored point clouds"));
+    saveOctoAct->setStatusTip(tr("Save computed OctoMap"));
     saveOctoAct->setIcon(QIcon::fromTheme("document-save-as"));//doesn't work for gnome
     connect(saveOctoAct, SIGNAL(triggered()), this, SLOT(saveOctomap()));
     dataMenu->addAction(saveOctoAct);
@@ -702,6 +709,22 @@ void Graphical_UI::createMenus() {
     octoMapMenu = menuBar()->addMenu(tr("&OctoMap"));
     octoMapMenu->addAction(saveOctoAct);
 
+    /* Separation of computation and saving of octomap not yet Implemented
+    QAction *computeOctoAct = new QAction(tr("Compute Octomap"), this);
+    //computeOctoAct->setShortcuts(QKeySequence::SaveAs);
+    computeOctoAct->setStatusTip(tr("Create OctoMap from stored point clouds"));
+    connect(computeOctoAct, SIGNAL(triggered()), this, SLOT(computeOctomap()));
+    octoMapMenu->addAction(computeOctoAct);
+    this->addAction(computeOctoAct);
+    */
+
+
+    QAction *occupancyFilterAct = new QAction(tr("Point Cloud Occupancy Filter"), this);
+    //occupancyFilterAct->setShortcuts(QKeySequence::SaveAs);
+    occupancyFilterAct->setStatusTip(tr("Remove points from the cloud that fall into unoccupied voxels of the OctoMap"));
+    connect(occupancyFilterAct, SIGNAL(triggered()), this, SLOT(triggerCloudFiltering()));
+    octoMapMenu->addAction(occupancyFilterAct);
+    this->addAction(occupancyFilterAct);
     QAction *setOctoMapResolutionAct = new QAction(tr("Octomap Resolution"), this);
     //setOctoMapResolutionAct->setShortcuts(QKeySequence::SaveAs);
     setOctoMapResolutionAct->setStatusTip(tr("Change the octomap resolution. Clears previously created maps on next update."));
@@ -925,6 +948,15 @@ void Graphical_UI::createMenus() {
       viewMenu->addAction(toggleShowFeatures);
       this->addAction(toggleShowFeatures);
 
+      QAction *toggleOctoMapDisplay = new QAction(tr("Show &Octomap"), this);
+      toggleOctoMapDisplay->setShortcut(QString("O"));
+      toggleOctoMapDisplay->setCheckable(true);
+      toggleOctoMapDisplay->setChecked(true);
+      toggleOctoMapDisplay->setStatusTip(tr("Toggle whether octomap should be displayed"));
+      connect(toggleOctoMapDisplay, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowOctoMap(bool)));
+      viewMenu->addAction(toggleOctoMapDisplay);
+      this->addAction(toggleOctoMapDisplay);
+
       QAction *toggleCloudDisplay = new QAction(tr("Show &Clouds"), this);
       toggleCloudDisplay->setShortcut(QString("C"));
       toggleCloudDisplay->setCheckable(true);
@@ -1088,7 +1120,7 @@ void Graphical_UI::showBusy(int id, const char* message, int max){
     busydialog = new QProgressBar();
     busydialog->resize(100, 10);
     progressbars[id] = busydialog;
-    statusBar()->insertPermanentWidget(0, busydialog);
+    statusBar()->insertPermanentWidget(progressbars.size(), busydialog);
   } else {
     busydialog = progressbars[id];
   }

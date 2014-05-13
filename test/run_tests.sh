@@ -18,11 +18,11 @@ export ROS_MASTER_URI=http://localhost:11386
 #ROSCOREPID=$!
 #echo Waiting for roscore
 #sleep 3
-for CANDIDATES in 4; do
+for CANDIDATES in 8; do
   for OBS_EVAL in  0.00; do
-    for RANSAC_ITER in 100; do
+    for RANSAC_ITER in 100 500; do
       for DISTANCEMSR in false; do 
-        for OPT_SKIP in 10; do #online/offline
+        for OPT_SKIP in 1; do #online/offline
           for FEAT_TYPE in SIFTGPU; do 
             echo Evaluating $FEAT_TYPE
 
@@ -32,7 +32,7 @@ for CANDIDATES in 4; do
 
             for MAXFEATURES in 600; do
               #PARAM_DIRECTORY="$BASE_DIRECTORY/$1/emm__$OBS_EVAL/CANDIDATES_$CANDIDATES/RANSAC_$RANSAC_ITER/SOLVER_$DISTANCEMSR/NN_$NN_RATIO/OPT_SKIP_$OPT_SKIP/${FEAT_TYPE}/${MAXFEATURES}_Features/"
-              PARAM_DIRECTORY="$BASE_DIRECTORY/$TESTNAME/emm__$OBS_EVAL/CANDIDATES_$CANDIDATES/RANSAC_$RANSAC_ITER/HellingerDistance_$DISTANCEMSR/NN_0.9/OPT_SKIP_$OPT_SKIP/${FEAT_TYPE}/${MAXFEATURES}_Features/"
+              PARAM_DIRECTORY="$BASE_DIRECTORY/$TESTNAME/emm__$OBS_EVAL/CANDIDATES_$CANDIDATES/RANSAC_$RANSAC_ITER/HellingerDistance_$DISTANCEMSR/NN_0.5/OPT_SKIP_$OPT_SKIP/${FEAT_TYPE}/${MAXFEATURES}_Features/"
               for bagfile in $SELECTION; do
                 BASE_NAME=`basename $bagfile .bag` 
                 DIRECTORY="$PARAM_DIRECTORY/$BASE_NAME"

@@ -8,7 +8,8 @@
 
   <arg name="debug" default="false"/>
   <!-- Several possibilities to debug (uncomment only one)-->
-  <arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/gdb -ex run -args"/>
+  <arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/gdb -ex run -args"/-->
+  <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/perf -o $(find rgbdslam)/perf.data -g "/-->
   <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/xterm -rv -e gdb -ex run -args"/-->
   <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/valgrind -DELeTEME-tool=cachegrind -DELETEME-cachegrind-out-file=/tmp/cachegrind.out"/-->
   <!--arg if="$(arg debug)" name="launch_prefix" value="/usr/bin/valgrind -DELETEME-leak-check=full "/-->

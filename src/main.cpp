@@ -30,6 +30,7 @@
 //Correct implementation of odometry
 //Multi-Camera-fusion
 
+class Renderable; //Fwd decl for signal renderableOctomap
 ///Connect Signals and Slots for the ui control
 void ui_connections(QObject* ui, GraphManager* graph_mgr, OpenNIListener* listener)
 {
@@ -61,11 +62,14 @@ void gui_connections(Graphical_UI* gui, GraphManager* graph_mgr, OpenNIListener*
     QObject::connect(graph_mgr, SIGNAL(sendFinished()), gui, SLOT(sendFinished()));
     QObject::connect(graph_mgr, SIGNAL(iamBusy(int, const char*, int)), gui, SLOT(showBusy(int, const char*, int)));
     QObject::connect(graph_mgr, SIGNAL(progress(int, const char*, int)), gui, SLOT(setBusy(int, const char*, int)));
+    QObject::connect(listener, SIGNAL(iamBusy(int, const char*, int)), gui, SLOT(showBusy(int, const char*, int)));
+    QObject::connect(listener, SIGNAL(progress(int, const char*, int)), gui, SLOT(setBusy(int, const char*, int)));
     QObject::connect(graph_mgr, SIGNAL(setGUIInfo(QString)), gui, SLOT(setInfo(QString)));
     QObject::connect(graph_mgr, SIGNAL(setGUIStatus(QString)), gui, SLOT(setStatus(QString)));
     QObject::connect(gui, SIGNAL(printEdgeErrors(QString)), graph_mgr, SLOT(printEdgeErrors(QString)));
     QObject::connect(gui, SIGNAL(pruneEdgesWithErrorAbove(float)), graph_mgr, SLOT(pruneEdgesWithErrorAbove(float)));
     QObject::connect(gui, SIGNAL(clearClouds()), graph_mgr, SLOT(clearPointClouds()));
+    QObject::connect(gui, SIGNAL(occupancyFilterClouds()), graph_mgr, SLOT(occupancyFilterClouds()));
     QObject::connect(gui, SIGNAL(saveBagfile(QString)), graph_mgr, SLOT(saveBagfileAsync(QString)));
     QObject::connect(gui, SIGNAL(openPCDFiles(QStringList)), listener, SLOT(loadPCDFiles(QStringList)));
     QObject::connect(gui, SIGNAL(openBagFile(QString)), listener, SLOT(loadBagFileFromGUI(QString)));
@@ -78,6 +82,7 @@ void gui_connections(Graphical_UI* gui, GraphManager* graph_mgr, OpenNIListener*
 	    QObject::connect(graph_mgr, SIGNAL(updateTransforms(QList<QMatrix4x4>*)), glv, SLOT(updateTransforms(QList<QMatrix4x4>*)));
       QObject::connect(graph_mgr, SIGNAL(deleteLastNode()), glv, SLOT(deleteLastNode()));
 	    QObject::connect(graph_mgr, SIGNAL(resetGLViewer()),  glv, SLOT(reset()));
+	    QObject::connect(graph_mgr, SIGNAL(renderableOctomap(Renderable*)),  glv, SLOT(setRenderable(Renderable*)));
       //QObject::connect(glv, SIGNAL(clickedPosition(float,float,float)), graph_mgr, SLOT(filterNodesByPosition(float,float,float)));
       if(!ParameterServer::instance()->get<bool>("store_pointclouds")) {
           QObject::connect(glv, SIGNAL(cloudRendered(pointcloud_type *)), graph_mgr, SLOT(clearPointCloud(pointcloud_type const *))); // 

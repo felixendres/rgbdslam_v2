@@ -106,7 +106,7 @@ def main():
     parser.add_argument('outputbag', nargs='?',help='output bag file')
     args = parser.parse_args()
 
-    import roslib; roslib.load_manifest('rgbd_benchmark_tools')
+    import roslib; roslib.load_manifest('rgbdslam')
     import rospy
     import rosbag
     import sensor_msgs.msg
@@ -144,7 +144,7 @@ def main():
     rgb_image_color = None
     cortex = None
 
-    nan = float('nan')
+    #nan = float('nan')
     bridge = CvBridge()
     frame = 0 
     transforms = dict()

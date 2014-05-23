@@ -616,8 +616,6 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
 
   std::list<int> featuresUsed;
   
-  //double max_depth = ps->get<double>("maximum_depth");
-  //double min_depth = ps->get<double>("minimum_depth");
   int index = -1;
 
   bool use_feature_min_depth = ParameterServer::instance()->get<bool>("use_feature_min_depth");
@@ -800,15 +798,23 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
                        const sensor_msgs::CameraInfoConstPtr& cam_info)
 {
   ScopedTimer s(__FUNCTION__);
-  double depth_scaling = ParameterServer::instance()->get<double>("depth_scaling_factor");
-  size_t max_keyp = ParameterServer::instance()->get<int>("max_keypoints");
+
+  ParameterServer* ps = ParameterServer::instance();
+  double depth_scaling = ps->get<double>("depth_scaling_factor");
+  size_t max_keyp = ps->get<int>("max_keypoints");
+  double maximum_depth = ps->get<double>("maximum_depth");
   float x,y;//temp point, 
   //principal point and focal lengths:
+  float fx = 1./ (ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : cam_info->K[0]); //(cloud->width >> 1) - 0.5f;
+  float fy = 1./ (ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : cam_info->K[4]); //(cloud->width >> 1) - 0.5f;
+  float cx = ps->get<double>("depth_camera_cx") > 0 ? ps->get<double>("depth_camera_cx") : cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
+  float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") : cam_info->K[5]; //(cloud->width >> 1) - 0.5f;
+  /*
   float cx = 325.1;//cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
   float cy = 249.7;//cam_info->K[5]; //(cloud->height >> 1) - 0.5f;
   float fx = 1.0/521.0;//1.0f / cam_info->K[0]; 
   float fy = 1.0/521.0;//1.0f / cam_info->K[4]; 
-
+  */
   cv::Point2f p2d;
 
   if(feature_locations_3d.size()){
@@ -836,8 +842,8 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
     {
       ROS_DEBUG("Feature %d has been extracted at NaN depth. Omitting", i);
       //FIXME Use parameter here to choose whether to use
-      //feature_locations_2d.erase(feature_locations_2d.begin()+i);
-      //continue;
+      feature_locations_2d.erase(feature_locations_2d.begin()+i);
+      continue;
     }
     x = (p2d.x - cx) * Z * fx;
     y = (p2d.y - cy) * Z * fy;

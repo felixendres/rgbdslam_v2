@@ -556,7 +556,7 @@ void OpenNIListener::noCloudCallback (const sensor_msgs::ImageConstPtr& visual_i
   if(pause_ && !getOneFrame_){ 
     if(ps->get<bool>("use_gui")){
       Q_EMIT newVisualImage(cvMat2QImage(visual_img, 0)); //visual_idx=0
-      //Q_EMIT newDepthImage (cvMat2QImage(depth_mono8_img_,1));//overwrites last cvMat2QImage
+      Q_EMIT newDepthImage (cvMat2QImage(depth_mono8_img_,1));//overwrites last cvMat2QImage
     }
     return;
   }
@@ -626,7 +626,7 @@ void OpenNIListener::kinectCallback (const sensor_msgs::ImageConstPtr& visual_im
   if(pause_ && !getOneFrame_){ 
     if(ps->get<bool>("use_gui")){
       Q_EMIT newVisualImage(cvMat2QImage(visual_img, 0)); //visual_idx=0
-//      Q_EMIT newDepthImage (cvMat2QImage(depth_mono8_img_,1));//overwrites last cvMat2QImage
+      Q_EMIT newDepthImage (cvMat2QImage(depth_mono8_img_,1));//overwrites last cvMat2QImage
     }
     return;
   }

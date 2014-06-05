@@ -19,6 +19,7 @@
 #include <QApplication>
 #include <QObject>
 #include "qt_gui.h"
+#include "glviewer.h"
 #include <Eigen/Core>
 #include "parameter_server.h"
 #include "ros_service_ui.h"

@@ -536,6 +536,7 @@ void OpenNIListener::noCloudCallback (const sensor_msgs::ImageConstPtr& visual_i
   if(visual_img.rows != depth_float_img.rows || 
      visual_img.cols != depth_float_img.cols){
     ROS_ERROR("depth and visual image differ in size! Ignoring Data");
+    //cv::resize(depth_float_img, depth_float_img, visual_img.size(), 0,0,cv::INTER_NEAREST);
     return;
   }
   image_encoding_ = visual_img_msg->encoding;

@@ -1,4 +1,4 @@
-#ifdef USE_ICP_CODE
+#ifdef USE_PCL_ICP
 
 #ifdef HEMACLOUDS
 #define PCL_NO_PRECOMPILE
@@ -27,6 +27,7 @@ void filterCloud(const pointcloud_type& cloud_in, pointcloud_type& cloud_out, in
     if (!isnan(cloud_in.points.at(i).z)) 
       non_nan_indices.push_back(i);
   }
+  ROS_INFO("Nonnans in cloud: %zu", non_nan_indices.size());
 
 
   cloud_out.reserve(desired_size+1); //just against off-by-one error

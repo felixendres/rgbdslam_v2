@@ -359,7 +359,8 @@ namespace dgc {
 	    gsl_matrix_set_identity(&M.matrix); 
 	    gsl_linalg_cholesky_decomp(gsl_temp);
 	    for(int k = 0; k < 3; k++) {
-	      gsl_linalg_cholesky_svx(gsl_temp, &gsl_matrix_row(&M.matrix, k).vector);
+        auto gsl_temp2 = gsl_matrix_row(&M.matrix, k);
+	      gsl_linalg_cholesky_svx(gsl_temp, &(gsl_temp2.vector));
 	    }
 	    num_matches++;
 	  }

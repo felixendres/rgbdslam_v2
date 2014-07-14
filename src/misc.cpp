@@ -405,9 +405,17 @@ FeatureDetector* createDetector( const string& detectorType )
                 0.2/*min_diversity*/, 200/*max_evolution*/, 1.01/*area_threshold*/, 0.003/*min_margin*/,
                 5/*edge_blur_size*/ );
     }
+    else if( !detectorType.compare( "HARRIS" ) ) {
+        ROS_INFO("Creating GFTT detector with HARRIS.");
+        fd = new GoodFeaturesToTrackDetector( params->get<int>("max_keypoints"), 0.0001, 2.0, 9, true);
+    }
     else if( !detectorType.compare( "GFTT" ) ) {
-        ROS_INFO("Creating GFTT detector as fallback.");
+        ROS_INFO("Creating GFTT detector.");
         fd = new GoodFeaturesToTrackDetector( params->get<int>("max_keypoints"), 0.0001, 2.0, 9);
+    }
+    else if( !detectorType.compare( "BRISK" ) ) {
+        ROS_INFO("Creating BRISK detector.");
+        fd = fd->create("BRISK");
     }
     else if( !detectorType.compare( "ORB" ) ) {
 #if CV_MAJOR_VERSION > 2 || CV_MINOR_VERSION == 3
@@ -437,6 +445,12 @@ DescriptorExtractor* createDescriptorExtractor( const string& descriptorType )
     DescriptorExtractor* extractor = 0;
     if( !descriptorType.compare( "SIFT" ) ) {
         extractor = new SiftDescriptorExtractor();/*( double magnification=SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION(), bool isNormalize=true, bool recalculateAngles=true, int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES, int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS, int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE, int angleMode=SIFT::CommonParams::FIRST_ANGLE )*/
+    }
+    else if( !descriptorType.compare( "BRISK" ) ) {
+        extractor = new cv::BRISK();/*brisk default: (int thresh=30, int octaves=3, float patternScale=1.0f)*/
+    }
+    else if( !descriptorType.compare( "FREAK" ) ) {
+        extractor = new cv::FREAK();
     }
     else if( !descriptorType.compare( "SURF" ) ) {
         extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/

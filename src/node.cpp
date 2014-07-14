@@ -51,9 +51,9 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/impl/voxel_grid.hpp>
 #include <opencv/highgui.h>
-//#ifdef USE_PCL_ICP
-//#include "icp.h"
-//#endif
+#ifdef USE_PCL_ICP
+#include "icp.h"
+#endif
 #include <string>
 #include <iostream>
 
@@ -132,6 +132,7 @@ Node::Node(const cv::Mat& visual,
     projectTo3D(feature_locations_2d_, feature_locations_3d_, depth, cam_info);
     ScopedTimer s("Feature Extraction");
     extractor->compute(gray_img, feature_locations_2d_, feature_descriptors_); //fill feature_descriptors_ with information 
+    projectTo3D(feature_locations_2d_, feature_locations_3d_, depth, cam_info);
     ROS_INFO("Feature Descriptors size: %d x %d", feature_descriptors_.rows, feature_descriptors_.cols);
   }
   assert(feature_locations_2d_.size() == feature_locations_3d_.size());
@@ -789,7 +790,9 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
     if(feature_locations_3d.size() >= max_keyp) break;
   }
 
+  ROS_INFO("Feature 2d size: %zu, 3D: %zu", feature_locations_2d.size(), feature_locations_3d.size());
   feature_locations_2d.resize(feature_locations_3d.size());
+  ROS_INFO("Feature 2d size: %zu, 3D: %zu", feature_locations_2d.size(), feature_locations_3d.size());
 }
 
 void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
@@ -853,7 +856,9 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
     if(feature_locations_3d.size() >= max_keyp) break;
   }
 
+  ROS_INFO("Feature 2d size: %zu, 3D: %zu", feature_locations_2d.size(), feature_locations_3d.size());
   feature_locations_2d.resize(feature_locations_3d.size());
+  ROS_INFO("Feature 2d size: %zu, 3D: %zu", feature_locations_2d.size(), feature_locations_3d.size());
 }
 
 
@@ -1249,6 +1254,29 @@ MatchingResult Node::matchNodePair(const Node* older_node)
           }
           nn_ratio /= mr.all_matches.size();
           ROS_INFO("RANSAC found no valid trafo, but had initially %d feature matches with average ratio %f",(int) mr.all_matches.size(), nn_ratio);
+
+#ifdef USE_PCL_ICP
+          if(((int)this->id_ - (int)older_node->id_) <= 1){ //Apply icp only for adjacent frames, as the initial guess needs to be in the global minimum
+            mr.icp_trafo = Eigen::Matrix4f::Identity();
+            int max_count = ParameterServer::instance()->get<int>("gicp_max_cloud_size");
+            pointcloud_type::Ptr tmp1(new pointcloud_type());
+            pointcloud_type::Ptr tmp2(new pointcloud_type());
+            filterCloud(*pc_col, *tmp1, max_count);
+            filterCloud(*(older_node->pc_col), *tmp2, max_count);
+            mr.icp_trafo = icpAlignment(tmp2, tmp1, mr.icp_trafo);
+            //pairwiseObservationLikelihood(this, older_node, mr);
+            //double icp_quality;
+            found_transformation = true; //observation_criterion_met(mr.inlier_points, mr.outlier_points, mr.occluded_points + mr.inlier_points + mr.outlier_points, icp_quality);
+            if(found_transformation){
+              ROS_ERROR("Found trafo via icp");
+              mr.final_trafo = mr.icp_trafo;
+              mr.edge.id1 = older_node->id_;//and we have a valid transformation
+              mr.edge.id2 = this->id_; //since there are enough matching features,
+              mr.edge.transform = mr.final_trafo.cast<double>();//we insert an edge between the frames
+              std::cout << std::endl << mr.final_trafo << std::endl;
+            }
+          }
+#endif
         }
     } 
     

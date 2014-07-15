@@ -9,9 +9,22 @@
     <param name="config/camera_info_topic"             value="/tango/narrow/camera_info"/> <!--could also be color -->
     <param name="config/topic_image_depth"             value="/tango/depth/image_raw"/>
     <param name="config/topic_points"                  value=""/> 
-    <param name="config/cloud_creation_skip_step"      value="4"/>
+    <param name="config/cloud_creation_skip_step"      value="1"/>
+    <param name="config/cloud_display_type"            value="GL_POINTS"/>
+    <param name="config/visualization_skip_step"       value="4"/>
 
+    <param name="config/depth_camera_fx"               value="939.326"/>
+    <param name="config/depth_camera_fy"               value="939.095"/>
+    <param name="config/depth_camera_cx"               value="625.429"/>
+    <param name="config/depth_camera_cy"               value="350.158"/>
+
+    <!-- tuning -->
     <param name="config/feature_detector_type"         value="SIFTGPU"/>
     <param name="config/feature_extractor_type"        value="SIFTGPU"/>
+    <param name="config/max_keypoints"                 value="2000"/>
+    <param name="config/min_sampled_candidates"        value="10"/>
+    <param name="config/neighbor_candidates"           value="10"/>
+    <param name="config/maximum_depth"                 value="5"/>
+
   </node>
 </launch>

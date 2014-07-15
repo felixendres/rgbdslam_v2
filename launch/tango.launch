@@ -1,0 +1,17 @@
+<!-- This file demonstrates the use of SIFT features for online SLAM with a Kinect. 
+     The openni driver is started from this file -->
+<launch>
+  <param name="/use_sim_time" value="false"/> 
+
+  <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" cwd="node" required="true" output="screen"> 
+    <!-- Input data settings-->
+    <param name="config/topic_image_mono"              value="/tango/narrow/image_raw"/> <!--could also be color -->
+    <param name="config/camera_info_topic"             value="/tango/narrow/camera_info"/> <!--could also be color -->
+    <param name="config/topic_image_depth"             value="/tango/depth/image_raw"/>
+    <param name="config/topic_points"                  value=""/> 
+    <param name="config/cloud_creation_skip_step"      value="4"/>
+
+    <param name="config/feature_detector_type"         value="SIFTGPU"/>
+    <param name="config/feature_extractor_type"        value="SIFTGPU"/>
+  </node>
+</launch>

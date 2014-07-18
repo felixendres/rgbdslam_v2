@@ -20,7 +20,7 @@
 inline double depth_std_dev(double depth)
 {
   // From Khoselham and Elberink?
-  static double depth_std_dev = 0.01;//ParameterServer::instance()->get<double>("sigma_depth");
+  static double depth_std_dev = ParameterServer::instance()->get<double>("sigma_depth");
   // Previously used 0.006 from information on http://www.ros.org/wiki/openni_kinect/kinect_accuracy;
   // ...using 2sigma = 95%ile
   //static const double depth_std_dev  = 0.006;

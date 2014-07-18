@@ -186,8 +186,8 @@ void transformAndAppendPointCloud (const pointcloud_type &cloud_in,
     origin.x = 0;
     origin.y = 0;
     origin.z = 0;
-    int j = 0;
-    for (size_t i = 0; i < cloud_in.points.size (); ++i)
+    int j = 0; //Output index
+    for (size_t i = 0; i < cloud_in.points.size (); ++i) //i: Input index
     { 
       Eigen::Map<Eigen::Vector3f> p_in (const_cast<float*>(&cloud_in.points[i].x), 3, 1);
       Eigen::Map<Eigen::Vector3f> p_out (&cloud_to_append_to.points[j+cloud_to_append_to_original_size].x, 3, 1);
@@ -203,7 +203,7 @@ void transformAndAppendPointCloud (const pointcloud_type &cloud_in,
          }
       }
       if (pcl_isnan (cloud_in.points[i].x) || pcl_isnan (cloud_in.points[i].y) || pcl_isnan (cloud_in.points[i].z)){
-         if(!compact) j++;
+         if(!compact) j++; //Skip, but leave output as is
          continue;
       }
       p_out = rot * p_in + trans;
@@ -213,7 +213,7 @@ void transformAndAppendPointCloud (const pointcloud_type &cloud_in,
       cloud_to_append_to.points.resize(j+cloud_to_append_to_original_size);
       cloud_to_append_to.width    = 1;
       cloud_to_append_to.height   = j+cloud_to_append_to_original_size;
-	}
+    }
 }
 #endif //HEMACLOUDS
 
@@ -967,12 +967,12 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
 
   //Camera Calibration FIXME: Get actual values from cameraInfo (need to store in node?)
   ParameterServer* ps = ParameterServer::instance();
-  float cx = ps->get<double>("depth_camera_cx") > 0 ? ps->get<double>("depth_camera_cx") / (640.0/old_pc->width)  : old_pc->width /2 - 0.5;
-  float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") / (480.0/old_pc->height) : old_pc->height/2 - 0.5;
+  float cx = ps->get<double>("depth_camera_cx") > 0 ? ps->get<double>("depth_camera_cx") /* (640.0/old_pc->width)  */: old_pc->width /2 - 0.5;
+  float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") /* (480.0/old_pc->height) */: old_pc->height/2 - 0.5;
   float fx = ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : 525; 
   float fy = ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : 525;
-  fx = fx / (640.0/old_pc->width); 
-  fy = fy / (480.0/old_pc->height); 
+  //fx = fx / (640.0/old_pc->width); 
+  //fy = fy / (480.0/old_pc->height); 
 
   double sumloglikelihood = 0.0;
   double observation_count = 0.0;
@@ -1061,6 +1061,9 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
           new_pc->at(new_rx, new_ry).data[3] = *reinterpret_cast<float*>(&rgb1);
           old_pc->at(old_rx_center, old_ry_center).data[3] = *reinterpret_cast<float*>(&rgb2);
 #endif
+          //Kill point
+          //new_pc->at(new_rx, new_ry).z = std::numeric_limits<float>::quiet_NaN();
+          //old_pc->at(old_rx_center, old_ry_center).z = std::numeric_limits<float>::quiet_NaN();
         }
       }
       else {} //only NaN?
@@ -1214,9 +1217,9 @@ double rejectionSignificance(const Eigen::Matrix4f& proposed_transformation,//ne
         sum_mahalanobis_sq += min_mahalanobis_sq;
         observation_count++;
         if(mark_outliers){
-          uint8_t r1 = 255, g1 = 0, b1 = 0; // Mark bad boint in red color
+          uint8_t r1 = 255, g1 = 0, b1 = 0; // Mark bad boint in new point cloud with red color
           uint32_t rgb1 = ((uint32_t)r1 << 16 | (uint32_t)g1 << 8 | (uint32_t)b1);
-          uint8_t r2 = 0, g2 = 255, b2 = 255; // Mark bad boint in red color
+          uint8_t r2 = 0, g2 = 255, b2 = 255; // Mark bad boint in older point cloud with cyan color
           uint32_t rgb2 = ((uint32_t)r2 << 16 | (uint32_t)g2 << 8 | (uint32_t)b2);
 #ifndef RGB_IS_4TH_DIM
           new_pc->at(new_rx, new_ry).rgb = *reinterpret_cast<float*>(&rgb1);

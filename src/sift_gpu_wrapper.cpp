@@ -62,6 +62,7 @@ SiftGPUWrapper::SiftGPUWrapper() {
     char dog_threshold[] = "-t"; 
     char dog_threshold_val[] = "0.005"; //Default: 0.02/3
 
+    char nonfixedorientation[] = "-ofix-not";
     char * argv[] = {method,  
                      subpixelKey, subpixelValue, 
                      max_flag, max_feat_char, 
@@ -69,9 +70,12 @@ SiftGPUWrapper::SiftGPUWrapper() {
                      verbosity, verbosity_val,
                      unnormalized_descriptors,
                      edge_threshold, edge_threshold_val,
-                     dog_threshold, dog_threshold_val};
+                     dog_threshold, dog_threshold_val,
+                     nonfixedorientation};
 
-    siftgpu->ParseParam(14, argv);
+    siftgpu->ParseParam(15, argv);
+
+
 
     if (siftgpu->CreateContextGL() != SiftGPU::SIFTGPU_FULL_SUPPORTED) {
         ROS_ERROR("Can't create OpenGL context! SiftGPU cannot be used.");
@@ -124,15 +128,30 @@ void SiftGPUWrapper::detect(const cv::Mat& image, cv::vector<cv::KeyPoint>& keyp
     int num_features = 0;
     SiftGPU::SiftKeypoint* keys = 0;
 
+    ///Use Keypoints if provided
+    if(keypoints.size() != 0){
+      keys = new SiftGPU::SiftKeypoint[keypoints.size()];
+      for(int i = 0; i < keypoints.size(); ++i){
+        keys[i].x = keypoints[i].pt.x;
+        keys[i].y = keypoints[i].pt.y;
+        keys[i].o = keypoints[i].angle / 180.0 * 3.1415927;//opencv uses degree
+        keys[i].s = keypoints[i].size / 12.0;//Changchang Wu: "You can use 6*scale as the radius" and OpenCV uses diameter
+      }
+      siftgpu->SetKeypointList(keypoints.size(), &keys[0]);
+    }
+
     gpu_mutex.lock();
     ROS_DEBUG("SIFTGPU: cols: %d, rows: %d", image.cols, image.rows);
     if (siftgpu->RunSIFT(image.cols, image.rows, data, GL_LUMINANCE, GL_UNSIGNED_BYTE)) {
         num_features = siftgpu->GetFeatureNum();
         ROS_DEBUG("Number of features found: %i", num_features);
-        keys = new SiftGPU::SiftKeypoint[num_features];
         descriptors.resize(128 * num_features);
         //descriptors = new float[128 * num_features];
-        siftgpu->GetFeatureVector(&keys[0], &descriptors[0]);
+        if(keypoints.size() == 0){
+          keys = new SiftGPU::SiftKeypoint[num_features];
+          siftgpu->GetFeatureVector(&keys[0], &descriptors[0]);
+        }
+        siftgpu->GetFeatureVector(NULL, &descriptors[0]);
     } else {
         ROS_WARN("SIFTGPU->RunSIFT() failed!");
     }
@@ -140,7 +159,7 @@ void SiftGPUWrapper::detect(const cv::Mat& image, cv::vector<cv::KeyPoint>& keyp
     //copy to opencv structure
     keypoints.clear();
     for (int i = 0; i < num_features; ++i) {
-        KeyPoint key(keys[i].x, keys[i].y, 6.0 * keys[i].s, keys[i].o); // 6 x scale is the conversion to pixels, according to changchang wu (the author of siftgpu)
+        KeyPoint key(keys[i].x, keys[i].y, 12.0 * keys[i].s, keys[i].o * 180.0 / 3.1415927); // 6 x scale is the conversion to pixels of the radius, according to changchang wu (the author of siftgpu). OpenCV uses Diameter and degree
         keypoints.push_back(key);
     }
     gpu_mutex.unlock();

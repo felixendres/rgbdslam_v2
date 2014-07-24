@@ -1,3 +1,5 @@
+#ifndef RGBDSLAM_SCOPED_TIMER_H
+#define RGBDSLAM_SCOPED_TIMER_H
 #include <ctime>
 
 ///Class that outputs the time since construction on destruction.
@@ -17,3 +19,5 @@ class ScopedTimer {
     const char* name;
     bool unconditional_triggering;
 };
+
+#endif

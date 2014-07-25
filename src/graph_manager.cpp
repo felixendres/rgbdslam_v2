@@ -327,7 +327,7 @@ void GraphManager::resetGraph(){
 
      next_seq_id = next_vertex_id = 0;
      camera_vertices.clear();
-     cam_cam_edges.clear();
+     cam_cam_edges_.clear();
     marker_id_ =0;
     ParameterServer* ps = ParameterServer::instance();
     createOptimizer(ps->get<std::string>("backend_solver"));
@@ -436,7 +436,7 @@ bool GraphManager::nodeComparisons(Node* new_node,
 
 
     earliest_loop_closure_node_ = new_node->id_;
-    unsigned int num_edges_before = cam_cam_edges.size();
+    unsigned int num_edges_before = cam_cam_edges_.size();
     edge_to_keyframe = false; //not yet found
     marker_id_ = 0; //overdraw old markers
     ROS_DEBUG("Graphsize: %d Nodes", (int) graph_.size());
@@ -617,7 +617,7 @@ bool GraphManager::nodeComparisons(Node* new_node,
     }
 
     //END OF MAIN LOOP: Compare node pairs ######################################################################
-    bool found_trafo = (cam_cam_edges.size() != num_edges_before);
+    bool found_trafo = (cam_cam_edges_.size() != num_edges_before);
     bool invalid_odometry = ps->get<std::string>("odom_frame_name").empty() || 
                             odom_tf_old.frame_id_ == "missing_odometry" || 
                             odom_tf_new.frame_id_ == "missing_odometry"; 
@@ -696,7 +696,7 @@ bool GraphManager::nodeComparisons(Node* new_node,
       new_node->valid_tf_estimate_ = false; //Don't use for postprocessing, rendering etc
     }
     */
-    return cam_cam_edges.size() > num_edges_before;
+    return cam_cam_edges_.size() > num_edges_before;
 }
 
 void GraphManager::localizationUpdate(Node* new_node, QMatrix4x4 motion_estimate)
@@ -809,7 +809,7 @@ bool GraphManager::addNode(Node* new_node)
  //Info output
  QString message;
  Q_EMIT setGUIInfo(message.sprintf("%s, Camera Pose Graph Size: %iN/%iE, Duration: %f, Inliers:%5i",// &chi;<sup>2</sup>: %f", 
-       found_match ? "Added" : "Ignored", (int)camera_vertices.size(), (int)cam_cam_edges.size(), s.elapsed(), (int)curr_best_result_.inlier_matches.size()));//, optimizer_->chi2()));
+       found_match ? "Added" : "Ignored", (int)camera_vertices.size(), (int)cam_cam_edges_.size(), s.elapsed(), (int)curr_best_result_.inlier_matches.size()));//, optimizer_->chi2()));
  process_node_runs_ = false;
  ROS_INFO("%s", qPrintable(message));
  return found_match;
@@ -905,7 +905,7 @@ bool GraphManager::addEdgeToG2O(const LoadedEdge3D& edge,Node* n1, Node* n2,  bo
     g2o_edge->setInformation(edge.informationMatrix);
     optimizer_->addEdge(g2o_edge);
     //ROS_DEBUG_STREAM("Added Edge ("<< edge.id1 << "-" << edge.id2 << ") to Optimizer:\n" << edge.transform << "\nInformation Matrix:\n" << edge.informationMatrix);
-    cam_cam_edges.insert(g2o_edge);
+    cam_cam_edges_.insert(g2o_edge);
     current_match_edges_.insert(g2o_edge); //Used if all previous vertices are fixed ("pose_relative_to" == "all")
 //    new_edges_.append(qMakePair(edge.id1, edge.id2));
 
@@ -1001,7 +1001,7 @@ double GraphManager::optimizeGraphImpl(double break_criterion)
      optimizer_->initializeOptimization(vs);
    } else {
      ScopedTimer s2("Optimizer Initialization");
-     optimizer_->initializeOptimization(cam_cam_edges);
+     optimizer_->initializeOptimization(cam_cam_edges_);
    }
 
     ROS_WARN_NAMED("eval", "Optimization with %zu cams, %zu nodes and %zu edges in the graph", graph_.size(), optimizer_->vertices().size(), optimizer_->edges().size());
@@ -1027,7 +1027,7 @@ double GraphManager::optimizeGraphImpl(double break_criterion)
     }
 
     ROS_WARN_STREAM_NAMED("eval", "G2O Statistics: " << std::setprecision(15) << camera_vertices.size() 
-                          << " cameras, " << cam_cam_edges.size() << " edges. " << chi2
+                          << " cameras, " << cam_cam_edges_.size() << " edges. " << chi2
                           << " ; chi2 "<< ", Iterations: " << currentIt);
     optimizer_mutex_.unlock();
     optimization_mutex_.unlock();
@@ -1096,16 +1096,16 @@ void GraphManager::deleteCameraFrame(int id)
 
 #ifdef DO_FEATURE_OPTIMIZATION
     //Erase edges from cam_cam edge set
-    EdgeSet::iterator edge_iter = cam_cam_edges.begin();
-    for(;edge_iter != cam_cam_edges.end(); edge_iter++) {
+    EdgeSet::iterator edge_iter = cam_cam_edges_.begin();
+    for(;edge_iter != cam_cam_edges_.end(); edge_iter++) {
         if(containsVertex(*edge_iter, v_to_del))
-          cam_cam_edges.erase(edge_iter);
+          cam_cam_edges_.erase(edge_iter);
     }
     //Erase edges from cam_lm edge set
     edge_iter = cam_lm_edges.begin();
     for(;edge_iter != cam_lm_edges.end(); edge_iter++) {
         if(containsVertex(*edge_iter, v_to_del))
-          cam_cam_edges.erase(edge_iter);
+          cam_cam_edges_.erase(edge_iter);
     }
 #endif
 
@@ -1149,8 +1149,8 @@ unsigned int GraphManager::pruneEdgesWithErrorAbove(float thresh){
 
     //Discount cam2cam edges
     g2o::HyperGraph::EdgeSet remaining_cam_cam_edges;
-    EdgeSet::iterator edge_iter = cam_cam_edges.begin();
-    for(;edge_iter != cam_cam_edges.end(); edge_iter++) {
+    EdgeSet::iterator edge_iter = cam_cam_edges_.begin();
+    for(;edge_iter != cam_cam_edges_.end(); edge_iter++) {
         g2o::EdgeSE3* myedge = dynamic_cast<g2o::EdgeSE3*>(*edge_iter);
         g2o::EdgeSE3::ErrorVector ev = myedge->error();
 
@@ -1161,7 +1161,7 @@ unsigned int GraphManager::pruneEdgesWithErrorAbove(float thresh){
         int n_id1 = vertex_id_to_node_id[v1->id()]; 
         int n_id2 = vertex_id_to_node_id[v2->id()];
 
-        ROS_INFO("Mahalanobis Distance for edge from node %d to %d is %f", n_id1, n_id2, myedge->chi2());
+        ROS_DEBUG("Mahalanobis Distance for edge from node %d to %d is %f", n_id1, n_id2, myedge->chi2());
         if(myedge->chi2() > thresh){
           counter++;
           //if(abs(n_id1 - n_id2) == 1){ //predecessor-successor
@@ -1214,7 +1214,7 @@ unsigned int GraphManager::pruneEdgesWithErrorAbove(float thresh){
         }*/
         //remaining_cam_cam_edges.insert(*edge_iter);
     }
-    //cam_cam_edges.swap(remaining_cam_cam_edges);
+    //cam_cam_edges_.swap(remaining_cam_cam_edges_);
     //Q_EMIT setGraphEdges(getGraphEdges());
     return counter;
 }
@@ -1230,8 +1230,8 @@ QList<QPair<int, int> >* GraphManager::getGraphEdges()
           vertex_id_to_node_id[node->vertex_id_] = node->id_;
     }
     QList<QPair<int, int> >* current_edges = new QList<QPair<int, int> >();
-    EdgeSet::iterator edge_iter = cam_cam_edges.begin();
-    for(;edge_iter != cam_cam_edges.end(); edge_iter++) {
+    EdgeSet::iterator edge_iter = cam_cam_edges_.begin();
+    for(;edge_iter != cam_cam_edges_.end(); edge_iter++) {
         g2o::EdgeSE3* myedge = dynamic_cast<g2o::EdgeSE3*>(*edge_iter);
         std::vector<g2o::HyperGraph::Vertex*>& myvertices = myedge->vertices();
         v1 = dynamic_cast<g2o::VertexSE3*>(myvertices.at(1));
@@ -1289,8 +1289,8 @@ void GraphManager::printEdgeErrors(QString filename){
   std::fstream filestr;
   filestr.open (qPrintable(filename),  std::fstream::out );
 
- EdgeSet::iterator edge_iter = cam_cam_edges.begin();
- for(int i =0;edge_iter != cam_cam_edges.end(); edge_iter++, i++) {
+ EdgeSet::iterator edge_iter = cam_cam_edges_.begin();
+ for(int i =0;edge_iter != cam_cam_edges_.end(); edge_iter++, i++) {
       g2o::EdgeSE3* myedge = dynamic_cast<g2o::EdgeSE3*>(*edge_iter);
       g2o::EdgeSE3::ErrorVector ev = myedge->error();
       ROS_INFO_STREAM("Error Norm for edge " << i << ": " << ev.squaredNorm());
@@ -1314,8 +1314,8 @@ void GraphManager::sanityCheck(float thresh){
   thresh *=thresh; //squaredNorm
   QMutexLocker locker(&optimizer_mutex_);
   QMutexLocker locker2(&optimization_mutex_);
-  EdgeSet::iterator edge_iter = cam_cam_edges.begin();
-  for(int i =0;edge_iter != cam_cam_edges.end(); edge_iter++, i++) {
+  EdgeSet::iterator edge_iter = cam_cam_edges_.begin();
+  for(int i =0;edge_iter != cam_cam_edges_.end(); edge_iter++, i++) {
     g2o::EdgeSE3* myedge = dynamic_cast<g2o::EdgeSE3*>(*edge_iter);
     Eigen::Vector3d ev = myedge->measurement().translation();
     if(ev.squaredNorm() > thresh){

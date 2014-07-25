@@ -774,9 +774,9 @@ void GraphManager::visualizeGraphEdges() const {
         edges_marker.color.a = 0.5f;//looks smoother
         geometry_msgs::Point point; //start and endpoint for each line segment
         g2o::VertexSE3* v1,* v2; //used in loop
-  EdgeSet::iterator edge_iter = cam_cam_edges.begin();
+  EdgeSet::iterator edge_iter = cam_cam_edges_.begin();
         int counter = 0;
-  for(;edge_iter != cam_cam_edges.end(); edge_iter++, counter++) {
+  for(;edge_iter != cam_cam_edges_.end(); edge_iter++, counter++) {
             g2o::EdgeSE3* myedge = dynamic_cast<g2o::EdgeSE3*>(*edge_iter);
             std::vector<g2o::HyperGraph::Vertex*>& myvertices = myedge->vertices();
             v1 = dynamic_cast<g2o::VertexSE3*>(myvertices.at(1));

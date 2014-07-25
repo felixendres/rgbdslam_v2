@@ -48,6 +48,8 @@
 #include <boost/math/distributions/chi_squared.hpp>
 #include <numeric>
 
+#include "feature_adjuster.h"
+
 void printQMatrix4x4(const char* name, const QMatrix4x4& m){
     ROS_DEBUG("QMatrix %s:", name);
     ROS_DEBUG("%f\t%f\t%f\t%f", m(0,0), m(0,1), m(0,2), m(0,3));
@@ -372,11 +374,14 @@ FeatureDetector* createDetector( const string& detectorType )
 	ParameterServer* params = ParameterServer::instance();
 	FeatureDetector* fd = 0;
     if( !detectorType.compare( "FAST" ) ) {
+        DetectorAdjuster* detadj = new DetectorAdjuster("FAST");
+        detadj->setDecreaseFactor(0.7);
+        detadj->setIncreaseFactor(1.3);
+        fd = new DynamicAdaptedFeatureDetectorWithStorage (detadj,
+        										params->get<int>("min_keypoints"),
+                            params->get<int>("max_keypoints"),
+                            params->get<int>("adjuster_max_iterations"));
         //fd = new FastFeatureDetector( 20/*threshold*/, true/*nonmax_suppression*/ );
-        fd = new DynamicAdaptedFeatureDetector (new FastAdjuster(20,true), 
-												params->get<int>("min_keypoints"),
-												params->get<int>("max_keypoints"),
-												params->get<int>("adjuster_max_iterations"));
     }
     else if( !detectorType.compare( "STAR" ) ) {
         fd = new StarFeatureDetector( 16/*max_size*/, 5/*response_threshold*/, 10/*line_threshold_projected*/,
@@ -390,14 +395,23 @@ FeatureDetector* createDetector( const string& detectorType )
                  SIFT::DetectorParams::GET_DEFAULT_THRESHOLD(),
                  SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD());
 #else
-        fd = new SiftFeatureDetector();
+        DetectorAdjuster* detadj = new DetectorAdjuster("SIFT", 0.04, 0.0001);
+        detadj->setDecreaseFactor(0.7);
+        detadj->setIncreaseFactor(1.3);
+        fd = new DynamicAdaptedFeatureDetectorWithStorage (detadj,
+        										params->get<int>("min_keypoints"),
+                            params->get<int>("max_keypoints"),
+                            params->get<int>("adjuster_max_iterations"));
 #endif
     }
     else if( !detectorType.compare( "SURF" ) || !detectorType.compare( "SURF128" ) ) {
       /* fd = new SurfFeatureDetector(200.0, 6, 5); */
-        fd = new DynamicAdaptedFeatureDetector(new SurfAdjuster(),
+        DetectorAdjuster* detadj = new DetectorAdjuster("SURF");
+        detadj->setDecreaseFactor(0.7);
+        detadj->setIncreaseFactor(1.3);
+        fd = new DynamicAdaptedFeatureDetectorWithStorage (detadj,
         										params->get<int>("min_keypoints"),
-                            params->get<int>("max_keypoints")+300,
+                            params->get<int>("max_keypoints"),
                             params->get<int>("adjuster_max_iterations"));
     }
     else if( !detectorType.compare( "MSER" ) ) {

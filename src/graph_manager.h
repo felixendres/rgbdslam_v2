@@ -65,6 +65,7 @@
 
 
 //typedef g2o::HyperGraph::VertexSet::iterator Vset_it;
+typedef std::set<g2o::HyperGraph::Edge*> EdgeSet;
 typedef g2o::HyperGraph::EdgeSet::iterator EdgeSet_it;
 typedef std::map<int, Node* >::iterator graph_it;
 //#define ROSCONSOLE_SEVERITY_INFO
@@ -165,7 +166,7 @@ class GraphManager : public QObject {
     void firstNode(Node* new_node);
 
     g2o::HyperGraph::VertexSet camera_vertices;
-    g2o::HyperGraph::EdgeSet cam_cam_edges;
+    g2o::HyperGraph::EdgeSet cam_cam_edges_;
     g2o::HyperGraph::EdgeSet current_match_edges_;
 
 #ifdef DO_FEATURE_OPTIMIZATION
@@ -187,6 +188,10 @@ class GraphManager : public QObject {
     ///Only write (not create, not clear) existing octomap
     void writeOctomap(QString filename) const;
     void setOptimizerVerbose(bool verbose);
+
+    ///Compute information matrix from empirical variances.
+    ///If graph_filename is given, compute variances from 
+    void setEmpiricalCovariances();
 protected:
         
     ///Start over
@@ -284,6 +289,8 @@ protected:
 
     //void mergeAllClouds(pointcloud_type & merge);
     double geodesicDiscount(g2o::HyperDijkstra& hypdij, const MatchingResult& mr);
+    ///See setEmpiricalCovariances
+    void setEmpiricalCovariancesForEdgeSet(EdgeSet& edges);
     
     g2o::SparseOptimizer* optimizer_;
 

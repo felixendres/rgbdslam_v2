@@ -120,10 +120,21 @@ Node::Node(const cv::Mat& visual,
 
   // project pixels to 3dPositions and create search structures for the gicp
 #ifdef USE_SIFT_GPU
-  if(ps->get<std::string>("feature_detector_type") == "SIFTGPU" 
-     && descriptors.size() > 0){
-    projectTo3DSiftGPU(feature_locations_2d_, feature_locations_3d_, depth, cam_info, descriptors, feature_descriptors_); 
-    ROS_INFO("Feature Descriptors size: %d x %d", feature_descriptors_.rows, feature_descriptors_.cols);
+  if(ps->get<std::string>("feature_extractor_type") == "SIFTGPU"){
+
+    if(ps->get<std::string>("feature_detector_type") != "SIFTGPU"){
+      //not already extracted descriptors in detection step
+      //clean keypoints from those without 3d FIXME: can be made more performant
+      projectTo3D(feature_locations_2d_, feature_locations_3d_, depth, cam_info);
+      SiftGPUWrapper* siftgpu = SiftGPUWrapper::getInstance();
+      siftgpu->detect(gray_img, feature_locations_2d_, descriptors);
+    } 
+    if(descriptors.size() > 0){
+      projectTo3DSiftGPU(feature_locations_2d_, feature_locations_3d_, depth, cam_info, descriptors, feature_descriptors_); 
+      ROS_INFO("Siftgpu Feature Descriptors size: %d x %d", feature_descriptors_.rows, feature_descriptors_.cols);
+    } else {
+      ROS_WARN("No descriptors for current image!");
+    }
     //std::cout << "feature descriptors = "<< std::endl << std::setprecision(3)  << feature_descriptors_<< std::endl;
   }
   else
@@ -551,6 +562,7 @@ unsigned int Node::featureMatching(const Node* other, std::vector<cv::DMatch>* m
           matches->push_back(match);
         }
       }
+      
       ROS_INFO("Feature Matches between Nodes %3d (%4d features) and %3d (%4d features) in segment %d/%d (features %d to %d of first node):\t%4d. Percentage: %f%%, Avg NN Ratio: %f",
                 this->id_, (int)this->feature_locations_2d_.size(), other->id_, (int)other->feature_locations_2d_.size(), seg, num_segments, start_feature, start_feature+num_features, 
                 (int)matches->size(), (100.0*matches->size())/((float)start_feature+num_features), avg_ratio / (start_feature+num_features));
@@ -1233,6 +1245,7 @@ MatchingResult Node::matchNodePair(const Node* older_node)
             nn_ratio += mr.inlier_matches[i].distance;
           }
           nn_ratio /= mr.inlier_matches.size();
+          ParameterServer::instance()->set("nn_distance_ratio", static_cast<double>(nn_ratio + 0.2));
           mr.final_trafo = mr.ransac_trafo;
           mr.edge.informationMatrix =   Eigen::Matrix<double,6,6>::Identity()*(mr.inlier_matches.size()/(mr.rmse*mr.rmse)); //TODO: What do we do about the information matrix? Scale with inlier_count. Should rmse be integrated?)
 

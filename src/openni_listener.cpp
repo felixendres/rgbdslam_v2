@@ -363,6 +363,19 @@ void OpenNIListener::evaluation(std::string filename)
       ROS_WARN_NAMED("eval", "Finished with optimization iteration %i.", 3);
     }
 
+    graph_mgr_->setEmpiricalCovariances();
+    graph_mgr_->optimizeGraph(-100, true, QString(filename.c_str()));//Non threaded call
+
+    graph_mgr_->saveTrajectory(QString(filename.c_str()) + "iteration_empiricalCov");
+    graph_mgr_->saveG2OGraph(QString(filename.c_str()) + "empiricalCov.g2o");
+    ROS_WARN_NAMED("eval", "Finished with optimization iteration empiricalCov.");
+
+    graph_mgr_->setEmpiricalCovariances();
+    graph_mgr_->optimizeGraph(-100, true, QString(filename.c_str()));//Non threaded call
+
+    graph_mgr_->saveTrajectory(QString(filename.c_str()) + "iteration_empiricalCov2");
+    graph_mgr_->saveG2OGraph(QString(filename.c_str()) + "empiricalCov2.g2o");
+    ROS_WARN_NAMED("eval", "Finished with optimization iteration empiricalCov2.");
     /* OCTOMAP
     if(ParameterServer::instance()->get<bool>("octomap_online_creation")){
       graph_mgr_->writeOctomap(QString(filename.c_str()) + "-online.ot");

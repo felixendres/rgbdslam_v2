@@ -14,6 +14,10 @@
  * along with RGBDSLAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "graph_manager.h"
+#include "misc.h"
+#include "covariance_estimation.h"
+#include "g2o/types/slam3d/edge_se3.h" //For setEmpiricalCovariances
+#include "scoped_timer.h"
 
 ///This file contains methods of the GraphManager class without extra 
 ///dependencies (except for the class header).
@@ -102,5 +106,39 @@ void GraphManager::deleteFeatureInformation() {
   BOOST_FOREACH(GraphNodeType entry, graph_){
     entry.second->clearFeatureInformation();
   }
+}
+
+void GraphManager::setEmpiricalCovariancesForEdgeSet(EdgeSet& edges){
+  ScopedTimer s(__FUNCTION__);
+
+  typedef Eigen::Matrix<double,6,Eigen::Dynamic> Matrix6Xd;
+  typedef g2o::BaseEdge<6, Eigen::Isometry3d> BaseEdgeSE3;
+  typedef g2o::EdgeSE3::InformationType InfoMat;
+
+  Matrix6Xd measurements, errors;
+  edgesToMeasurementMatrix<BaseEdgeSE3>(edges, measurements);
+  edgesToErrorMatrix<BaseEdgeSE3>(edges, errors);
+
+  //Precomputation of weights and weighted errors
+  Vector6d meanMsr = measurements.rowwise().mean();
+  Vector6d stdDev = (measurements.colwise() - meanMsr).cwiseAbs().rowwise().mean();
+
+  EdgeSet::iterator it = edges.begin();
+  for(int i = 0; it != edges.end(); ++it, ++i)
+  {
+    BaseEdgeSE3* edge = dynamic_cast<BaseEdgeSE3*>( *it );
+    if(edge){
+      InfoMat infoMat = computeEmpiricalInformationMatrix(measurements, errors, measurements.col(i), stdDev);
+      edge->setInformation(infoMat);
+    }
+  }
+
+}
+
+void GraphManager::setEmpiricalCovariances(){
+  optimizer_->initializeOptimization();
+  optimizer_->computeActiveErrors();
+
+  setEmpiricalCovariancesForEdgeSet(cam_cam_edges_);
 }
 

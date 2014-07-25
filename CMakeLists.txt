@@ -16,9 +16,9 @@ endif ("${ROS_PARALLEL_JOBS}" EQUAL "")
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
-SET(CMAKE_CXX_FLAGS "-O3 -fPIC -std=c++0x")
+#SET(CMAKE_CXX_FLAGS "-O3 -fPIC -std=c++0x")
 #For annotated profiling with perf: 
-#SET(CMAKE_CXX_FLAGS "-ggdb -O3 -fPIC -std=c++0x")
+SET(CMAKE_CXX_FLAGS "-ggdb -O3 -fPIC -std=c++0x")
 
 IF (${USE_GL2PS})
   add_definitions(-DGL2PS)
@@ -110,7 +110,7 @@ SET(${CMAKE_LIBRARY_PATH} ${LIBRARY_OUTPUT_PATH})
 
 
 #Only possible when not subscribing to point cloud topic. Possibly dangerous anyway, but halves storage space per point cloud
-#ADD_DEFINITIONS(-DRGB_IS_4TH_DIM) 
+ADD_DEFINITIONS(-DRGB_IS_4TH_DIM) 
 #ADD_DEFINITIONS(-DDO_FEATURE_OPTIMIZATION)
 #ADD_DEFINITIONS(-DHEMACLOUDS) 
 ADD_DEFINITIONS(-DROSCONSOLE_MIN_SEVERITY=ROSCONSOLE_SEVERITY_INFO)
@@ -195,8 +195,14 @@ QT4_WRAP_CPP(QT_MOC_HPP ${QT_MOC})
 ##############################################################################
 # Sources to Compile
 ##############################################################################
-SET(ADDITIONAL_SOURCES src/gicp-fallback.cpp src/main.cpp src/qtros.cpp  src/openni_listener.cpp src/qt_gui.cpp src/node.cpp src/graph_manager.cpp src/graph_mgr_io.cpp src/glviewer.cpp src/parameter_server.cpp src/ros_service_ui.cpp src/misc.cpp src/landmark.cpp src/loop_closing.cpp src/ColorOctomapServer.cpp src/scoped_timer.cpp src/icp.cpp src/matching_result.cpp)
+SET(ADDITIONAL_SOURCES src/gicp-fallback.cpp src/main.cpp src/qtros.cpp  src/openni_listener.cpp src/qt_gui.cpp src/node.cpp src/glviewer.cpp src/parameter_server.cpp src/ros_service_ui.cpp src/misc.cpp src/landmark.cpp src/loop_closing.cpp src/ColorOctomapServer.cpp src/scoped_timer.cpp src/icp.cpp src/matching_result.cpp)
+#GraphManager Files
+SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/graph_manager.cpp src/graph_mgr_io.cpp src/graph_manager2.cpp)
 SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/transformation_estimation_euclidean.cpp src/transformation_estimation.cpp src/graph_manager2.cpp src/header.cpp)
+#Computation of meaningful covariances
+SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/covariance_estimation.cpp) # src/edge_labeler.cpp)
+#Detector Threshold Adapter
+SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/feature_adjuster.cpp)
 
 IF (${USE_SIFT_GPU})
  	SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/sift_gpu_wrapper.cpp)

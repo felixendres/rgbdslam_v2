@@ -10,7 +10,7 @@ if  test ! -d "$DIR"; then
 fi
 
 pushd $DIR > /dev/null
-for num in 0 1 2 3 4; do 
+for num in 0 1 2 3 4 empiricalCov empiricalCov2; do 
   if grep "absolute.*error" ate_evaluation_$num.csv &> /dev/null;then
     echo "[0;36mResult exists: ate_evaluation_$num.csv[1;36m[0m "
     #column '-s;' -t  ate_evaluation_$num.csv
@@ -56,9 +56,9 @@ for num in 0 1 2 3 4; do
       grep translational_error.rmse $EVAL_FILE.ate |sed "s#$DIR##g" | sed 's/ /; /g' >> eval_translational.ate.txt
 
       #OVERALL RUNTIME
-      STARTTIME=`grep "First RGBD-Data Received" $BASENAME/logfile.txt |head -n1|grep -o '13[0-9]*\.'` #timestamp first relevant action
+      STARTTIME=`grep "First RGBD-Data Received" $BASENAME/logfile.txt |head -n1|grep -o '14[0-9]*\.'` #timestamp first relevant action
       STARTTIME_NSEC=`grep "First RGBD-Data Received" $BASENAME/logfile.txt |head -n1|grep -o '\.[0-9]*'` #timestamp first relevant action
-      ENDTIME=`grep "Finished with optimization iteration $num[^0-9]" $BASENAME/logfile.txt |head -n1|grep -o '13[0-9][0-9]*\.'` #timestamp first relevant action
+      ENDTIME=`grep "Finished with optimization iteration $num[^0-9]" $BASENAME/logfile.txt |head -n1|grep -o '14[0-9][0-9]*\.'` #timestamp first relevant action
       ENDTIME_NSEC=`grep "Finished with optimization iteration $num[^0-9]" $BASENAME/logfile.txt |head -n1|grep -o '\.[0-9][0-9]*'` #timestamp first relevant action
       #echo -n "Start; ${STARTTIME%.}.${STARTTIME_NSEC#.};s; End; ${ENDTIME%.}.${ENDTIME_NSEC#.};s;" >> eval_runtime.txt
       timediff=`echo "${ENDTIME%.}.${ENDTIME_NSEC#.} - ${STARTTIME%.}.${STARTTIME_NSEC#.}" |bc` 

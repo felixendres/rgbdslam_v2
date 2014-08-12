@@ -133,9 +133,6 @@ void DynamicAdaptedFeatureDetectorWithStorage::detectImpl(const cv::Mat& _image,
     bool down = false;
     bool up = false;
 
-    //flag for whether the correct threshhold has been reached
-    bool thresh_good = false;
-
     //break if the desired number hasn't been reached.
     int iter_count = escape_iters_;
 
@@ -154,12 +151,13 @@ void DynamicAdaptedFeatureDetectorWithStorage::detectImpl(const cv::Mat& _image,
         {
             up = true;
             adjuster_->tooMany(max_features_, (int)keypoints.size());
+            break;//FIXME: Too many is ok as they are clipped anyway?
         }
         else
-            thresh_good = true;
+            break;
 
         iter_count--;
-    } while( iter_count > 0 && !(down && up) && !thresh_good && adjuster_->good() );
+    } while( iter_count > 0 && !(down && up) && adjuster_->good() );
 
 }
 

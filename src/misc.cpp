@@ -436,7 +436,10 @@ FeatureDetector* createDetector( const string& detectorType )
         fd = new OrbFeatureDetector(params->get<int>("max_keypoints")+1500,
                 ORB::CommonParams(1.2, ORB::CommonParams::DEFAULT_N_LEVELS, 31, ORB::CommonParams::DEFAULT_FIRST_LEVEL));
 #elif CV_MAJOR_VERSION > 2 || CV_MINOR_VERSION >= 4
-        fd = new OrbFeatureDetector();
+        ROS_INFO("Using Grid-Adapted ORB");
+        fd = new cv::GridAdaptedFeatureDetector(new OrbFeatureDetector(params->get<int>("max_keypoints"), 1.2, 8, 31, 0, 2, 0, 15), params->get<int>("max_keypoints"));
+    //CV_WRAP explicit ORB(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 8, int edgeThreshold = 31,
+     //   int firstLevel = 0, int WTA_K=2, int scoreType=ORB::HARRIS_SCORE, int patchSize=31 );
 #else
       ROS_ERROR("ORB features are not implemented in your version of OpenCV");
 #endif
@@ -459,6 +462,9 @@ DescriptorExtractor* createDescriptorExtractor( const string& descriptorType )
     DescriptorExtractor* extractor = 0;
     if( !descriptorType.compare( "SIFT" ) ) {
         extractor = new SiftDescriptorExtractor();/*( double magnification=SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION(), bool isNormalize=true, bool recalculateAngles=true, int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES, int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS, int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE, int angleMode=SIFT::CommonParams::FIRST_ANGLE )*/
+    }
+    else if( !descriptorType.compare( "BRIEF" ) ) {
+        extractor = new BriefDescriptorExtractor();
     }
     else if( !descriptorType.compare( "BRISK" ) ) {
         extractor = new cv::BRISK();/*brisk default: (int thresh=30, int octaves=3, float patternScale=1.0f)*/

@@ -48,6 +48,7 @@ void ParameterServer::defaultConfig() {
   addOption("store_pointclouds",             static_cast<bool> (true),                  "If the point clouds are not needed online, setting this to false saves lots of memory ");
   addOption("individual_cloud_out_topic",    std::string("/rgbdslam/batch_clouds"),     "Use this topic when sending the individual clouds with the computed transforms, e.g. for octomap_server");
   addOption("aggregate_cloud_out_topic",     std::string("/rgbdslam/aggregate_clouds"), "Use this topic when sending the all points in one big registered cloud");
+  addOption("online_cloud_out_topic",        std::string("/rgbdslam/online_clouds"),    "Use this topic to get the latest cloud.");
   addOption("send_clouds_rate",              static_cast<double> (5),                   "When sending the point clouds (e.g. to RVIZ or Octomap Server) limit sending to this many clouds per second");
   addOption("publisher_queue_size",          static_cast<int> (5),                      "ROS standard parameter for all publishers");
   // Octomap data settings

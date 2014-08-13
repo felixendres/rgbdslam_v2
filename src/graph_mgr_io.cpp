@@ -931,9 +931,17 @@ void GraphManager::broadcastLatestTransform(const ros::TimerEvent& event) const
     */
 }
 
-void GraphManager::broadcastTransform(const tf::StampedTransform& stamped_transform) const 
+void GraphManager::broadcastTransform(const tf::StampedTransform& stamped_transform) 
 {
     br_.sendTransform(stamped_transform);
+    if(graph_.size() > 0){
+      Node* current_node = graph_.at(graph_.size() - 1);
+      if(current_node && current_node->header_.stamp.toSec() == stamped_transform.stamp_.toSec()){
+        publishCloud(current_node, current_node->header_.stamp, online_cloud_pub_);
+      } else {
+        ROS_WARN("Timestamp of transform does not match node");
+      }
+    }
 }
 
 /*
@@ -965,13 +973,15 @@ void GraphManager::broadcastTransform(Node* node, tf::Transform& computed_motion
 
 ///Send node's pointcloud with given publisher and timestamp
 void publishCloud(Node* node, ros::Time timestamp, ros::Publisher pub){
-  myHeader backup_h(node->pc_col->header);
-  myHeader newtime_h(node->pc_col->header);
-  newtime_h.stamp = timestamp;
-  node->pc_col->header = newtime_h;
-  pub.publish(node->pc_col);
-  ROS_INFO("Pointcloud with id %i sent with frame %s", node->id_, node->pc_col->header.frame_id.c_str());
-  node->pc_col->header = backup_h;
+  if (pub.getNumSubscribers() != 0){
+    myHeader backup_h(node->pc_col->header);
+    myHeader newtime_h(node->pc_col->header);
+    newtime_h.stamp = timestamp;
+    node->pc_col->header = newtime_h;
+    pub.publish(node->pc_col);
+    ROS_INFO("Pointcloud with id %i sent with frame %s", node->id_, node->pc_col->header.frame_id.c_str());
+    node->pc_col->header = backup_h;
+  }
 }
 
 void drawFeatureConnectors(cv::Mat& canvas, cv::Scalar line_color, 

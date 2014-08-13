@@ -81,6 +81,8 @@ GraphManager::GraphManager() :
   ros::NodeHandle nh;
   batch_cloud_pub_ = nh.advertise<pointcloud_type>(ps->get<std::string>("individual_cloud_out_topic"),
                                                    ps->get<int>("publisher_queue_size"));
+  online_cloud_pub_ = nh.advertise<pointcloud_type>(ps->get<std::string>("online_cloud_out_topic"),
+                                                   ps->get<int>("publisher_queue_size"));
   whole_cloud_pub_ = nh.advertise<pointcloud_type>(ps->get<std::string>("aggregate_cloud_out_topic"),
                                                    ps->get<int>("publisher_queue_size"));
   ransac_marker_pub_ = nh.advertise<visualization_msgs::Marker>("/rgbdslam/correspondence_marker", 

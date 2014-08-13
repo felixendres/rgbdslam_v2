@@ -256,7 +256,7 @@ protected:
     void deleteCameraFrame(int id);
 
     ///Broadcast given transform
-    void broadcastTransform(const tf::StampedTransform& computed_motion) const;
+    void broadcastTransform(const tf::StampedTransform& computed_motion);
 
     ///Broadcast cached transform
     void broadcastLatestTransform(const ros::TimerEvent& event) const;
@@ -298,6 +298,7 @@ protected:
     ros::Publisher ransac_marker_pub_;
     ros::Publisher whole_cloud_pub_;
     ros::Publisher batch_cloud_pub_;
+    ros::Publisher online_cloud_pub_;
     
     //!Used to start the broadcasting of the pose estimate regularly
     ros::Timer timer_;

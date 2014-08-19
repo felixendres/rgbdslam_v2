@@ -39,6 +39,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
 #endif
+#include "aorb.h"
 
 #include <omp.h>
 #include "misc2.h"
@@ -436,12 +437,22 @@ FeatureDetector* createDetector( const string& detectorType )
         fd = new OrbFeatureDetector(params->get<int>("max_keypoints")+1500,
                 ORB::CommonParams(1.2, ORB::CommonParams::DEFAULT_N_LEVELS, 31, ORB::CommonParams::DEFAULT_FIRST_LEVEL));
 #elif CV_MAJOR_VERSION > 2 || CV_MINOR_VERSION >= 4
-        ROS_INFO("Using Grid-Adapted ORB");
-        fd = new cv::GridAdaptedFeatureDetector(new OrbFeatureDetector(params->get<int>("max_keypoints"), 1.2, 8, 31, 0, 2, 0, 15), params->get<int>("max_keypoints"));
+        ROS_INFO("Using Adapted ORB");
+        //fd = new AorbFeatureDetector(params->get<int>("max_keypoints"), 1.1, 8, 31, 0, 4, 0, 31, 10);
+        DetectorAdjuster* detadj = new DetectorAdjuster("AORB");
+        // DetectorAdjuster* detadj = new DetectorAdjuster("FAST");
+        detadj->setDecreaseFactor(0.7);
+        detadj->setIncreaseFactor(1.3);
+        fd = new DynamicAdaptedFeatureDetectorWithStorage (detadj,
+        										params->get<int>("min_keypoints"),
+                            params->get<int>("max_keypoints"),
+                            params->get<int>("adjuster_max_iterations"));
     //CV_WRAP explicit ORB(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 8, int edgeThreshold = 31,
      //   int firstLevel = 0, int WTA_K=2, int scoreType=ORB::HARRIS_SCORE, int patchSize=31 );
 #else
-      ROS_ERROR("ORB features are not implemented in your version of OpenCV");
+        ROS_ERROR("ORB features are not implemented in your version of OpenCV");
+        ROS_DEBUG("Creating FAST detector as fallback.");
+        fd = createDetector("FAST"); //recursive call with correct parameter
 #endif
     }
     else if( !detectorType.compare( "SIFTGPU" ) ) {

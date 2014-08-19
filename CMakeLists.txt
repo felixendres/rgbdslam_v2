@@ -110,10 +110,10 @@ SET(${CMAKE_LIBRARY_PATH} ${LIBRARY_OUTPUT_PATH})
 
 
 #Only possible when not subscribing to point cloud topic. Possibly dangerous anyway, but halves storage space per point cloud
-ADD_DEFINITIONS(-DRGB_IS_4TH_DIM) 
+#ADD_DEFINITIONS(-DRGB_IS_4TH_DIM) 
 #ADD_DEFINITIONS(-DDO_FEATURE_OPTIMIZATION)
 #ADD_DEFINITIONS(-DHEMACLOUDS) 
-ADD_DEFINITIONS(-DROSCONSOLE_MIN_SEVERITY=ROSCONSOLE_SEVERITY_INFO)
+ADD_DEFINITIONS(-DROSCONSOLE_MIN_SEVERITY=ROSCONSOLE_SEVERITY_WARN)
 
 #############################
 # SiftGPU ###################
@@ -202,7 +202,7 @@ SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/transformation_estimation_eucli
 #Computation of meaningful covariances
 SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/covariance_estimation.cpp) # src/edge_labeler.cpp)
 #Detector Threshold Adapter
-SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/feature_adjuster.cpp)
+SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/feature_adjuster.cpp src/aorb.cpp)
 
 IF (${USE_SIFT_GPU})
  	SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/sift_gpu_wrapper.cpp)

@@ -54,13 +54,13 @@ SiftGPUWrapper::SiftGPUWrapper() {
     char verbosity_val[] = {"0"};//nothing but errors
 
     char first_octave[] = {"-fo"};
-    char first_octave_val[] = {"-1"}; //Slower than 0, more features
+    char first_octave_val[] = {"-1"}; //Slower than 0, more keypoints
 
     char edge_threshold[] = "-e"; 
-    char edge_threshold_val[] = "5.0"; //Default: 10
+    char edge_threshold_val[] = "10.0"; //Default: 10
 
-    char dog_threshold[] = "-t"; 
-    char dog_threshold_val[] = "0.005"; //Default: 0.02/3
+    char dog_levels[] = "-d"; //This parameter affects the number of keypoints found
+    char dog_levels_val[] = "5"; //Default: 3 (would result in less features for, e.g., blurry images)
 
     char nonfixedorientation[] = "-ofix-not";
     char * argv[] = {method,  
@@ -69,8 +69,8 @@ SiftGPUWrapper::SiftGPUWrapper() {
                      first_octave, first_octave_val, 
                      verbosity, verbosity_val,
                      unnormalized_descriptors,
+                     dog_levels, dog_levels_val,
                      edge_threshold, edge_threshold_val,
-                     dog_threshold, dog_threshold_val,
                      nonfixedorientation};
 
     siftgpu->ParseParam(15, argv);

@@ -45,7 +45,8 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
-#include <ros/ros.h>
+#include <cassert>
+#include <iostream>
 using namespace cv;
 
 
@@ -55,10 +56,7 @@ DetectorAdjuster::DetectorAdjuster(const char* detector_name, double initial_thr
     increase_factor_(increase_factor), decrease_factor_(decrease_factor),
     detector_name_(detector_name)
 {
-  if(detector_name_ == NULL){
-    ROS_ERROR("No detector name given, using SURF");
-    detector_name_ = "SURF";
-  } 
+  assert(detector_name_ != NULL && "No detector name given, using SURF");
 }
 
 void DetectorAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
@@ -73,8 +71,11 @@ void DetectorAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypo
     else if(strcmp(detector_name_, "FAST") == 0){
       detector->set("threshold", static_cast<int>(thresh_));
     }
+    else if(strcmp(detector_name_, "AORB") == 0){
+      detector->set("fastThreshold", static_cast<int>(thresh_));
+    }
     else {
-      ROS_ERROR("Unknown Descriptor, not setting threshold");
+      std::cerr << "Unknown Descriptor, not setting threshold";
     }
     detector->detect(image, keypoints, mask);
 }
@@ -91,7 +92,6 @@ void DetectorAdjuster::tooFew(int, int)
     thresh_ *= decrease_factor_;
     if (thresh_ < min_thresh_)
             thresh_ = min_thresh_;
-    ROS_INFO("Too Few Features, Decreased Threshold. New Threshold: %f", thresh_);
 }
 
 void DetectorAdjuster::tooMany(int, int)
@@ -99,7 +99,6 @@ void DetectorAdjuster::tooMany(int, int)
     thresh_ *= increase_factor_;
     if (thresh_ > max_thresh_)
             thresh_ = max_thresh_;
-    ROS_INFO("Too Many Features, Increased Threshold. New Threshold: %f", thresh_);
 }
 
 //return whether or not the threshhold is beyond
@@ -115,6 +114,10 @@ Ptr<AdjusterAdapter> DetectorAdjuster::clone() const
     return cloned_obj;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 DynamicAdaptedFeatureDetectorWithStorage::DynamicAdaptedFeatureDetectorWithStorage(Ptr<AdjusterAdapter> a,
                                          int min_features, int max_features, int max_iters ) :
         escape_iters_(max_iters), min_features_(min_features), max_features_(max_features), adjuster_(a)
@@ -127,11 +130,8 @@ bool DynamicAdaptedFeatureDetectorWithStorage::empty() const
 
 void DynamicAdaptedFeatureDetectorWithStorage::detectImpl(const cv::Mat& _image, std::vector<KeyPoint>& keypoints, const cv::Mat& _mask) const
 {
-    //Mat image = _image, mask = _mask;
-
-    //for oscillation testing
-    bool down = false;
-    bool up = false;
+    //In contraast to the original, no oscillation testing is needed as
+    //the loop is broken out of anyway, if too many features were found.
 
     //break if the desired number hasn't been reached.
     int iter_count = escape_iters_;
@@ -141,15 +141,12 @@ void DynamicAdaptedFeatureDetectorWithStorage::detectImpl(const cv::Mat& _image,
 
         //the adjuster takes care of calling the detector with updated parameters
         adjuster_->detect(_image, keypoints,_mask);
-        ROS_INFO("Detected %d Keypoints", int(keypoints.size()));
         if( int(keypoints.size()) < min_features_ )
         {
-            down = true;
             adjuster_->tooFew(min_features_, (int)keypoints.size());
         }
         else if( int(keypoints.size()) > max_features_ )
         {
-            up = true;
             adjuster_->tooMany(max_features_, (int)keypoints.size());
             break;//FIXME: Too many is ok as they are clipped anyway?
         }
@@ -157,7 +154,7 @@ void DynamicAdaptedFeatureDetectorWithStorage::detectImpl(const cv::Mat& _image,
             break;
 
         iter_count--;
-    } while( iter_count > 0 && !(down && up) && adjuster_->good() );
+    } while( iter_count > 0 && adjuster_->good() );
 
 }
 

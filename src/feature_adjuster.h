@@ -2,11 +2,17 @@
 #define FEATUREADJUSTER_H
 #include <opencv2/features2d/features2d.hpp>
 
+/** \brief an detector adjuster optimized for image sequences (video).
+ * Use this Adjuster with the DynamicAdaptedFeatureDetector. 
+ * It lets you set the increase/decrease factor for faster adaptation.
+ * It works for SURF, SIFT, FAST and the adjustable ORB variant "AORB" 
+ * which exposes its FAST threshold.
+ */
 class DetectorAdjuster: public cv::AdjusterAdapter
 {
 public:
-    ///Initial values are from SURF detector
-    DetectorAdjuster(const char* detector_name, double initial_thresh=200.f, double min_thresh=2, double max_thresh=10000, double increase_factor=1.1, double decrease_factor=0.9 );
+    ///Initial values are for SURF detector
+    DetectorAdjuster(const char* detector_name, double initial_thresh=200.f, double min_thresh=2, double max_thresh=10000, double increase_factor=1.3, double decrease_factor=0.7 );
     
     virtual void tooFew(int minv, int n_detected);
     virtual void tooMany(int maxv, int n_detected);
@@ -14,7 +20,6 @@ public:
 
     virtual cv::Ptr<cv::AdjusterAdapter> clone() const;
 
-    //Default is 1.1
     void setIncreaseFactor(double new_factor);
     void setDecreaseFactor(double new_factor);
 protected:
@@ -36,6 +41,17 @@ protected:
  //FAST feature detection 10 times until that number of keypoints are found
  Ptr<FeatureDetector> detector(new DynamicAdaptedFeatureDetector(new FastAdjuster(20,true),100, 110, 10));
 
+ In contrast to the original DynamicAdaptedFeatureDetector, this variant is enhanced for
+ processing of video sequences. It is meant to work with the DetectorAdjuster.
+ It keeps the DetectorAdjuster alive, so that the final threshold will be retained
+ throughout detection calls. For video sequences the "good" threshold will in
+ general be similar for successive frames, therefore the last "good" threshold
+ is a good starting point for the next frame.
+
+ In case of too many features, this variant will just decrease the threshold of the
+ DetectorAdjuster without triggering redetection, so the user needs to get rid of the
+ superfluous keypoints. Mostly the keypoints are scored anyway, so this avoids
+ costly and unnecessary redetections. 
  */
 class DynamicAdaptedFeatureDetectorWithStorage: public cv::FeatureDetector
 {

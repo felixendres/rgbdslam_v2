@@ -1245,7 +1245,7 @@ MatchingResult Node::matchNodePair(const Node* older_node)
             nn_ratio += mr.inlier_matches[i].distance;
           }
           nn_ratio /= mr.inlier_matches.size();
-          ParameterServer::instance()->set("nn_distance_ratio", static_cast<double>(nn_ratio + 0.2));
+          //ParameterServer::instance()->set("nn_distance_ratio", static_cast<double>(nn_ratio + 0.2));
           mr.final_trafo = mr.ransac_trafo;
           mr.edge.informationMatrix =   Eigen::Matrix<double,6,6>::Identity()*(mr.inlier_matches.size()/(mr.rmse*mr.rmse)); //TODO: What do we do about the information matrix? Scale with inlier_count. Should rmse be integrated?)
 

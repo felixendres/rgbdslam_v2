@@ -1062,7 +1062,7 @@ double GraphManager::optimizeGraphImpl(double break_criterion)
   }
 
   current_match_edges_.clear();
-  ROS_WARN("GM: 1198: no graph edges in visualzation"  );
+  //ROS_WARN("GM: 1198: no graph edges in visualzation"  );
   Q_EMIT setGraphEdges(getGraphEdges());
   Q_EMIT updateTransforms(getAllPosesAsMatrixList());
 

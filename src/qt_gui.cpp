@@ -932,7 +932,7 @@ void Graphical_UI::createMenus() {
       this->addAction(toggleShowEdgesAct);
 
       QAction *toggleStereoAct = new QAction(tr("Stere&o View"), this);
-      toggleStereoAct->setShortcut(QString("Ctrl+Shift+O"));
+      //toggleStereoAct->setShortcut(QString(""));
       toggleStereoAct->setCheckable(true);
       toggleStereoAct->setChecked(false);
       toggleStereoAct->setStatusTip(tr("Split screen view with slightly shifted Camera"));
@@ -949,7 +949,7 @@ void Graphical_UI::createMenus() {
       this->addAction(toggleShowFeatures);
 
       QAction *toggleOctoMapDisplay = new QAction(tr("Show &Octomap"), this);
-      toggleOctoMapDisplay->setShortcut(QString("O"));
+      toggleOctoMapDisplay->setShortcut(QString("Ctrl+Shift+O"));
       toggleOctoMapDisplay->setCheckable(true);
       toggleOctoMapDisplay->setChecked(true);
       toggleOctoMapDisplay->setStatusTip(tr("Toggle whether octomap should be displayed"));

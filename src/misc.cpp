@@ -443,10 +443,11 @@ FeatureDetector* createDetector( const string& detectorType )
         // DetectorAdjuster* detadj = new DetectorAdjuster("FAST");
         detadj->setDecreaseFactor(0.7);
         detadj->setIncreaseFactor(1.3);
-        fd = new DynamicAdaptedFeatureDetectorWithStorage (detadj,
-        										params->get<int>("min_keypoints"),
-                            params->get<int>("max_keypoints"),
+        FeatureDetector* ofd = new DynamicAdaptedFeatureDetectorWithStorage (detadj,
+        										round(params->get<int>("min_keypoints")/4.0),//four cells
+                            round(params->get<int>("max_keypoints")/4.0),//four cells
                             params->get<int>("adjuster_max_iterations"));
+        fd = new GridAdaptedFeatureDetector(ofd, params->get<int>("max_keypoints"), 2,2);
     //CV_WRAP explicit ORB(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 8, int edgeThreshold = 31,
      //   int firstLevel = 0, int WTA_K=2, int scoreType=ORB::HARRIS_SCORE, int patchSize=31 );
 #else
@@ -526,7 +527,7 @@ std::string openCVCode2String(unsigned int code){
   return std::string("Unknown");
 }
 
-void printMatrixInfo(cv::Mat& image, std::string name){
+void printMatrixInfo(const cv::Mat& image, std::string name){
   ROS_INFO_STREAM("Matrix " << name << " - Type:" << openCVCode2String(image.type()) <<  " rows: " <<  image.rows  <<  " cols: " <<  image.cols);
 }
 

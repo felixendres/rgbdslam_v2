@@ -127,7 +127,7 @@ void depthToCV8UC1(cv::Mat& float_img, cv::Mat& mono8_img);
 std::string openCVCode2String(unsigned int code);
 
 ///Print Type and size of image
-void printMatrixInfo(cv::Mat& image, std::string name = std::string(""));
+void printMatrixInfo(const cv::Mat& image, std::string name = std::string(""));
 
 //!Return true if frames should be dropped because they are asynchronous
 bool asyncFrameDrop(ros::Time depth, ros::Time rgb);

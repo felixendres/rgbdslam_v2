@@ -82,7 +82,7 @@ void ParameterServer::defaultConfig() {
   addOption("min_matches",                   static_cast<int> (20),                     "Don't try RANSAC if less than this many matches (if using SiftGPU and GLSL you should use max. 60 matches)");
   addOption("sufficient_matches",            static_cast<int> (1e9),                    "Extract no less than this many only honored by the adjustable SURF and FAST features");
   addOption("adjuster_max_iterations",       static_cast<int> (1),                     "If outside of bounds for max_kp and min_kp, retry this many times with adapted threshold");
-  addOption("use_feature_min_depth",         static_cast<bool>(true),                   "Consider the nearest point in the neighborhood of the feature as its depth, as it will dominate the motion");
+  addOption("use_feature_min_depth",         static_cast<bool>(false),                   "Consider the nearest point in the neighborhood of the feature as its depth, as it will dominate the motion");
   addOption("use_feature_mask",              static_cast<bool>(false),                  "Whether to extract features without depth");
   addOption("use_root_sift",                 static_cast<bool>(true),                   "Whether to use euclidean distance or Hellman kernel for feature comparison");
 

@@ -16,9 +16,9 @@ endif ("${ROS_PARALLEL_JOBS}" EQUAL "")
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
-#SET(CMAKE_CXX_FLAGS "-O3 -fPIC -std=c++0x")
+SET(CMAKE_CXX_FLAGS "-O3 -fPIC -std=c++0x")
 #For annotated profiling with perf: 
-SET(CMAKE_CXX_FLAGS "-ggdb -O3 -fPIC -std=c++0x")
+#SET(CMAKE_CXX_FLAGS "-ggdb -O3 -fPIC -std=c++0x")
 
 IF (${USE_GL2PS})
   add_definitions(-DGL2PS)
@@ -110,7 +110,7 @@ SET(${CMAKE_LIBRARY_PATH} ${LIBRARY_OUTPUT_PATH})
 
 
 #Only possible when not subscribing to point cloud topic. Possibly dangerous anyway, but halves storage space per point cloud
-#ADD_DEFINITIONS(-DRGB_IS_4TH_DIM) 
+ADD_DEFINITIONS(-DRGB_IS_4TH_DIM) 
 #ADD_DEFINITIONS(-DDO_FEATURE_OPTIMIZATION)
 #ADD_DEFINITIONS(-DHEMACLOUDS) 
 ADD_DEFINITIONS(-DROSCONSOLE_MIN_SEVERITY=ROSCONSOLE_SEVERITY_WARN)

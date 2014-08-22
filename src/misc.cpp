@@ -378,7 +378,7 @@ FeatureDetector* createDetector( const string& detectorType )
         DetectorAdjuster* detadj = new DetectorAdjuster("FAST");
         detadj->setDecreaseFactor(0.7);
         detadj->setIncreaseFactor(1.3);
-        fd = new DynamicAdaptedFeatureDetectorWithStorage (detadj,
+        fd = new  VideoDynamicAdaptedFeatureDetector(detadj,
         										params->get<int>("min_keypoints"),
                             params->get<int>("max_keypoints"),
                             params->get<int>("adjuster_max_iterations"));
@@ -399,10 +399,11 @@ FeatureDetector* createDetector( const string& detectorType )
         DetectorAdjuster* detadj = new DetectorAdjuster("SIFT", 0.04, 0.0001);
         detadj->setDecreaseFactor(0.7);
         detadj->setIncreaseFactor(1.3);
-        fd = new DynamicAdaptedFeatureDetectorWithStorage (detadj,
-        										params->get<int>("min_keypoints"),
-                            params->get<int>("max_keypoints"),
+        StatefulFeatureDetector* sfd = new  VideoDynamicAdaptedFeatureDetector(detadj,
+        										round(params->get<int>("min_keypoints")/9.0),//9 cells
+                            round(params->get<int>("max_keypoints")/9.0),//9 cells
                             params->get<int>("adjuster_max_iterations"));
+        fd = new VideoGridAdaptedFeatureDetector(sfd, params->get<int>("max_keypoints"), 3,3);
 #endif
     }
     else if( !detectorType.compare( "SURF" ) || !detectorType.compare( "SURF128" ) ) {
@@ -410,10 +411,11 @@ FeatureDetector* createDetector( const string& detectorType )
         DetectorAdjuster* detadj = new DetectorAdjuster("SURF");
         detadj->setDecreaseFactor(0.7);
         detadj->setIncreaseFactor(1.3);
-        fd = new DynamicAdaptedFeatureDetectorWithStorage (detadj,
-        										params->get<int>("min_keypoints"),
-                            params->get<int>("max_keypoints"),
+        StatefulFeatureDetector* sfd = new  VideoDynamicAdaptedFeatureDetector(detadj,
+        										round(params->get<int>("min_keypoints")/9.0),//9 cells
+                            round(params->get<int>("max_keypoints")/9.0),//9 cells
                             params->get<int>("adjuster_max_iterations"));
+        fd = new VideoGridAdaptedFeatureDetector(sfd, params->get<int>("max_keypoints"), 3,3);
     }
     else if( !detectorType.compare( "MSER" ) ) {
         fd = new MserFeatureDetector( 1/*delta*/, 60/*min_area*/, 114400/*_max_area*/, 0.35f/*max_variation*/,
@@ -440,14 +442,13 @@ FeatureDetector* createDetector( const string& detectorType )
         ROS_INFO("Using Adapted ORB");
         //fd = new AorbFeatureDetector(params->get<int>("max_keypoints"), 1.1, 8, 31, 0, 4, 0, 31, 10);
         DetectorAdjuster* detadj = new DetectorAdjuster("AORB");
-        // DetectorAdjuster* detadj = new DetectorAdjuster("FAST");
         detadj->setDecreaseFactor(0.7);
         detadj->setIncreaseFactor(1.3);
-        FeatureDetector* ofd = new DynamicAdaptedFeatureDetectorWithStorage (detadj,
+        StatefulFeatureDetector* sfd = new  VideoDynamicAdaptedFeatureDetector(detadj,
         										round(params->get<int>("min_keypoints")/4.0),//four cells
                             round(params->get<int>("max_keypoints")/4.0),//four cells
                             params->get<int>("adjuster_max_iterations"));
-        fd = new GridAdaptedFeatureDetector(ofd, params->get<int>("max_keypoints"), 2,2);
+        fd = new VideoGridAdaptedFeatureDetector(sfd, params->get<int>("max_keypoints"), 2,2);
     //CV_WRAP explicit ORB(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 8, int edgeThreshold = 31,
      //   int firstLevel = 0, int WTA_K=2, int scoreType=ORB::HARRIS_SCORE, int patchSize=31 );
 #else

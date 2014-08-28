@@ -59,7 +59,13 @@ DetectorAdjuster::DetectorAdjuster(const char* detector_name, double initial_thr
     increase_factor_(increase_factor), decrease_factor_(decrease_factor),
     detector_name_(detector_name)
 {
-  assert(detector_name_ != NULL && "No detector name given, using SURF");
+    if(!(detector_name_ == "SURF" || 
+         detector_name_ == "SIFT" ||
+         detector_name_ == "FAST" ||
+         detector_name_ == "AORB"))
+    { //None of the above
+      std::cerr << "Unknown Descriptor";
+    }
 }
 
 void DetectorAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
@@ -240,7 +246,7 @@ void VideoGridAdaptedFeatureDetector::detectImpl( const cv::Mat& image, std::vec
                 sub_mask = mask(row_range, col_range);
 
             std::vector<cv::KeyPoint>& sub_keypoints = sub_keypoint_vectors[j+i*gridCols];
-            std::cout << "detection on subimage " << i << ", " << j << "\n";
+            //std::cout << "detection on subimage " << i << ", " << j << "\n";
             detectors[j+i*gridCols]->detect( sub_image, sub_keypoints, sub_mask );
             keepStrongest( maxPerCell, sub_keypoints );
         }

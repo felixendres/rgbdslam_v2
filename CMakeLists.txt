@@ -16,9 +16,9 @@ endif ("${ROS_PARALLEL_JOBS}" EQUAL "")
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
-SET(CMAKE_CXX_FLAGS "-O3 -fPIC -std=c++0x")
+#SET(CMAKE_CXX_FLAGS "-O3 -fPIC -std=c++0x")
 #For annotated profiling with perf: 
-#SET(CMAKE_CXX_FLAGS "-ggdb -O3 -fPIC -std=c++0x")
+SET(CMAKE_CXX_FLAGS "-ggdb -O3 -fPIC -std=c++0x")
 
 IF (${USE_GL2PS})
   add_definitions(-DGL2PS)
@@ -202,7 +202,7 @@ SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/transformation_estimation_eucli
 #Computation of meaningful covariances
 SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/covariance_estimation.cpp) # src/edge_labeler.cpp)
 #Detector Threshold Adapter
-SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/feature_adjuster.cpp src/aorb.cpp)
+SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/feature_adjuster.cpp src/aorb.cpp src/features.cpp)
 
 IF (${USE_SIFT_GPU})
  	SET(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES} src/sift_gpu_wrapper.cpp)

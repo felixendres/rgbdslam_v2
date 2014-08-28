@@ -84,7 +84,7 @@ void removeDepthless(std::vector<cv::KeyPoint>& feature_locations_2d, const cv::
     // Check for invalid measurements
     if(std::isnan (Z))
     {
-      ROS_INFO("Feature %d (%f %f) has been extracted at NaN depth. Omitting", i, p2d.x, p2d.y);
+      ROS_INFO("%.3u. Feature (%f %f) has been extracted at NaN depth. Omitting", i, p2d.x, p2d.y);
       //FIXME Use parameter here to choose whether to use
       feature_locations_2d.erase(feature_locations_2d.begin()+i);
       continue;
@@ -173,15 +173,33 @@ Node::Node(const cv::Mat& visual,
   else
 #endif
   {
+    for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){
+      //feature_locations_2d_[i].class_id = i;
+      feature_locations_2d_[i].pt.x = round(feature_locations_2d_[i].pt.x);
+      feature_locations_2d_[i].pt.y = round(feature_locations_2d_[i].pt.y);
+      //ROS_WARN("%u. Keypoint %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
+    }
     removeDepthless(feature_locations_2d_, depth);
+    /* for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){
+      ROS_WARN("%u. DKeypoint %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
+    }*/
     size_t max_keyp = ps->get<int>("max_keypoints");
     if(feature_locations_2d_.size() > max_keyp){
       feature_locations_2d_.resize(max_keyp);
     }
     ScopedTimer s("Feature Extraction");
     extractor->compute(gray_img, feature_locations_2d_, feature_descriptors_); //fill feature_descriptors_ with information 
+    /*for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){
+      ROS_WARN("%.3u. EKeypoint1 %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
+    }*/
     removeDepthless(feature_locations_2d_, depth);//FIXME: Unnecessary?
+    /*for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){
+      ROS_WARN("%.3u. EKeypoint2 %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
+    }*/
     projectTo3D(feature_locations_2d_, feature_locations_3d_, depth, cam_info);
+    /*for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){
+      ROS_WARN("%.3u. EKeypoint3 %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
+    }*/
     ROS_INFO("Keypoints: %zu", feature_locations_2d_.size());
     ROS_DEBUG("Feature Descriptors size: %d x %d", feature_descriptors_.rows, feature_descriptors_.cols);
   }
@@ -679,7 +697,7 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
     if(use_feature_min_depth ){
       Z = getMinDepthInNeighborhood(depth, p2d, feature_locations_2d[i].size) * depth_scaling;
     } else {
-      Z = depth.at<float>(round(p2d.y), round(p2d.x)) * depth_scaling;//unfortunately rounding is necessary. Seldomly, casting the floating point coordinates (b/c subpix accuracy) shifted the point. Happend only for ORB, which produces coordinats like 10.9999959
+      Z = depth.at<float>(p2d.y, p2d.x) * depth_scaling;//unfortunately rounding is necessary. Seldomly, casting the floating point coordinates (b/c subpix accuracy) shifted the point. Happend only for ORB, which produces coordinats like 10.9999959
     }
     // Check for invalid measurements
     if (std::isnan (Z))
@@ -1050,7 +1068,8 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
   //unsigned int min_inlier_threshold = int(initial_matches->size()*0.2);
   unsigned int min_inlier_threshold = (unsigned int) ParameterServer::instance()->get<int>("min_matches");
   if(min_inlier_threshold > 0.75 * initial_matches->size()){
-    ROS_WARN("Lowering min_inlier_threshold from %d to %d, because there are only %d matches to begin with", min_inlier_threshold, (int) (0.75 * initial_matches->size()), (int)initial_matches->size());
+    //FIXME: Evaluate whether beneficial
+    ROS_INFO("Lowering min_inlier_threshold from %d to %d, because there are only %d matches to begin with", min_inlier_threshold, (int) (0.75 * initial_matches->size()), (int)initial_matches->size());
     min_inlier_threshold = 0.75 * initial_matches->size();
   }
 

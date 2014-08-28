@@ -39,6 +39,7 @@
 #include <Eigen/Core>
 #include "node.h"
 #include "misc.h"
+#include "features.h"
 //#include <image_geometry/pinhole_camera_model.h>
 //#include "pcl/ros/for_each_type.h"
 

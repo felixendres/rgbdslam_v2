@@ -49,7 +49,7 @@
 #include <cassert>
 #include <iostream>
 #include <algorithm> //for min
-#include <ros/ros.h>
+//#include <ros/ros.h>
 using namespace cv;
 
 
@@ -70,7 +70,7 @@ DetectorAdjuster::DetectorAdjuster(const char* detector_name, double initial_thr
 
 void DetectorAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
 {
-    Ptr<FeatureDetector> detector = FeatureDetector::create(detector_name_);
+    Ptr<FeatureDetector> detector; 
     if(strcmp(detector_name_, "SURF") == 0){
       //detector->set("hessianThreshold", thresh_);//Not threadsafe (parallelized grid)
       detector = new SurfFeatureDetector(thresh_);
@@ -80,16 +80,19 @@ void DetectorAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypo
       detector = new SiftFeatureDetector(thresh_);
     }
     else if(strcmp(detector_name_, "FAST") == 0){
-      detector->set("threshold", static_cast<int>(thresh_));
+      //detector->set("threshold", static_cast<int>(thresh_));
+      detector = new FastFeatureDetector(thresh_);
     }
     else if(strcmp(detector_name_, "AORB") == 0){
-      detector = new AorbFeatureDetector(10000, 1.1, 8, 31, 0, 4, 0, 31, static_cast<int>(thresh_));
+      //Default params except last
+      detector = new AorbFeatureDetector(10000, 1.2, 8, 31, 0, 2, 0, 31, static_cast<int>(thresh_));
       //detector->set("fastThreshold", static_cast<int>(thresh_));//Not threadsafe (parallelized grid)
     }
     else {
+      FeatureDetector::create(detector_name_);
       std::cerr << "Unknown Descriptor, not setting threshold";
     }
-    ROS_INFO("Calling Detect with threshold %f", thresh_);
+    //ROS_INFO("Calling Detect with threshold %f", thresh_);
     detector->detect(image, keypoints, mask);
 }
 
@@ -164,7 +167,7 @@ void VideoDynamicAdaptedFeatureDetector::detectImpl(const cv::Mat& _image, std::
 
         //the adjuster takes care of calling the detector with updated parameters
         adjuster_->detect(_image, keypoints,_mask);
-        ROS_INFO("Detected %zu keypoints", keypoints.size());
+        //ROS_INFO("Detected %zu keypoints", keypoints.size());
         if( int(keypoints.size()) < min_features_ )
         {
             adjuster_->tooFew(min_features_, (int)keypoints.size());

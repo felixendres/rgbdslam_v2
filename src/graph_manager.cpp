@@ -623,7 +623,7 @@ bool GraphManager::nodeComparisons(Node* new_node,
                             odom_tf_new.frame_id_ == "missing_odometry"; 
 
     bool keep_anyway = (ps->get<bool>("keep_all_nodes") || 
-                        (((int)new_node->feature_locations_3d_.size() > ps->get<int>("min_keypoints")) 
+                        (((int)new_node->feature_locations_3d_.size() > ps->get<int>("min_matches")) 
                          && ps->get<bool>("keep_good_nodes")));
     if(!invalid_odometry)
     {

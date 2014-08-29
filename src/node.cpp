@@ -179,14 +179,16 @@ Node::Node(const cv::Mat& visual,
       feature_locations_2d_[i].pt.y = round(feature_locations_2d_[i].pt.y);
       //ROS_WARN("%u. Keypoint %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
     }
+
+    //PREFILTER 
     removeDepthless(feature_locations_2d_, depth);
-    /* for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){
-      ROS_WARN("%u. DKeypoint %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
-    }*/
     size_t max_keyp = ps->get<int>("max_keypoints");
     if(feature_locations_2d_.size() > max_keyp){
-      feature_locations_2d_.resize(max_keyp);
+      cv::KeyPointsFilter::retainBest(feature_locations_2d_, max_keyp);  
+      //feature_locations_2d_.resize(max_keyp);
     }
+
+
     ScopedTimer s("Feature Extraction");
     extractor->compute(gray_img, feature_locations_2d_, feature_descriptors_); //fill feature_descriptors_ with information 
     /*for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){

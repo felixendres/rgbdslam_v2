@@ -173,20 +173,20 @@ Node::Node(const cv::Mat& visual,
   else
 #endif
   {
-    for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){
-      //feature_locations_2d_[i].class_id = i;
-      feature_locations_2d_[i].pt.x = round(feature_locations_2d_[i].pt.x);
-      feature_locations_2d_[i].pt.y = round(feature_locations_2d_[i].pt.y);
-      //ROS_WARN("%u. Keypoint %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
-    }
-
     //PREFILTER 
     removeDepthless(feature_locations_2d_, depth);
     size_t max_keyp = ps->get<int>("max_keypoints");
     if(feature_locations_2d_.size() > max_keyp){
       cv::KeyPointsFilter::retainBest(feature_locations_2d_, max_keyp);  
-      //feature_locations_2d_.resize(max_keyp);
+      feature_locations_2d_.resize(max_keyp);//Because retainBest doesn't retain exactly max_keyp?
     }
+
+    /*for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){
+      feature_locations_2d_[i].class_id = i;
+      feature_locations_2d_[i].pt.x = round(feature_locations_2d_[i].pt.x);
+      feature_locations_2d_[i].pt.y = round(feature_locations_2d_[i].pt.y);
+      ROS_WARN("%u. Keypoint %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
+    }*/
 
 
     ScopedTimer s("Feature Extraction");
@@ -195,11 +195,11 @@ Node::Node(const cv::Mat& visual,
       ROS_WARN("%.3u. EKeypoint1 %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
     }*/
     removeDepthless(feature_locations_2d_, depth);//FIXME: Unnecessary?
-    /*for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){
-      ROS_WARN("%.3u. EKeypoint2 %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
-    }*/
+    /* for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){
+      ROS_WARN("%.3u. EKeypoint %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
+    }  */
     projectTo3D(feature_locations_2d_, feature_locations_3d_, depth, cam_info);
-    /*for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){
+    /* for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){
       ROS_WARN("%.3u. EKeypoint3 %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
     }*/
     ROS_INFO("Keypoints: %zu", feature_locations_2d_.size());

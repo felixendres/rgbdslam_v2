@@ -12,14 +12,17 @@ if [[ "$1" == "" ]]; then
 else
   TESTNAME=$1
 fi
-
+mkdir -p $BASE_DIRECTORY/$TESTNAME
+if test -f "$BASE_DIRECTORY/$TESTNAME/all_results.csv"; then
+  mv "$BASE_DIRECTORY/$TESTNAME/all_results.csv" "$BASE_DIRECTORY/$TESTNAME/prev_results.csv"
+fi
 export ROS_MASTER_URI=http://localhost:11386
 #roscore -p 11386&
 #ROSCOREPID=$!
 #echo Waiting for roscore
 #sleep 3
-for MAXFEATURES in 400 800 ; do
-  for FEAT_TYPE in ORB; do 
+for FEAT_TYPE in SURF SIFT; do 
+  for MAXFEATURES in 200 400 800; do
     for CANDIDATES in 2 4 8; do
       for OBS_EVAL in  0.00; do
         for RANSAC_ITER in 250; do
@@ -90,8 +93,10 @@ done
 echo "Generating Plots"
 ./figures.py $BASE_DIRECTORY/$TESTNAME/all_results.csv
 echo "Compressing Raw Data"
-tar czf $TESTNAME.tgz $BASE_DIRECTORY/$TESTNAME/emm*
+pushd $BASE_DIRECTORY/$TESTNAME/ > /dev/null
+tar czf $TESTNAME.tgz -C emm*
+popd > /dev/null
 echo "Removing Raw Data"
-rm -rf $BASE_DIRECTORY/$TESTNAME/emm*
+#rm -rf $BASE_DIRECTORY/$TESTNAME/emm*
 
 popd > /dev/null

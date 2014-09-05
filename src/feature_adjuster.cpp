@@ -77,7 +77,7 @@ void DetectorAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypo
     }
     else if(strcmp(detector_name_, "SIFT") == 0){
       //detector->set("contrastThreshold", thresh_);
-      detector = new SiftFeatureDetector(thresh_);
+      detector = new SiftFeatureDetector(0 /*max_features*/, 3 /*default lvls/octave*/, thresh_);
     }
     else if(strcmp(detector_name_, "FAST") == 0){
       //detector->set("threshold", static_cast<int>(thresh_));
@@ -93,6 +93,7 @@ void DetectorAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypo
       std::cerr << "Unknown Descriptor, not setting threshold";
     }
     //ROS_INFO("Calling Detect with threshold %f", thresh_);
+    //std::cout << "Performing detection with " << detector_name_ << ". Threshold: " << thresh_ << std::endl;
     detector->detect(image, keypoints, mask);
 }
 

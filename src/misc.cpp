@@ -856,6 +856,7 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
     return;
   }
   pointcloud_type new_pc_transformed;
+  //ROS_INFO_STREAM("Transforming with\n" << proposed_transformation);
   pcl::transformPointCloud(*new_pc, new_pc_transformed, proposed_transformation);
 
   //Camera Calibration FIXME: Get actual values from cameraInfo (need to store in node?)
@@ -864,8 +865,13 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
   float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") /* (480.0/old_pc->height) */: old_pc->height/2 - 0.5;
   float fx = ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : 525; 
   float fy = ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : 525;
-  //fx = fx / (640.0/old_pc->width); 
-  //fy = fy / (480.0/old_pc->height); 
+  int cloud_creation_skip_step = ps->get<int>("cloud_creation_skip_step");
+  if(ps->get<std::string>("topic_points").empty()){
+    fx = fx / cloud_creation_skip_step;
+    fy = fy / cloud_creation_skip_step;
+    cx = cx / cloud_creation_skip_step;
+    cy = cy / cloud_creation_skip_step;
+  }
 
   double sumloglikelihood = 0.0;
   double observation_count = 0.0;
@@ -881,19 +887,20 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
       if(p.z < 0) continue; // Behind the camera
       int old_rx_center = round((p.x / p.z)* fx + cx);
       int old_ry_center = round((p.y / p.z)* fy + cy);
+      //ROS_INFO_COND(new_ry % 32 == 0 && new_rx % 32 == 0, "Projected point from [%d, %d] to [%d, %d]", new_rx, new_ry, old_rx_center, old_ry_center);
       if(old_rx_center >= (int)old_pc->width || old_rx_center < 0 ||
          old_ry_center >= (int)old_pc->height|| old_ry_center < 0 )
       {
         ROS_DEBUG("New point not projected into old image, skipping");
         continue;
       }
-      int nbhd = 2; //1 => 3x3 neighbourhood
+      int nbhd = 1; //1 => 3x3 neighbourhood
       bool good_point = false, occluded_point = false, bad_point = false;
       int startx = std::max(0,old_rx_center - nbhd);
       int starty = std::max(0,old_ry_center - nbhd);
       int endx = std::min(static_cast<int>(old_pc->width), old_rx_center + nbhd +1);
       int endy = std::min(static_cast<int>(old_pc->height), old_ry_center + nbhd +1);
-      int neighbourhood_step = 2; //Search for depth jumps in this area
+      int neighbourhood_step = 4; //Search for depth jumps in this area
       for(int old_ry = starty; old_ry < endy; old_ry+=neighbourhood_step){
         for(int old_rx = startx; old_rx < endx; old_rx+=neighbourhood_step){
 
@@ -905,9 +912,9 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
           //double dz = (old_p.z - p.z);//Positive: behind old_z
 
           // likelihood for old msrmnt = new msrmnt:
-          double old_sigma = depth_covariance(old_p.z);
+          double old_sigma = cloud_creation_skip_step*depth_covariance(old_p.z);
           //TODO: (Wrong) Assumption: Transformation does not change the viewing angle. 
-          double new_sigma = depth_covariance(p.z);
+          double new_sigma = cloud_creation_skip_step*depth_covariance(p.z);
           //Assumption: independence of sensor noise lets us sum variances
           double joint_sigma = old_sigma + new_sigma;
           ///TODO: Compute correctly transformed new sigma in old_z direction
@@ -936,23 +943,34 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
         }
       }//End neighbourhood loop
       end_of_neighbourhood_loop:
-      if(good_point) good_points++;
-      else if(occluded_point){
+      if(good_point) {
+        good_points++;
+      } else if(occluded_point){
         occluded_points++;
+        if(mark_outliers){
+          uint8_t r1 = rand() % 32, g1 = rand() % 256, b1 = rand() % 256; // Mark occluded point in red color
+          uint32_t rgb1 = ((uint32_t)r1 << 16 | (uint32_t)g1 << 8 | (uint32_t)b1);
+#ifndef RGB_IS_4TH_DIM
+          new_pc->at(new_rx, new_ry).rgb = *reinterpret_cast<float*>(&rgb1);
+          old_pc->at(old_rx_center, old_ry_center).rgb = *reinterpret_cast<float*>(&rgb1);
+#else
+          new_pc->at(new_rx, new_ry).data[3] = *reinterpret_cast<float*>(&rgb1);
+          old_pc->at(old_rx_center, old_ry_center).data[3] = *reinterpret_cast<float*>(&rgb1);
+#endif
+        }
       }
       else if(bad_point){
         bad_points++;
         if(mark_outliers){
-          uint8_t r1 = 255, g1 = 0, b1 = 0; // Mark bad boint in red color
+          //uint8_t r1 = 255, g1 = 0, b1 = 0; // Mark bad point in red color
+          uint8_t r1 = rand() % 256, g1 = rand()%32, b1 = rand() % 256; // Mark occluded point in red color
           uint32_t rgb1 = ((uint32_t)r1 << 16 | (uint32_t)g1 << 8 | (uint32_t)b1);
-          uint8_t r2 = 0, g2 = 255, b2 = 255; // Mark bad boint in red color
-          uint32_t rgb2 = ((uint32_t)r2 << 16 | (uint32_t)g2 << 8 | (uint32_t)b2);
 #ifndef RGB_IS_4TH_DIM
           new_pc->at(new_rx, new_ry).rgb = *reinterpret_cast<float*>(&rgb1);
-          old_pc->at(old_rx_center, old_ry_center).rgb = *reinterpret_cast<float*>(&rgb2);
+          old_pc->at(old_rx_center, old_ry_center).rgb = *reinterpret_cast<float*>(&rgb1);
 #else
           new_pc->at(new_rx, new_ry).data[3] = *reinterpret_cast<float*>(&rgb1);
-          old_pc->at(old_rx_center, old_ry_center).data[3] = *reinterpret_cast<float*>(&rgb2);
+          old_pc->at(old_rx_center, old_ry_center).data[3] = *reinterpret_cast<float*>(&rgb1);
 #endif
           //Kill point
           //new_pc->at(new_rx, new_ry).z = std::numeric_limits<float>::quiet_NaN();
@@ -1143,8 +1161,8 @@ bool observation_criterion_met(unsigned int inliers, unsigned int outliers, unsi
   bool criterion1_met = quality > obs_thresh; //TODO: parametrice certainty (and use meaningful statistic)
   bool criterion2_met = certainty > 0.25; //TODO: parametrice certainty (and use meaningful statistic)
   bool both_criteria_met = criterion1_met && criterion2_met;
-  ROS_INFO_COND(!criterion1_met, "Transformation does not meet observation likelihood criterion, because of ratio good/(good+bad): %f. Threshold: %f", inliers/static_cast<float>(inliers+outliers), obs_thresh);
-  ROS_INFO_COND(!criterion2_met, "Transformation does not meet observation likelihood criterion, because of ratio good/(all): %f. Threshold: 0.25", certainty);
+  ROS_WARN_COND(!criterion1_met, "Transformation does not meet observation likelihood criterion, because of ratio good/(good+bad): %f. Threshold: %f", inliers/static_cast<float>(inliers+outliers), obs_thresh);
+  ROS_WARN_COND(!criterion2_met, "Transformation does not meet observation likelihood criterion, because of ratio good/(all): %f. Threshold: 0.25", certainty);
   return both_criteria_met;
 }
 

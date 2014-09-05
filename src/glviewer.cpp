@@ -119,6 +119,7 @@ GLViewer::GLViewer(QWidget *parent)
       rotation_stepping_(1.0),
       myparent(parent),
       button_pressed_(false),
+      non_interactive_update_(false),
       fast_rendering_step_(1),
       external_renderable(NULL) 
 {
@@ -346,6 +347,7 @@ void GLViewer::drawOneCloud(int i) {
 }
 void GLViewer::drawClouds(float xshift) {
     ScopedTimer s(__FUNCTION__);
+    ParameterServer* ps = ParameterServer::instance();
     if(follow_mode_){
         int id = cloud_matrices->size()-1;
         if(id >= 0)setViewPoint((*cloud_matrices)[id]);
@@ -379,22 +381,31 @@ void GLViewer::drawClouds(float xshift) {
     if(show_poses_) drawAxes(0.5);//Show origin as big axis
 
     ROS_DEBUG("Drawing %i PointClouds", cloud_list_indices.size());
-    int step = button_pressed_ ? ParameterServer::instance()->get<int>("fast_rendering_step") + fast_rendering_step_ : 1; //if last_draw_duration_ was bigger than 100hz, skip clouds in drawing when button pressed
-    step = std::max(step,1);
+    int step = 1;
+    if(button_pressed_ || non_interactive_update_){
+      step = std::max(step,(int)fast_rendering_step_); //if dynamic adapted value is larger: use
+      step = std::max(step,ps->get<int>("fast_rendering_step")); //if fixed positive is larger: Use.
+    }
     int last_cloud = std::min(cloud_list_indices.size(), cloud_matrices->size());
     int first_cloud = 0;
 
     //For only viewing a single cloud
-    int specific_cloud = ParameterServer::instance()->get<int>("show_cloud_with_id");
+    int specific_cloud = ps->get<int>("show_cloud_with_id");
     if(specific_cloud >= 0){ 
       drawOneCloud(specific_cloud);
     }
     else //Show all
     {
-      for(int i = 0; i < last_cloud; i+=step){
+      int i = 0;
+      for(; i < last_cloud - 10; i+=step){
+          ROS_DEBUG("Drawing %d. PointCloud", i);
           drawOneCloud(i);
-          if((last_cloud - i) <= 1.5*step) step = 1; //Draw all of the most recent clouds
       }
+      for(int j = std::max(last_cloud - 10, 0); j < last_cloud; j++){
+          ROS_DEBUG("Drawing %d. PointCloud.", j);
+          drawOneCloud(j);
+      }
+
     }
 
     glDisable(GL_DEPTH_TEST);
@@ -411,16 +422,6 @@ void GLViewer::drawClouds(float xshift) {
         glPopMatrix();
     }
     glEnable(GL_DEPTH_TEST);
-    if(button_pressed_){
-      /*
-      if(s.elapsed() > 0.15) { //Try to maintain high speed rendering if button is pressed
-        fast_rendering_step_++;
-        ROS_INFO("Increased renderer skipto every %d. cloud during motion", fast_rendering_step_);
-      } else if(s.elapsed() < 0.03 && fast_rendering_step_ > 0) { //Try to maintain high rendering quality, if fast enough 
-        fast_rendering_step_--;
-      }
-      */
-    }
 }
 
 void GLViewer::resizeGL(int width, int height)
@@ -691,7 +692,18 @@ void GLViewer::addPointCloud(pointcloud_type * pc, QMatrix4x4 transform){
     }
     cloud_matrices->push_back(transform); //keep for later
     Q_EMIT cloudRendered(pc);
+    non_interactive_update_ = true;
+    ScopedTimer s("Rendering", false);
     clearAndUpdate();
+    if(s.elapsed() > 0.05) { //Try to maintain high speed rendering if button is pressed
+      fast_rendering_step_++;
+      ROS_INFO("Increased renderer skipto every %d.", fast_rendering_step_);
+    } else if(s.elapsed() < 0.01 && fast_rendering_step_ > 1) { //Try to maintain high rendering quality, if fast enough 
+      fast_rendering_step_--;
+      ROS_INFO("Decreased renderer skip to every %d.", fast_rendering_step_);
+    } else 
+      ROS_INFO("No change to renderer skip (%d).", fast_rendering_step_);
+    non_interactive_update_ = false;
     //QApplication::processEvents(QEventLoop::ExcludeSocketNotifiers);
     /*
     std::string file_prefix = ParameterServer::instance()->get<std::string>("screencast_path_prefix");

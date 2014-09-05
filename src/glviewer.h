@@ -148,6 +148,7 @@ private:
     double rotation_stepping_;
     QWidget* myparent;
     bool button_pressed_;
+    bool non_interactive_update_;
     unsigned int fast_rendering_step_;
     Renderable* external_renderable;
 };

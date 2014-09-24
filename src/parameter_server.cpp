@@ -75,15 +75,16 @@ void ParameterServer::defaultConfig() {
   addOption("fixed_camera",                  static_cast<bool> (true),                  "Is camera fixed relative to base?");
 
   // Visual Features, to activate GPU-based features see CMakeLists.txt 
-  addOption("feature_detector_type",         std::string("SURF"),                       "SURF, SIFT or ORB");
-  addOption("feature_extractor_type",        std::string("SURF"),                       "SURF, SIFT or ORB");
+  addOption("feature_detector_type",         std::string("SURF"),                       "SIFTGPU, SURF, SIFT or ORB, or variants like GridDynamicORB or DynamicSURF (however, not GridXXX only, and not in combination with SIFTGPU)");
+  addOption("feature_extractor_type",        std::string("SURF"),                       "SIFTGPU, SURF, SIFT or ORB");
   addOption("matcher_type",                  std::string("FLANN"),                      "SIFTGPU (matching on the gpu) or FLANN or BRUTEFORCE");
-  addOption("max_keypoints",                 static_cast<int> (600),                   "Extract no more than this many keypoints ");
+  addOption("max_keypoints",                 static_cast<int> (600),                    "Extract no more than this many keypoints ");
   addOption("min_keypoints",                 static_cast<int> (000),                    "Extract no less than this many keypoints ");
   addOption("min_matches",                   static_cast<int> (20),                     "Don't try RANSAC if less than this many matches (if using SiftGPU and GLSL you should use max. 60 matches)");
+  addOption("detector_grid_resolution",      static_cast<int> (0),                      "If >1, split image into x by x subimages (overlapping b/c of keypoint size) and detect keypoints in parallel");
   addOption("sufficient_matches",            static_cast<int> (1e9),                    "Extract no less than this many only honored by the adjustable SURF and FAST features");
-  addOption("adjuster_max_iterations",       static_cast<int> (1),                     "If outside of bounds for max_kp and min_kp, retry this many times with adapted threshold");
-  addOption("use_feature_min_depth",         static_cast<bool>(true),                   "Consider the nearest point in the neighborhood of the feature as its depth, as it will dominate the motion");
+  addOption("adjuster_max_iterations",       static_cast<int> (0),                      "If outside of bounds for max_kp and min_kp, retry this many times with adapted threshold");
+  addOption("use_feature_min_depth",         static_cast<bool>(false),                  "Consider the nearest point in the neighborhood of the feature as its depth, as it will dominate the motion");
   addOption("use_feature_mask",              static_cast<bool>(false),                  "Whether to extract features without depth");
   addOption("use_root_sift",                 static_cast<bool>(true),                   "Whether to use euclidean distance or Hellman kernel for feature comparison");
 
@@ -145,7 +146,7 @@ void ParameterServer::defaultConfig() {
   addOption("voxelfilter_size",              static_cast<double> (-1.0),                "In meter voxefilter displayed and stored pointclouds, useful to reduce the time for, e.g., octomap generation. Set negative to disable");
   addOption("nn_distance_ratio",             static_cast<double> (0.50),                 "Feature correspondence is valid if distance to nearest neighbour is smaller than this parameter times the distance to the 2nd neighbour. This needs to be 0.9-1.0 for SIFTGPU w/ FLANN, since SIFTGPU Features are normalized");
   addOption("keep_all_nodes",                static_cast<bool> (false),                 "Keep all nodes with 'no motion' assumption");
-  addOption("keep_good_nodes",               static_cast<bool> (false),                 "Keep nodes without transformation estimation but enough features (according to min_keypoints) with 'no motion' assumption. These are not rendered in visualization.");
+  addOption("keep_good_nodes",               static_cast<bool> (false),                 "Keep nodes without transformation estimation but enough features (according to min_matches) with 'no motion' assumption. These are not rendered in visualization.");
   addOption("clear_non_keyframes",           static_cast<bool> (false),                 "Remove the net data of nodes when it becomes clear that they will not be used as keyframe. However, this makes matching against them impossible.");
   addOption("min_time_reported",             static_cast<double> (-1.0),                "For easy profiling. Negative: nothing should be reported");
   addOption("preserve_raster_on_save",       static_cast<bool> (false),                 "Filter NaNs when saving clouds, destroying the image raster");

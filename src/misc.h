@@ -114,12 +114,6 @@ bool isSmallTrafo(const Eigen::Isometry3d& t, double seconds = 1.0);
 //bool triangleRayIntersection(Eigen::Vector3d triangle1,Eigen::Vector3d triangle2, Eigen::Vector3d ray_origin, Eigen::Vector3d ray);
 
 
-/// Creates Feature Detector Objects accordingt to the type.
-/// Possible detectorTypes: FAST, STAR, SIFT, SURF, GFTT
-/// FAST and SURF are the self-adjusting versions (see http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_feature_detectors.html#DynamicAdaptedFeatureDetector)
-cv::FeatureDetector* createDetector( const std::string& detectorType );
-/// Create an object to extract features at keypoints. The Exctractor is passed to the Node constructor and must be the same for each node.
-cv::DescriptorExtractor* createDescriptorExtractor( const std::string& descriptorType );
 ///Convert the CV_32FC1 image to CV_8UC1 with a fixed scale factor
 void depthToCV8UC1(cv::Mat& float_img, cv::Mat& mono8_img);
 
@@ -127,7 +121,7 @@ void depthToCV8UC1(cv::Mat& float_img, cv::Mat& mono8_img);
 std::string openCVCode2String(unsigned int code);
 
 ///Print Type and size of image
-void printMatrixInfo(cv::Mat& image, std::string name = std::string(""));
+void printMatrixInfo(const cv::Mat& image, std::string name = std::string(""));
 
 //!Return true if frames should be dropped because they are asynchronous
 bool asyncFrameDrop(ros::Time depth, ros::Time rgb);

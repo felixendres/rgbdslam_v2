@@ -39,6 +39,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
 #endif
+#include "aorb.h"
 
 #include <omp.h>
 #include "misc2.h"
@@ -367,134 +368,6 @@ g2o::SE3Quat eigen2G2O(const Eigen::Matrix4d& eigen_mat)
 
   return result;
 }
-using namespace cv;
-///Analog to opencv example file and modified to use adjusters
-FeatureDetector* createDetector( const string& detectorType ) 
-{
-	ParameterServer* params = ParameterServer::instance();
-	FeatureDetector* fd = 0;
-    if( !detectorType.compare( "FAST" ) ) {
-        DetectorAdjuster* detadj = new DetectorAdjuster("FAST");
-        detadj->setDecreaseFactor(0.7);
-        detadj->setIncreaseFactor(1.3);
-        fd = new DynamicAdaptedFeatureDetectorWithStorage (detadj,
-        										params->get<int>("min_keypoints"),
-                            params->get<int>("max_keypoints"),
-                            params->get<int>("adjuster_max_iterations"));
-        //fd = new FastFeatureDetector( 20/*threshold*/, true/*nonmax_suppression*/ );
-    }
-    else if( !detectorType.compare( "STAR" ) ) {
-        fd = new StarFeatureDetector( 16/*max_size*/, 5/*response_threshold*/, 10/*line_threshold_projected*/,
-                                      8/*line_threshold_binarized*/, 5/*suppress_nonmax_size*/ );
-    }
-    else if( !detectorType.compare( "SIFT" ) ) {
-#if CV_MAJOR_VERSION > 2 || CV_MINOR_VERSION <= 3
-        fd = new SiftFeatureDetector(SIFT::DetectorParams::GET_DEFAULT_THRESHOLD(),
-                                     SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD());
-        ROS_INFO("Default SIFT threshold: %f, Default SIFT Edge Threshold: %f", 
-                 SIFT::DetectorParams::GET_DEFAULT_THRESHOLD(),
-                 SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD());
-#else
-        DetectorAdjuster* detadj = new DetectorAdjuster("SIFT", 0.04, 0.0001);
-        detadj->setDecreaseFactor(0.7);
-        detadj->setIncreaseFactor(1.3);
-        fd = new DynamicAdaptedFeatureDetectorWithStorage (detadj,
-        										params->get<int>("min_keypoints"),
-                            params->get<int>("max_keypoints"),
-                            params->get<int>("adjuster_max_iterations"));
-#endif
-    }
-    else if( !detectorType.compare( "SURF" ) || !detectorType.compare( "SURF128" ) ) {
-      /* fd = new SurfFeatureDetector(200.0, 6, 5); */
-        DetectorAdjuster* detadj = new DetectorAdjuster("SURF");
-        detadj->setDecreaseFactor(0.7);
-        detadj->setIncreaseFactor(1.3);
-        fd = new DynamicAdaptedFeatureDetectorWithStorage (detadj,
-        										params->get<int>("min_keypoints"),
-                            params->get<int>("max_keypoints"),
-                            params->get<int>("adjuster_max_iterations"));
-    }
-    else if( !detectorType.compare( "MSER" ) ) {
-        fd = new MserFeatureDetector( 1/*delta*/, 60/*min_area*/, 114400/*_max_area*/, 0.35f/*max_variation*/,
-                0.2/*min_diversity*/, 200/*max_evolution*/, 1.01/*area_threshold*/, 0.003/*min_margin*/,
-                5/*edge_blur_size*/ );
-    }
-    else if( !detectorType.compare( "HARRIS" ) ) {
-        ROS_INFO("Creating GFTT detector with HARRIS.");
-        fd = new GoodFeaturesToTrackDetector( params->get<int>("max_keypoints"), 0.0001, 2.0, 9, true);
-    }
-    else if( !detectorType.compare( "GFTT" ) ) {
-        ROS_INFO("Creating GFTT detector.");
-        fd = new GoodFeaturesToTrackDetector( params->get<int>("max_keypoints"), 0.0001, 2.0, 9);
-    }
-    else if( !detectorType.compare( "BRISK" ) ) {
-        ROS_INFO("Creating BRISK detector.");
-        fd = fd->create("BRISK");
-    }
-    else if( !detectorType.compare( "ORB" ) ) {
-#if CV_MAJOR_VERSION > 2 || CV_MINOR_VERSION == 3
-        fd = new OrbFeatureDetector(params->get<int>("max_keypoints")+1500,
-                ORB::CommonParams(1.2, ORB::CommonParams::DEFAULT_N_LEVELS, 31, ORB::CommonParams::DEFAULT_FIRST_LEVEL));
-#elif CV_MAJOR_VERSION > 2 || CV_MINOR_VERSION >= 4
-        ROS_INFO("Using Grid-Adapted ORB");
-        fd = new cv::GridAdaptedFeatureDetector(new OrbFeatureDetector(params->get<int>("max_keypoints"), 1.2, 8, 31, 0, 2, 0, 15), params->get<int>("max_keypoints"));
-    //CV_WRAP explicit ORB(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 8, int edgeThreshold = 31,
-     //   int firstLevel = 0, int WTA_K=2, int scoreType=ORB::HARRIS_SCORE, int patchSize=31 );
-#else
-      ROS_ERROR("ORB features are not implemented in your version of OpenCV");
-#endif
-    }
-    else if( !detectorType.compare( "SIFTGPU" ) ) {
-      ROS_INFO("%s is to be used", detectorType.c_str());
-      ROS_DEBUG("Creating SURF detector as fallback.");
-      fd = createDetector("SURF"); //recursive call with correct parameter
-    }
-    else {
-      ROS_WARN("No valid detector-type given: %s. Using SURF.", detectorType.c_str());
-      fd = createDetector("SURF"); //recursive call with correct parameter
-    }
-    ROS_ERROR_COND(fd == 0, "No detector could be created");
-    return fd;
-}
-
-DescriptorExtractor* createDescriptorExtractor( const string& descriptorType ) 
-{
-    DescriptorExtractor* extractor = 0;
-    if( !descriptorType.compare( "SIFT" ) ) {
-        extractor = new SiftDescriptorExtractor();/*( double magnification=SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION(), bool isNormalize=true, bool recalculateAngles=true, int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES, int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS, int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE, int angleMode=SIFT::CommonParams::FIRST_ANGLE )*/
-    }
-    else if( !descriptorType.compare( "BRIEF" ) ) {
-        extractor = new BriefDescriptorExtractor();
-    }
-    else if( !descriptorType.compare( "BRISK" ) ) {
-        extractor = new cv::BRISK();/*brisk default: (int thresh=30, int octaves=3, float patternScale=1.0f)*/
-    }
-    else if( !descriptorType.compare( "FREAK" ) ) {
-        extractor = new cv::FREAK();
-    }
-    else if( !descriptorType.compare( "SURF" ) ) {
-        extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
-    }
-    else if( !descriptorType.compare( "SURF128" ) ) {
-        extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
-        extractor->set("extended", 1);
-    }
-#if CV_MAJOR_VERSION > 2 || CV_MINOR_VERSION >= 3
-    else if( !descriptorType.compare( "ORB" ) ) {
-        extractor = new OrbDescriptorExtractor();
-    }
-#endif
-    else if( !descriptorType.compare( "SIFTGPU" ) ) {
-      ROS_DEBUG("%s is to be used as extractor, creating SURF descriptor extractor as fallback.", descriptorType.c_str());
-      extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
-    }
-    else {
-      ROS_ERROR("No valid descriptor-matcher-type given: %s. Using SURF", descriptorType.c_str());
-      extractor = createDescriptorExtractor("SURF");
-    }
-    ROS_ERROR_COND(extractor == 0, "No extractor could be created");
-    return extractor;
-}
 
 //Little debugging helper functions
 std::string openCVCode2String(unsigned int code){
@@ -515,7 +388,7 @@ std::string openCVCode2String(unsigned int code){
   return std::string("Unknown");
 }
 
-void printMatrixInfo(cv::Mat& image, std::string name){
+void printMatrixInfo(const cv::Mat& image, std::string name){
   ROS_INFO_STREAM("Matrix " << name << " - Type:" << openCVCode2String(image.type()) <<  " rows: " <<  image.rows  <<  " cols: " <<  image.cols);
 }
 
@@ -983,6 +856,7 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
     return;
   }
   pointcloud_type new_pc_transformed;
+  //ROS_INFO_STREAM("Transforming with\n" << proposed_transformation);
   pcl::transformPointCloud(*new_pc, new_pc_transformed, proposed_transformation);
 
   //Camera Calibration FIXME: Get actual values from cameraInfo (need to store in node?)
@@ -991,8 +865,13 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
   float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") /* (480.0/old_pc->height) */: old_pc->height/2 - 0.5;
   float fx = ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : 525; 
   float fy = ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : 525;
-  //fx = fx / (640.0/old_pc->width); 
-  //fy = fy / (480.0/old_pc->height); 
+  int cloud_creation_skip_step = ps->get<int>("cloud_creation_skip_step");
+  if(ps->get<std::string>("topic_points").empty()){
+    fx = fx / cloud_creation_skip_step;
+    fy = fy / cloud_creation_skip_step;
+    cx = cx / cloud_creation_skip_step;
+    cy = cy / cloud_creation_skip_step;
+  }
 
   double sumloglikelihood = 0.0;
   double observation_count = 0.0;
@@ -1008,19 +887,20 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
       if(p.z < 0) continue; // Behind the camera
       int old_rx_center = round((p.x / p.z)* fx + cx);
       int old_ry_center = round((p.y / p.z)* fy + cy);
+      //ROS_INFO_COND(new_ry % 32 == 0 && new_rx % 32 == 0, "Projected point from [%d, %d] to [%d, %d]", new_rx, new_ry, old_rx_center, old_ry_center);
       if(old_rx_center >= (int)old_pc->width || old_rx_center < 0 ||
          old_ry_center >= (int)old_pc->height|| old_ry_center < 0 )
       {
         ROS_DEBUG("New point not projected into old image, skipping");
         continue;
       }
-      int nbhd = 2; //1 => 3x3 neighbourhood
+      int nbhd = 1; //1 => 3x3 neighbourhood
       bool good_point = false, occluded_point = false, bad_point = false;
       int startx = std::max(0,old_rx_center - nbhd);
       int starty = std::max(0,old_ry_center - nbhd);
       int endx = std::min(static_cast<int>(old_pc->width), old_rx_center + nbhd +1);
       int endy = std::min(static_cast<int>(old_pc->height), old_ry_center + nbhd +1);
-      int neighbourhood_step = 2; //Search for depth jumps in this area
+      int neighbourhood_step = 4; //Search for depth jumps in this area
       for(int old_ry = starty; old_ry < endy; old_ry+=neighbourhood_step){
         for(int old_rx = startx; old_rx < endx; old_rx+=neighbourhood_step){
 
@@ -1032,9 +912,9 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
           //double dz = (old_p.z - p.z);//Positive: behind old_z
 
           // likelihood for old msrmnt = new msrmnt:
-          double old_sigma = depth_covariance(old_p.z);
+          double old_sigma = cloud_creation_skip_step*depth_covariance(old_p.z);
           //TODO: (Wrong) Assumption: Transformation does not change the viewing angle. 
-          double new_sigma = depth_covariance(p.z);
+          double new_sigma = cloud_creation_skip_step*depth_covariance(p.z);
           //Assumption: independence of sensor noise lets us sum variances
           double joint_sigma = old_sigma + new_sigma;
           ///TODO: Compute correctly transformed new sigma in old_z direction
@@ -1063,23 +943,34 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
         }
       }//End neighbourhood loop
       end_of_neighbourhood_loop:
-      if(good_point) good_points++;
-      else if(occluded_point){
+      if(good_point) {
+        good_points++;
+      } else if(occluded_point){
         occluded_points++;
+        if(mark_outliers){
+          uint8_t r1 = rand() % 32, g1 = rand() % 256, b1 = rand() % 256; // Mark occluded point in red color
+          uint32_t rgb1 = ((uint32_t)r1 << 16 | (uint32_t)g1 << 8 | (uint32_t)b1);
+#ifndef RGB_IS_4TH_DIM
+          new_pc->at(new_rx, new_ry).rgb = *reinterpret_cast<float*>(&rgb1);
+          old_pc->at(old_rx_center, old_ry_center).rgb = *reinterpret_cast<float*>(&rgb1);
+#else
+          new_pc->at(new_rx, new_ry).data[3] = *reinterpret_cast<float*>(&rgb1);
+          old_pc->at(old_rx_center, old_ry_center).data[3] = *reinterpret_cast<float*>(&rgb1);
+#endif
+        }
       }
       else if(bad_point){
         bad_points++;
         if(mark_outliers){
-          uint8_t r1 = 255, g1 = 0, b1 = 0; // Mark bad boint in red color
+          //uint8_t r1 = 255, g1 = 0, b1 = 0; // Mark bad point in red color
+          uint8_t r1 = rand() % 256, g1 = rand()%32, b1 = rand() % 256; // Mark occluded point in red color
           uint32_t rgb1 = ((uint32_t)r1 << 16 | (uint32_t)g1 << 8 | (uint32_t)b1);
-          uint8_t r2 = 0, g2 = 255, b2 = 255; // Mark bad boint in red color
-          uint32_t rgb2 = ((uint32_t)r2 << 16 | (uint32_t)g2 << 8 | (uint32_t)b2);
 #ifndef RGB_IS_4TH_DIM
           new_pc->at(new_rx, new_ry).rgb = *reinterpret_cast<float*>(&rgb1);
-          old_pc->at(old_rx_center, old_ry_center).rgb = *reinterpret_cast<float*>(&rgb2);
+          old_pc->at(old_rx_center, old_ry_center).rgb = *reinterpret_cast<float*>(&rgb1);
 #else
           new_pc->at(new_rx, new_ry).data[3] = *reinterpret_cast<float*>(&rgb1);
-          old_pc->at(old_rx_center, old_ry_center).data[3] = *reinterpret_cast<float*>(&rgb2);
+          old_pc->at(old_rx_center, old_ry_center).data[3] = *reinterpret_cast<float*>(&rgb1);
 #endif
           //Kill point
           //new_pc->at(new_rx, new_ry).z = std::numeric_limits<float>::quiet_NaN();
@@ -1270,8 +1161,8 @@ bool observation_criterion_met(unsigned int inliers, unsigned int outliers, unsi
   bool criterion1_met = quality > obs_thresh; //TODO: parametrice certainty (and use meaningful statistic)
   bool criterion2_met = certainty > 0.25; //TODO: parametrice certainty (and use meaningful statistic)
   bool both_criteria_met = criterion1_met && criterion2_met;
-  ROS_INFO_COND(!criterion1_met, "Transformation does not meet observation likelihood criterion, because of ratio good/(good+bad): %f. Threshold: %f", inliers/static_cast<float>(inliers+outliers), obs_thresh);
-  ROS_INFO_COND(!criterion2_met, "Transformation does not meet observation likelihood criterion, because of ratio good/(all): %f. Threshold: 0.25", certainty);
+  ROS_WARN_COND(!criterion1_met, "Transformation does not meet observation likelihood criterion, because of ratio good/(good+bad): %f. Threshold: %f", inliers/static_cast<float>(inliers+outliers), obs_thresh);
+  ROS_WARN_COND(!criterion2_met, "Transformation does not meet observation likelihood criterion, because of ratio good/(all): %f. Threshold: 0.25", certainty);
   return both_criteria_met;
 }
 

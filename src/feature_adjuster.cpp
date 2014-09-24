@@ -43,39 +43,57 @@
 #include "feature_adjuster.h"
 //#include "opencv2/features2d/precomp.hpp"
 #include "opencv2/features2d/features2d.hpp"
+#include "opencv2/nonfree/features2d.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
-
-#include <ros/ros.h>
+#include "aorb.h"
+#include <cassert>
+#include <iostream>
+#include <algorithm> //for min
+//#include <ros/ros.h>
 using namespace cv;
 
 
 DetectorAdjuster::DetectorAdjuster(const char* detector_name, double initial_thresh, double min_thresh, double max_thresh, double increase_factor, double decrease_factor ) :
-    thresh_(initial_thresh), init_thresh_(initial_thresh),
+    thresh_(initial_thresh), 
     min_thresh_(min_thresh), max_thresh_(max_thresh),
     increase_factor_(increase_factor), decrease_factor_(decrease_factor),
     detector_name_(detector_name)
 {
-  if(detector_name_ == NULL){
-    ROS_ERROR("No detector name given, using SURF");
-    detector_name_ = "SURF";
-  } 
+    if(!(detector_name_ == "SURF" || 
+         detector_name_ == "SIFT" ||
+         detector_name_ == "FAST" ||
+         detector_name_ == "AORB"))
+    { //None of the above
+      std::cerr << "Unknown Descriptor";
+    }
 }
 
 void DetectorAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
 {
-    Ptr<FeatureDetector> detector = FeatureDetector::create(detector_name_);
+    Ptr<FeatureDetector> detector; 
     if(strcmp(detector_name_, "SURF") == 0){
-      detector->set("hessianThreshold", thresh_);
+      //detector->set("hessianThreshold", thresh_);//Not threadsafe (parallelized grid)
+      detector = new SurfFeatureDetector(thresh_);
     }
     else if(strcmp(detector_name_, "SIFT") == 0){
-      detector->set("contrastThreshold", thresh_);
+      //detector->set("contrastThreshold", thresh_);
+      detector = new SiftFeatureDetector(0 /*max_features*/, 3 /*default lvls/octave*/, thresh_);
     }
     else if(strcmp(detector_name_, "FAST") == 0){
-      detector->set("threshold", static_cast<int>(thresh_));
+      //detector->set("threshold", static_cast<int>(thresh_));
+      detector = new FastFeatureDetector(thresh_);
+    }
+    else if(strcmp(detector_name_, "AORB") == 0){
+      //Default params except last
+      detector = new AorbFeatureDetector(10000, 1.2, 8, 31, 0, 2, 0, 31, static_cast<int>(thresh_));
+      //detector->set("fastThreshold", static_cast<int>(thresh_));//Not threadsafe (parallelized grid)
     }
     else {
-      ROS_ERROR("Unknown Descriptor, not setting threshold");
+      FeatureDetector::create(detector_name_);
+      std::cerr << "Unknown Descriptor, not setting threshold";
     }
+    //ROS_INFO("Calling Detect with threshold %f", thresh_);
+    //std::cout << "Performing detection with " << detector_name_ << ". Threshold: " << thresh_ << std::endl;
     detector->detect(image, keypoints, mask);
 }
 
@@ -91,7 +109,6 @@ void DetectorAdjuster::tooFew(int, int)
     thresh_ *= decrease_factor_;
     if (thresh_ < min_thresh_)
             thresh_ = min_thresh_;
-    ROS_INFO("Too Few Features, Decreased Threshold. New Threshold: %f", thresh_);
 }
 
 void DetectorAdjuster::tooMany(int, int)
@@ -99,7 +116,6 @@ void DetectorAdjuster::tooMany(int, int)
     thresh_ *= increase_factor_;
     if (thresh_ > max_thresh_)
             thresh_ = max_thresh_;
-    ROS_INFO("Too Many Features, Increased Threshold. New Threshold: %f", thresh_);
 }
 
 //return whether or not the threshhold is beyond
@@ -111,27 +127,38 @@ bool DetectorAdjuster::good() const
 
 Ptr<AdjusterAdapter> DetectorAdjuster::clone() const
 {
-    Ptr<AdjusterAdapter> cloned_obj(new DetectorAdjuster(detector_name_, init_thresh_, min_thresh_, max_thresh_, increase_factor_, decrease_factor_ ));
+    Ptr<AdjusterAdapter> cloned_obj(new DetectorAdjuster(detector_name_, thresh_, min_thresh_, max_thresh_, increase_factor_, decrease_factor_ ));
     return cloned_obj;
 }
 
-DynamicAdaptedFeatureDetectorWithStorage::DynamicAdaptedFeatureDetectorWithStorage(Ptr<AdjusterAdapter> a,
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+ VideoDynamicAdaptedFeatureDetector::VideoDynamicAdaptedFeatureDetector(Ptr<AdjusterAdapter> a,
                                          int min_features, int max_features, int max_iters ) :
         escape_iters_(max_iters), min_features_(min_features), max_features_(max_features), adjuster_(a)
 {}
 
-bool DynamicAdaptedFeatureDetectorWithStorage::empty() const
+cv::Ptr<StatefulFeatureDetector> VideoDynamicAdaptedFeatureDetector::clone() const 
+{
+  StatefulFeatureDetector* fd = new VideoDynamicAdaptedFeatureDetector(adjuster_->clone(), //clone adjuster, so threshold is not shared!
+                                                                       min_features_, 
+                                                                       max_features_, 
+                                                                       escape_iters_);
+  cv::Ptr<StatefulFeatureDetector> cloned_obj(fd);
+  return cloned_obj;
+}
+
+bool VideoDynamicAdaptedFeatureDetector::empty() const
 {
     return !adjuster_ || adjuster_->empty();
 }
 
-void DynamicAdaptedFeatureDetectorWithStorage::detectImpl(const cv::Mat& _image, std::vector<KeyPoint>& keypoints, const cv::Mat& _mask) const
+void VideoDynamicAdaptedFeatureDetector::detectImpl(const cv::Mat& _image, std::vector<KeyPoint>& keypoints, const cv::Mat& _mask) const
 {
-    //Mat image = _image, mask = _mask;
-
-    //for oscillation testing
-    bool down = false;
-    bool up = false;
+    //In contraast to the original, no oscillation testing is needed as
+    //the loop is broken out of anyway, if too many features were found.
 
     //break if the desired number hasn't been reached.
     int iter_count = escape_iters_;
@@ -141,15 +168,13 @@ void DynamicAdaptedFeatureDetectorWithStorage::detectImpl(const cv::Mat& _image,
 
         //the adjuster takes care of calling the detector with updated parameters
         adjuster_->detect(_image, keypoints,_mask);
-        ROS_INFO("Detected %d Keypoints", int(keypoints.size()));
+        //ROS_INFO("Detected %zu keypoints", keypoints.size());
         if( int(keypoints.size()) < min_features_ )
         {
-            down = true;
             adjuster_->tooFew(min_features_, (int)keypoints.size());
         }
         else if( int(keypoints.size()) > max_features_ )
         {
-            up = true;
             adjuster_->tooMany(max_features_, (int)keypoints.size());
             break;//FIXME: Too many is ok as they are clipped anyway?
         }
@@ -157,8 +182,114 @@ void DynamicAdaptedFeatureDetectorWithStorage::detectImpl(const cv::Mat& _image,
             break;
 
         iter_count--;
-    } while( iter_count > 0 && !(down && up) && adjuster_->good() );
+    } while( iter_count > 0 && adjuster_->good() );
 
 }
 
+/*
+ *  VideoGridAdaptedFeatureDetector
+ */
+VideoGridAdaptedFeatureDetector::VideoGridAdaptedFeatureDetector( const cv::Ptr<StatefulFeatureDetector>& _detector, int _maxTotalKeypoints, int _gridRows, int _gridCols, int _edgeThreshold)
+    : maxTotalKeypoints(_maxTotalKeypoints), gridRows(_gridRows), gridCols(_gridCols), edgeThreshold(_edgeThreshold)
+{
+  detectors.push_back(_detector);//Use original one
+  while(detectors.size() < gridRows*gridCols){
+    detectors.push_back(_detector->clone());//clone, so any state is not shared
+  }
+}
+
+bool VideoGridAdaptedFeatureDetector::empty() const
+{
+    for(auto detector : detectors){
+      if(detector->empty()) return true;
+    }
+    return false;
+}
+
+struct ResponseComparator
+{
+    bool operator() (const KeyPoint& a, const KeyPoint& b)
+    {
+        return std::abs(a.response) > std::abs(b.response);
+    }
+};
+
+void keepStrongest( int N, vector<KeyPoint>& keypoints )
+{
+    if( (int)keypoints.size() > N )
+    {
+        std::vector<cv::KeyPoint>::iterator nth = keypoints.begin() + N;
+        std::nth_element( keypoints.begin(), nth, keypoints.end(), ResponseComparator() );
+        keypoints.erase( nth, keypoints.end() );
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void VideoGridAdaptedFeatureDetector::detectImpl( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask ) const
+{
+    std::vector<std::vector<cv::KeyPoint> > sub_keypoint_vectors(gridCols*gridRows);
+    keypoints.reserve(maxTotalKeypoints);
+    int maxPerCell = maxTotalKeypoints / (gridRows * gridCols);
+    //First loop: Detection
+#pragma omp parallel for
+    for( int i = 0; i < gridRows; ++i )
+    {
+        int rowstart = std::max((i*image.rows)/gridRows - edgeThreshold, 0);
+        int rowend   = std::min(image.rows, ((i+1)*image.rows)/gridRows + edgeThreshold);
+        cv::Range row_range(rowstart, rowend);
+#pragma omp parallel for
+        for( int j = 0; j < gridCols; ++j )
+        {
+            int colstart = std::max((j*image.cols)/gridCols - edgeThreshold, 0);
+            int colend   = std::min(image.cols, ((j+1)*image.cols)/gridCols + edgeThreshold);
+            cv::Range col_range(colstart, colend);
+            cv::Mat sub_image = image(row_range, col_range);
+            cv::Mat sub_mask;
+            if( !mask.empty() )
+                sub_mask = mask(row_range, col_range);
+
+            std::vector<cv::KeyPoint>& sub_keypoints = sub_keypoint_vectors[j+i*gridCols];
+            //std::cout << "detection on subimage " << i << ", " << j << "\n";
+            detectors[j+i*gridCols]->detect( sub_image, sub_keypoints, sub_mask );
+            keepStrongest( maxPerCell, sub_keypoints );
+        }
+    }
+
+    //Second loop: Aggregation
+    for( int i = 0; i < gridRows; ++i )
+    {
+        int rowstart = std::max((i*image.rows)/gridRows - edgeThreshold, 0);
+        int rowend   = std::min(image.rows, ((i+1)*image.rows)/gridRows + edgeThreshold);
+        cv::Range row_range(rowstart, rowend);
+        for( int j = 0; j < gridCols; ++j )
+        {
+            int colstart = std::max((j*image.cols)/gridCols - edgeThreshold, 0);
+            int colend   = std::min(image.cols, ((j+1)*image.cols)/gridCols + edgeThreshold);
+            cv::Range col_range(colstart, colend);
+
+            std::vector<cv::KeyPoint>& sub_keypoints = sub_keypoint_vectors[j+i*gridCols];
+            std::vector<cv::KeyPoint>::iterator it = sub_keypoints.begin(),
+                                                end = sub_keypoints.end();
+            for( ; it != end; ++it )
+            {
+                it->pt.x += col_range.start;
+                it->pt.y += row_range.start;
+            }
+            {
+              keypoints.insert( keypoints.end(), sub_keypoints.begin(), sub_keypoints.end() );
+            }
+        }
+    }
+}
+
+cv::Ptr<StatefulFeatureDetector> VideoGridAdaptedFeatureDetector::clone() const 
+{
+  StatefulFeatureDetector* fd = new VideoGridAdaptedFeatureDetector(detectors[0]->clone(), //clone detector, so threshold is not shared!
+                                                                    maxTotalKeypoints, 
+                                                                    gridRows, gridCols, 
+                                                                    edgeThreshold);
+  cv::Ptr<StatefulFeatureDetector> cloned_obj(fd);
+  return cloned_obj;
+}
 

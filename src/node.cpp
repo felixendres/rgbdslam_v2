@@ -56,9 +56,42 @@
 #endif
 #include <string>
 #include <iostream>
-
+#include <cmath>
 QMutex Node::gicp_mutex;
 QMutex Node::siftgpu_mutex;
+
+/*Check for all keypoint coordinates whether valid depth is available */
+void removeDepthless(std::vector<cv::KeyPoint>& feature_locations_2d, const cv::Mat& depth)
+{
+  cv::Point2f p2d;
+  unsigned int i = 0; 
+  while(i < feature_locations_2d.size())
+  {
+    p2d = feature_locations_2d[i].pt;
+    if (p2d.x >= depth.cols || p2d.x < 0 ||
+        p2d.y >= depth.rows || p2d.y < 0 ||
+        std::isnan(p2d.x) || std::isnan(p2d.y)){ //TODO: Unclear why points should be outside the image or be NaN
+      ROS_WARN_STREAM("Ignoring invalid keypoint: " << p2d); //Does it happen at all? If not, remove this code block
+      feature_locations_2d.erase(feature_locations_2d.begin()+i);
+      continue;
+    }
+    float Z;
+    if(ParameterServer::instance()->get<bool>("use_feature_min_depth")){
+      Z = getMinDepthInNeighborhood(depth, p2d, feature_locations_2d[i].size);
+    } else {
+      Z = depth.at<float>(round(p2d.y), round(p2d.x));//unfortunately rounding is necessary. Seldomly, casting the floating point coordinates (b/c subpix accuracy) shifted the point. Happend only for ORB, which produces coordinats like 10.9999959
+    }
+    // Check for invalid measurements
+    if(std::isnan (Z))
+    {
+      ROS_INFO("%.3u. Feature (%f %f) has been extracted at NaN depth. Omitting", i, p2d.x, p2d.y);
+      //FIXME Use parameter here to choose whether to use
+      feature_locations_2d.erase(feature_locations_2d.begin()+i);
+      continue;
+    }
+    i++; //Only increment if no element is removed from vector
+  }
+}
 
 //!Construct node without precomputed point cloud. Computes the point cloud on
 //!demand, possibly subsampled
@@ -140,11 +173,37 @@ Node::Node(const cv::Mat& visual,
   else
 #endif
   {
-    projectTo3D(feature_locations_2d_, feature_locations_3d_, depth, cam_info);
+    //PREFILTER 
+    removeDepthless(feature_locations_2d_, depth);
+    size_t max_keyp = ps->get<int>("max_keypoints");
+    if(feature_locations_2d_.size() > max_keyp){
+      cv::KeyPointsFilter::retainBest(feature_locations_2d_, max_keyp);  
+      feature_locations_2d_.resize(max_keyp);//Because retainBest doesn't retain exactly max_keyp?
+    }
+
+    /*for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){
+      feature_locations_2d_[i].class_id = i;
+      feature_locations_2d_[i].pt.x = round(feature_locations_2d_[i].pt.x);
+      feature_locations_2d_[i].pt.y = round(feature_locations_2d_[i].pt.y);
+      ROS_WARN("%u. Keypoint %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
+    }*/
+
+
     ScopedTimer s("Feature Extraction");
     extractor->compute(gray_img, feature_locations_2d_, feature_descriptors_); //fill feature_descriptors_ with information 
+    /*for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){
+      ROS_WARN("%.3u. EKeypoint1 %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
+    }*/
+    removeDepthless(feature_locations_2d_, depth);//FIXME: Unnecessary?
+    /* for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){
+      ROS_WARN("%.3u. EKeypoint %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
+    }  */
     projectTo3D(feature_locations_2d_, feature_locations_3d_, depth, cam_info);
-    ROS_INFO("Feature Descriptors size: %d x %d", feature_descriptors_.rows, feature_descriptors_.cols);
+    /* for(unsigned int i = 0; i < feature_locations_2d_.size(); i++){
+      ROS_WARN("%.3u. EKeypoint3 %.3i: (%f %f)", i, feature_locations_2d_[i].class_id, feature_locations_2d_[i].pt.x, feature_locations_2d_[i].pt.y);
+    }*/
+    ROS_INFO("Keypoints: %zu", feature_locations_2d_.size());
+    ROS_DEBUG("Feature Descriptors size: %d x %d", feature_descriptors_.rows, feature_descriptors_.cols);
   }
   assert(feature_locations_2d_.size() == feature_locations_3d_.size());
   assert(feature_locations_3d_.size() == (unsigned int)feature_descriptors_.rows); 
@@ -638,9 +697,9 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
     p2d = feature_locations_2d[i].pt;
     float Z;
     if(use_feature_min_depth ){
-      Z = getMinDepthInNeighborhood(depth, p2d, feature_locations_2d[i].size);
+      Z = getMinDepthInNeighborhood(depth, p2d, feature_locations_2d[i].size) * depth_scaling;
     } else {
-      Z = depth.at<float>(p2d.y, p2d.x) * depth_scaling;
+      Z = depth.at<float>(p2d.y, p2d.x) * depth_scaling;//unfortunately rounding is necessary. Seldomly, casting the floating point coordinates (b/c subpix accuracy) shifted the point. Happend only for ORB, which produces coordinats like 10.9999959
     }
     // Check for invalid measurements
     if (std::isnan (Z))
@@ -848,9 +907,11 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
     }
     float Z;
     if(use_feature_min_depth){
-      Z = getMinDepthInNeighborhood(depth, p2d, feature_locations_2d[i].size);
+      Z = getMinDepthInNeighborhood(depth, p2d, feature_locations_2d[i].size) * depth_scaling;
     } else {
-      Z = depth.at<float>(p2d.y, p2d.x) * depth_scaling;
+      Z = depth.at<float>(round(p2d.y), round(p2d.x)) * depth_scaling;//unfortunately rounding is necessary. Seldomly, casting the floating point coordinates (b/c subpix accuracy) shifted the point. Happend only for ORB, which produces coordinats like 10.9999959
+      //printMatrixInfo(depth, "Depth Image");
+      //ROS_INFO("X Y Z: %f %f %f", p2d.x, p2d.y, Z);
     }
     // Check for invalid measurements
     if(std::isnan (Z))
@@ -868,7 +929,7 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
     if(feature_locations_3d.size() >= max_keyp) break;
   }
 
-  ROS_INFO("Feature 2d size: %zu, 3D: %zu", feature_locations_2d.size(), feature_locations_3d.size());
+  //ROS_INFO("Feature 2d size: %zu, 3D: %zu", feature_locations_2d.size(), feature_locations_3d.size());
   feature_locations_2d.resize(feature_locations_3d.size());
   ROS_INFO("Feature 2d size: %zu, 3D: %zu", feature_locations_2d.size(), feature_locations_3d.size());
 }
@@ -1009,7 +1070,8 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
   //unsigned int min_inlier_threshold = int(initial_matches->size()*0.2);
   unsigned int min_inlier_threshold = (unsigned int) ParameterServer::instance()->get<int>("min_matches");
   if(min_inlier_threshold > 0.75 * initial_matches->size()){
-    ROS_WARN("Lowering min_inlier_threshold from %d to %d, because there are only %d matches to begin with", min_inlier_threshold, (int) (0.75 * initial_matches->size()), (int)initial_matches->size());
+    //FIXME: Evaluate whether beneficial
+    ROS_INFO("Lowering min_inlier_threshold from %d to %d, because there are only %d matches to begin with", min_inlier_threshold, (int) (0.75 * initial_matches->size()), (int)initial_matches->size());
     min_inlier_threshold = 0.75 * initial_matches->size();
   }
 
@@ -1245,7 +1307,7 @@ MatchingResult Node::matchNodePair(const Node* older_node)
             nn_ratio += mr.inlier_matches[i].distance;
           }
           nn_ratio /= mr.inlier_matches.size();
-          ParameterServer::instance()->set("nn_distance_ratio", static_cast<double>(nn_ratio + 0.2));
+          //ParameterServer::instance()->set("nn_distance_ratio", static_cast<double>(nn_ratio + 0.2));
           mr.final_trafo = mr.ransac_trafo;
           mr.edge.informationMatrix =   Eigen::Matrix<double,6,6>::Identity()*(mr.inlier_matches.size()/(mr.rmse*mr.rmse)); //TODO: What do we do about the information matrix? Scale with inlier_count. Should rmse be integrated?)
 

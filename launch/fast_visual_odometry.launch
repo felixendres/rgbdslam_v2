@@ -17,10 +17,10 @@
     <param name="config/topic_image_mono"              value="/camera/rgb/image_color"/> 
     <param name="config/topic_image_depth"             value="/camera/depth_registered/sw_registered/image_rect_raw"/>
 
-    <param name="config/feature_detector_type"         value="FAST"/><!-- FAST can guarantee a certain range of keypoints using an adjuster-->
-    <param name="config/adjuster_max_iterations"       value="100"/><!-- retry this many times if not enough features are detected -->
-    <param name="config/max_keypoints"                 value="800"/><!-- -->
-    <param name="config/min_keypoints"                 value="400"/><!-- -->
+    <param name="config/feature_detector_type"         value="ORB"/><!-- FAST can guarantee a certain range of keypoints using an adjuster-->
+    <param name="config/adjuster_max_iterations"       value="10"/><!-- retry this many times if not enough features are detected -->
+    <param name="config/detector_grid_resolution"      value="2"/><!-- -->
+    <param name="config/max_keypoints"                 value="600"/><!-- -->
 
     <param name="config/feature_extractor_type"        value="ORB"/><!-- ORB are fastest descriptors and require no GPU -->
 
@@ -36,6 +36,6 @@
 
 
     <param name="config/backend_solver"                value="pcg"/> <!-- pcg is fast and good for online operation -->
-    <param name="config/cloud_creation_skip_step"      value="8"/> <!-- Subsample point cloud during creation -->
+    <param name="config/cloud_creation_skip_step"      value="16"/> <!-- Subsample point cloud during creation -->
   </node>
 </launch>

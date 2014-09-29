@@ -19,8 +19,8 @@
 
     <param name="config/feature_detector_type"         value="ORB"/><!-- FAST can guarantee a certain range of keypoints using an adjuster-->
     <param name="config/adjuster_max_iterations"       value="10"/><!-- retry this many times if not enough features are detected -->
-    <param name="config/detector_grid_resolution"      value="2"/><!-- -->
-    <param name="config/max_keypoints"                 value="600"/><!-- -->
+    <param name="config/detector_grid_resolution"      value="2"/><!-- detect on a 2x2 grid -->
+    <param name="config/max_keypoints"                 value="600"/><!-- Extract no more than this many keypoints -->
 
     <param name="config/feature_extractor_type"        value="ORB"/><!-- ORB are fastest descriptors and require no GPU -->
 

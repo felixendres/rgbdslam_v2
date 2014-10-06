@@ -1168,18 +1168,24 @@ unsigned int GraphManager::pruneEdgesWithErrorAbove(float thresh){
           counter++;
           //if(abs(n_id1 - n_id2) == 1){ //predecessor-successor
             // Only for sequential camera edges
-            ROS_INFO("Setting edge from node %d to %d to Identity because error is %f", n_id1, n_id2, ev.squaredNorm());
             //Constant position estimate
             Eigen::Quaterniond eigen_quat(1,0,0,0);
             Eigen::Vector3d translation(0,0,0);
             g2o::SE3Quat unit_tf(eigen_quat, translation);
             myedge->setMeasurement(unit_tf);
-            //Set highly uncertain, so non-erroneous edges prevail
-            Eigen::Matrix<double,6,6> new_info = Eigen::Matrix<double,6,6>::Identity()* 1e-100;
-            new_info(3,3) = 1e-100;
-            new_info(4,4) = 1e-100;
-            new_info(5,5) = 1e-100;
-            myedge->setInformation(new_info);
+            if(abs(n_id1 - n_id2) != 1)//Non-Consecutive
+            { 
+              ROS_WARN("Setting edge from node %d to %d to Identity and Information to diag(1e-100), because error is %f", n_id1, n_id2, ev.squaredNorm());
+              //Set highly uncertain, so non-erroneous edges prevail
+              Eigen::Matrix<double,6,6> new_info = Eigen::Matrix<double,6,6>::Identity()* 1e-100;
+              new_info(3,3) = 1e-100;
+              new_info(4,4) = 1e-100;
+              new_info(5,5) = 1e-100;
+              myedge->setInformation(new_info);
+            } else {
+              //consecutive: zero motion assumption
+              ROS_WARN("Setting edge from node %d to %d and Information to Identity because error is %f", n_id1, n_id2, ev.squaredNorm());
+            }
           /*
           }
           else{

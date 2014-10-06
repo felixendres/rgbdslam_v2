@@ -555,7 +555,6 @@ bool GraphManager::nodeComparisons(Node* new_node,
             MatchingResult& mr = results[i];
             ROS_INFO("Result of comparison %d: %s", i, mr.toString());
             if (mr.edge.id1 >= 0 ) {
-
               ROS_INFO("new node has id %i", new_node->id_);
               assert(graph_[mr.edge.id1]);
 
@@ -564,6 +563,10 @@ bool GraphManager::nodeComparisons(Node* new_node,
                   addEdgeToG2O(mr.edge,graph_[mr.edge.id1],new_node, isBigTrafo(mr.edge.transform), mr.inlier_matches.size() > curr_best_result_.inlier_matches.size(), curr_motion_estimate))
                 { 
                   graph_[new_node->id_] = new_node; //Needs to be added
+                  if(mr.edge.id1 == mr.edge.id2-1 ) {//older == newer-1
+                    predecessor_matched = true;
+                  }
+
 #ifdef DO_FEATURE_OPTIMIZATION
                   updateLandmarks(mr, graph_[mr.edge.id1],new_node);
 #endif
@@ -589,7 +592,6 @@ bool GraphManager::nodeComparisons(Node* new_node,
             ROS_INFO("Result of comparison: %s", mr.toString());
 
             if (mr.edge.id1 >= 0) {
-
               ros::Duration delta_time = new_node->header_.stamp - graph_[mr.edge.id1]->header_.stamp;
               if (isSmallTrafo(mr.edge.transform, delta_time.toSec()) &&
                   addEdgeToG2O(mr.edge, node_to_compare, new_node, isBigTrafo(mr.edge.transform), mr.inlier_matches.size() > curr_best_result_.inlier_matches.size(), curr_motion_estimate))
@@ -598,6 +600,9 @@ bool GraphManager::nodeComparisons(Node* new_node,
                 updateLandmarks(mr, node_to_compare, new_node);
 #endif
                 graph_[new_node->id_] = new_node; //Needs to be added
+                if(mr.edge.id1 == mr.edge.id2-1 ) {//older == newer-1
+                  predecessor_matched = true;
+                }
                 updateInlierFeatures(mr, new_node, node_to_compare);
                 graph_[mr.edge.id1]->valid_tf_estimate_ = true;
                 ROS_INFO("Added Edge between %i and %i. Inliers: %i",mr.edge.id1,mr.edge.id2,(int) mr.inlier_matches.size());
@@ -627,6 +632,8 @@ bool GraphManager::nodeComparisons(Node* new_node,
     bool keep_anyway = (ps->get<bool>("keep_all_nodes") || 
                         (((int)new_node->feature_locations_3d_.size() > ps->get<int>("min_matches")) 
                          && ps->get<bool>("keep_good_nodes")));
+    ros::Duration delta_time = new_node->header_.stamp - graph_[sequentially_previous_id]->header_.stamp;
+    ROS_WARN_COND(delta_time.toSec() >= 0.1, "Time jump (time delta: %.2f)", delta_time.toSec());
     if(!invalid_odometry)
     {
       ROS_INFO("Adding odometry motion edge for Node %i (if available, otherwise using identity)", (int)graph_.rbegin()->second->id_);
@@ -650,7 +657,10 @@ bool GraphManager::nodeComparisons(Node* new_node,
       addEdgeToG2O(odom_edge,graph_[sequentially_previous_id],new_node, true,true, curr_motion_estimate);
       graph_[new_node->id_] = new_node; //Needs to be added
     }
-    else if(!found_trafo && keep_anyway) //Constant position assumption
+    //If no trafo is found, only keep if a parameter says so. 
+    //Otherwise only add a constant position edge, if the predecessor wasn't matched and its timestamp is nearby
+    else if((!found_trafo && keep_anyway) || 
+           (!predecessor_matched && fabs(delta_time.toSec()) < 0.1)) //FIXME: Add parameter for constant position assumption and time_delta
     { 
       LoadedEdge3D odom_edge;
 
@@ -662,11 +672,13 @@ bool GraphManager::nodeComparisons(Node* new_node,
       ///High information value for translation 
       ///10000 corresponds to 1cm std deviation, i.e. we expect the camera to travel about 1cm in any direction (with mean 0)
       ///FIXME this should have a dependency on time.
-      ROS_INFO_STREAM("No valid transformation: Using constant position assumption.");
+      ROS_WARN("No valid (sequential) transformation between %d and %d: Using constant position assumption.", odom_edge.id1, odom_edge.id2);
       odom_edge.informationMatrix = Eigen::Matrix<double,6,6>::Identity() * 1;//e-9; 
+      /*
       odom_edge.informationMatrix(3,3) = 1e-100;
       odom_edge.informationMatrix(4,4) = 1e-100;
       odom_edge.informationMatrix(5,5) = 1e-100;
+      */
       addEdgeToG2O(odom_edge,graph_[sequentially_previous_id],new_node, true,true, curr_motion_estimate);
       graph_[new_node->id_] = new_node; //Needs to be added
       new_node->valid_tf_estimate_ = false; //Don't use for postprocessing, rendering etc
@@ -1222,6 +1234,26 @@ unsigned int GraphManager::pruneEdgesWithErrorAbove(float thresh){
         }*/
         //remaining_cam_cam_edges.insert(*edge_iter);
     }
+    //Now cut, without making vertices disconnected
+    /*
+    for(g2o::SparseOptimizer::VertexIDMap::iterator it = optimizer_->vertices().begin(); it != optimizer_->vertices().end(); it++)
+    {
+      //Go through all edges of vertex
+      g2o::HyperGraph::EdgeSet es = it->second->edges();
+      EdgeSet::iterator edge_iter = es.begin(); 
+      unsigned int nonconsec_edges = 0;
+      bool edge_to_prev = false, edge_to_next = false;
+      for(;edge_iter != es.end(); ++edge_iter) {
+        g2o::EdgeSE3* curr_edge = dynamic_cast<g2o::EdgeSE3*>(*edge_iter);
+        g2o::EdgeSE3::ErrorVector ev = curr_edge->error();
+
+        if(curr_edge->chi2() > thresh){
+          optimizer_->removeEdge(curr_edge); 
+          continue;
+        } 
+      }
+    }
+    */
     //cam_cam_edges_.swap(remaining_cam_cam_edges_);
     //Q_EMIT setGraphEdges(getGraphEdges());
     return counter;

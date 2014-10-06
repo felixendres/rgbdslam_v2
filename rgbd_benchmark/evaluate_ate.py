@@ -6,7 +6,8 @@
 import sys
 import numpy
 import argparse
-import associate
+import pyximport; pyximport.install()
+import associate_module as associate
 
 def align_first(model,data):
     numpy.set_printoptions(precision=3,suppress=True)
@@ -151,7 +152,7 @@ if __name__=="__main__":
         ax = fig.add_subplot(111)
         plt.title("ATE RMSE: "+str(rmse))
         plot_traj(ax,first_stamps,first_xyz_full.transpose().A,'-',"black","Ground Truth", linewidth=2)
-        plot_traj(ax,second_stamps,second_xyz_full_aligned.transpose().A,'-',"green","Unmodified RGB-D Sensor", linewidth=2)
+        plot_traj(ax,second_stamps,second_xyz_full_aligned.transpose().A,'-',"green","Estimate", linewidth=2)
 
         label="Difference"
         i = 0
@@ -161,9 +162,10 @@ if __name__=="__main__":
               ax.plot([x1,x2],[y1,y2],'-',color="red",label=label, linewidth=1)
               label=""
             
-        ax.legend(loc="upper left")
+        ax.legend(loc="upper right")
             
         ax.set_xlabel('x [m]')
         ax.set_ylabel('y [m]')
+        plt.show()
         plt.savefig(args.plot,dpi=300)
         

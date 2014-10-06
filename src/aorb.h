@@ -1,3 +1,5 @@
+#ifndef RGBDSLAM_AORB
+#define RGBDSLAM_AORB
 /*M///////////////////////////////////////////////////////////////////////////////////////
  //
  //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
@@ -89,3 +91,4 @@ typedef AORB AorbDescriptorExtractor;
 
 
 }
+#endif

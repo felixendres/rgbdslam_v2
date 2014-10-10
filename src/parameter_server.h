@@ -32,12 +32,15 @@
 #include "point_types.h"
 #ifdef RGB_IS_4TH_DIM
 typedef pcl::PointXYZ point_type;
+typedef pcl::PointXYZNormal point_normal_type;
 #elif defined(HEMACLOUDS)
 typedef hema::PointXYZRGBCamSL point_type;
 #else
 typedef pcl::PointXYZRGB point_type;
+typedef pcl::PointXYZRGBNormal point_normal_type;
 #endif
 typedef pcl::PointCloud<point_type> pointcloud_type;
+typedef pcl::PointCloud<point_normal_type> pointcloud_normal_type;
 //#define CONCURRENT_EDGE_COMPUTATION
 //Compile out DEBUG Statements. Hardly benefitial though
 #define ROSCONSOLE_SEVERITY_INFO 1

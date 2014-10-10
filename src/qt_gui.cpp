@@ -77,7 +77,8 @@ void Graphical_UI::setup(){
     // create widgets for image and map display
     feature_flow_image_label->setWordWrap(true);
     feature_flow_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
-    if(ParameterServer::instance()->get<bool>("scalable_2d_display")) 
+    ParameterServer* ps = ParameterServer::instance();
+    if(ps->get<bool>("scalable_2d_display")) 
       feature_flow_image_label->setScaledContents(true);
 
     std::string visual_topic = ParameterServer::instance()->get<std::string>("topic_image_mono");
@@ -85,21 +86,29 @@ void Graphical_UI::setup(){
     visual_image_label = new QLabel(vl);
     visual_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     visual_image_label->setAlignment(Qt::AlignCenter);
-    if(ParameterServer::instance()->get<bool>("scalable_2d_display")) 
+    if(ps->get<bool>("scalable_2d_display")) 
       visual_image_label->setScaledContents(true);
 
     std::string depth_topic = ParameterServer::instance()->get<std::string>("topic_image_depth");
     QString dl("Waiting for depth image on topic<br/><i>\""); dl += depth_topic.c_str(); 
     dl += "\"</i><br/>";
+
     depth_image_label = new QLabel(dl);
     depth_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     depth_image_label->setAlignment(Qt::AlignCenter);
-    if(ParameterServer::instance()->get<bool>("scalable_2d_display")) 
+    if(ps->get<bool>("scalable_2d_display")) 
       depth_image_label->setScaledContents(true);
+
+    feature_image_label = new QLabel(tr("<i>Waiting for feature image...</i>"));
+    feature_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
+    feature_image_label->setAlignment(Qt::AlignCenter);
+    if(ps->get<bool>("scalable_2d_display")) 
+      feature_image_label->setScaledContents(true);
+
     //transform_label = new QLabel(tr("<i>Waiting for transformation matrix...</i>"));
     //transform_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     //transform_label->setAlignment(Qt::AlignCenter);
-    if(ParameterServer::instance()->get<bool>("use_glwidget")) glviewer = new GLViewer(this);//displays the cloud in 3d
+    if(ps->get<bool>("use_glwidget")) glviewer = new GLViewer(this);//displays the cloud in 3d
 
     //QFont typewriter_font;
     //typewriter_font.setStyleHint(QFont::TypeWriter);
@@ -118,6 +127,7 @@ void Graphical_UI::setup(){
     //h_layout->setContentsMargins(0, 0, 0, 0);
     hsplitter->addWidget(visual_image_label);
     hsplitter->addWidget(depth_image_label);
+    hsplitter->addWidget(feature_image_label);
     hsplitter->addWidget(feature_flow_image_label);
     //QWidget* bottom_widget = new QWidget;
     //bottom_widget->setLayout(h_layout);
@@ -145,6 +155,14 @@ void Graphical_UI::setup(){
 
     setMinimumSize(790, 290);
     resize(1000, 700);
+}
+void Graphical_UI::setFeatureImage(QImage qimage){
+  if(feature_image_label->isVisible()){
+    feature_image_label->setAlignment(Qt::AlignCenter);
+    feature_image_label->setPixmap(QPixmap::fromImage(qimage));
+    feature_image_label->repaint();
+  }
+  feature_image = qimage;
 }
 
 void Graphical_UI::setFeatureFlowImage(QImage qimage){
@@ -821,6 +839,12 @@ void Graphical_UI::createMenus() {
     actionMenu->addAction(psOutputAct);
     this->addAction(psOutputAct);
 
+    QAction *saveImages = new QAction(tr("&Write All Images to file."), this);
+    saveImages->setStatusTip(tr("Write All images shown in the gui to appropriate files"));
+    saveImages->setIcon(QIcon::fromTheme("application-pdf"));//doesn't work for gnome
+    connect(saveImages, SIGNAL(triggered()), this, SLOT(saveAllImages()));
+    actionMenu->addAction(saveImages);
+    this->addAction(saveImages);
     QAction *toggleCloudStorageAct = new QAction(tr("&Store Point Clouds"), this);
     QList<QKeySequence> tcs_shortcuts;
     tcs_shortcuts.append(QString("Ctrl+P"));
@@ -1147,3 +1171,23 @@ void Graphical_UI::setBusy(int id, const char* message, int val){
     statusBar()->showMessage("Error: Set Value for non-existing progressbar");
 }
 
+void Graphical_UI::saveAllImages() {
+	QString tmp="~";
+    QString file_basename = QFileDialog::getSaveFileName(this, "Save all images to file", tmp, tr("PNG (*.png)"));
+    file_basename.remove(".png", Qt::CaseInsensitive);
+
+    QString depth_file =file_basename+"-depth.png";
+    QString feature_file =file_basename+"-feature.png";
+    QString flow_file =file_basename+"-flow.png";
+    QString visual_file =file_basename+"-visual.png";
+    QString vector_file =file_basename+"-points.ps";
+    std::cout << visual_file.toStdString() << std::endl;
+    depth_image.save(depth_file);
+    feature_image.save(feature_file);
+    feature_flow_image.save(flow_file);
+    visual_image.save(visual_file);
+
+    //glviewer->drawToPS(vector_file);
+    QString message = tr("Saving all images.");
+    statusBar()->showMessage(message);
+}

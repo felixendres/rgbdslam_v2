@@ -361,6 +361,10 @@ void GraphManager::saveIndividualCloudsToFile(QString file_basename)
       cam2rgb.setOrigin(tf::Point(0,-0.04,0));
       world2base = cam2rgb*transform;
       */
+    //for cpu_tsdf
+    Eigen::Matrix3f export_rot;
+    Eigen::Vector3f export_origin;
+    QString transform_filename;
     if(ParameterServer::instance()->get<bool>("transform_individual_clouds")){
 
       Eigen::Matrix4f m = v->estimate().matrix().cast<float>();
@@ -368,6 +372,8 @@ void GraphManager::saveIndividualCloudsToFile(QString file_basename)
       Eigen::Vector4f sensor_origin(0,0,0,0);
       Eigen::Quaternionf sensor_orientation(0,0,0,1);
 
+      export_rot= sensor_orientation.toRotationMatrix();
+      export_origin= sensor_origin.head<3>();
       node->pc_col->sensor_origin_ = sensor_origin;
       node->pc_col->sensor_orientation_ = sensor_orientation;
       node->header_.frame_id = fixed_frame_id;
@@ -381,16 +387,25 @@ void GraphManager::saveIndividualCloudsToFile(QString file_basename)
       Eigen::Vector4f sensor_origin(world2points.getOrigin().x(),world2points.getOrigin().y(),world2points.getOrigin().z(),world2points.getOrigin().w());
       Eigen::Quaternionf sensor_orientation(world2points.getRotation().w(),world2points.getRotation().x(),world2points.getRotation().y(),world2points.getRotation().z());
 
+      export_rot= sensor_orientation.toRotationMatrix();
+      export_origin= sensor_origin.head<3>();
       node->pc_col->sensor_origin_ = sensor_origin;
       node->pc_col->sensor_orientation_ = sensor_orientation;
       node->header_.frame_id = fixed_frame_id;
     }
 
     filename.sprintf("%s_%04d.pcd", qPrintable(file_basename), it->first);
+    transform_filename.sprintf("%s_%04d.txt", qPrintable(file_basename), it->first);
     ROS_INFO("Saving %s", qPrintable(filename));
     Q_EMIT setGUIStatus(message.sprintf("Saving to %s: Transformed Node %i/%i", qPrintable(filename), it->first, (int)camera_vertices.size()));
     pcl::io::savePCDFile(qPrintable(filename), *(node->pc_col), true); //Last arg: true is binary mode. ASCII mode drops color bits
 
+    std::ofstream trans_file;
+    trans_file.open(qPrintable(transform_filename), std::ios::out);
+    for (int i = 0; i < 3; ++i) {
+    	trans_file << export_rot(i,0) << " " << export_rot(i,1) << " " << export_rot(i,2) << " " << export_origin(i) << " ";
+	}
+    trans_file << 0 << " " << 0 << " " << 0 << " " << 1 << std::endl;
     if(!gt.empty()){
       tf::StampedTransform gt_world2base = node->getGroundTruthTransform();//get mocap pose of base in map
       if( gt_world2base.frame_id_   == "/missing_ground_truth" ){ 
@@ -488,8 +503,9 @@ void GraphManager::saveAllCloudsToFile(QString filename){
       ROS_WARN("Cannot save empty graph. Aborted");
       return;
     }
-
+    bool export_normals =false;//FIXME: Not implemented (see below)
     pcl::PointCloud<point_type> aggregate_cloud; ///will hold all other clouds
+    pcl::PointCloud<pcl::PointXYZRGBNormal> aggregate_normal_cloud; ///will hold all other clouds
     //Make big enough to hold all other clouds. This might be too much if NaNs are filtered. They are filtered according to the parameter preserve_raster_on_save
     aggregate_cloud.reserve(graph_.size() * graph_.begin()->second->pc_col->size()); 
     ROS_INFO("Saving all clouds to %s, this may take a while as they need to be transformed to a common coordinate frame.", qPrintable(filename));
@@ -516,22 +532,35 @@ void GraphManager::saveAllCloudsToFile(QString filename){
       }
       g2o::VertexSE3* v = dynamic_cast<g2o::VertexSE3*>(optimizer_->vertex(node->vertex_id_));
       if(!v){ 
-        ROS_ERROR("Nullpointer in graph at position %i!", it->first);
+        ROS_ERROR("Nullpointer in graph at position %i when saving clouds!", it->first);
         continue;
       }
       tf::Transform transform = eigenTransf2TF(v->estimate());
       world2cam = cam2rgb*transform;
-      transformAndAppendPointCloud (*(node->pc_col), aggregate_cloud, world2cam, ParameterServer::instance()->get<double>("maximum_depth"), node->id_);
-
-      if(ParameterServer::instance()->get<bool>("batch_processing"))
+      if (!export_normals){
+        transformAndAppendPointCloud (*(node->pc_col), aggregate_cloud, world2cam, ParameterServer::instance()->get<double>("maximum_depth"), node->id_);
+      } else { 
+        ROS_ERROR("Exporting normals is not implemented");
+        //transformAndAppendPointCloud (*(node->pc_col), aggregate_normal_cloud, world2cam, ParameterServer::instance()->get<double>("maximum_depth"));
+      }
+      if(ParameterServer::instance()->get<bool>("batch_processing")){
         node->clearPointCloud(); //saving all is the last thing to do, so these are not required anymore
+      }
       Q_EMIT setGUIStatus(message.sprintf("Saving to %s: Transformed Node %i/%i", qPrintable(filename), it->first, (int)camera_vertices.size()));
     }
     aggregate_cloud.header.frame_id = base_frame;
-    if(!filename.endsWith(".pcd", Qt::CaseInsensitive)){
-      filename.append(".pcd");
+    aggregate_normal_cloud.header.frame_id = base_frame;
+    if (filename.endsWith(".ply", Qt::CaseInsensitive) ){
+        	ROS_INFO("ply saving");
+          savePlyFile(qPrintable(filename), aggregate_normal_cloud); //Last arg is binary mode
+    } else {
+      ROS_INFO("pcd saving");
+      if(!filename.endsWith(".pcd", Qt::CaseInsensitive)){
+        filename.append(".pcd");
+      }
+      pcl::io::savePCDFile(qPrintable(filename), aggregate_cloud, true); //Last arg is binary mode
     }
-    pcl::io::savePCDFile(qPrintable(filename), aggregate_cloud, true); //Last arg is binary mode
+    
     Q_EMIT setGUIStatus(message.sprintf("Saved %d data points to %s", (int)aggregate_cloud.points.size(), qPrintable(filename)));
     ROS_INFO ("Saved %d data points to %s", (int)aggregate_cloud.points.size(), qPrintable(filename));
 
@@ -620,7 +649,7 @@ void GraphManager::saveTrajectory(QString filebasename, bool with_ground_truth)
       }
       g2o::VertexSE3* v = dynamic_cast<g2o::VertexSE3*>(optimizer_->vertex(node->vertex_id_));
 
-      ROS_ERROR_COND(!v, "Nullpointer in graph at position %i!", it->first);
+      ROS_ERROR_COND(!v, "Nullpointer in graph at position %i when saving trajectory!", it->first);
 
       tf::Transform pose = eigenTransf2TF(v->estimate());
 
@@ -774,9 +803,9 @@ void GraphManager::visualizeGraphEdges() const {
         edges_marker.color.a = 0.5f;//looks smoother
         geometry_msgs::Point point; //start and endpoint for each line segment
         g2o::VertexSE3* v1,* v2; //used in loop
-  EdgeSet::iterator edge_iter = cam_cam_edges_.begin();
+        EdgeSet::iterator edge_iter = cam_cam_edges_.begin();
         int counter = 0;
-  for(;edge_iter != cam_cam_edges_.end(); edge_iter++, counter++) {
+        for(;edge_iter != cam_cam_edges_.end(); edge_iter++, counter++) {
             g2o::EdgeSE3* myedge = dynamic_cast<g2o::EdgeSE3*>(*edge_iter);
             std::vector<g2o::HyperGraph::Vertex*>& myvertices = myedge->vertices();
             v1 = dynamic_cast<g2o::VertexSE3*>(myvertices.at(1));
@@ -984,15 +1013,15 @@ void publishCloud(Node* node, ros::Time timestamp, ros::Publisher pub){
   }
 }
 
-void drawFeatureConnectors(cv::Mat& canvas, cv::Scalar line_color, 
+void drawFeatureConnectors(cv::Mat& canvas, cv::Scalar line_color, int line_type,
                            const std::vector<cv::DMatch> matches,
                            const std::vector<cv::KeyPoint>& newer_keypoints,
                            const std::vector<cv::KeyPoint>& older_keypoints)
 {
     const double pi_fourth = 3.14159265358979323846 / 4.0;
-    const int line_thickness = 1;
+    const int line_thickness = 2;
     const int circle_radius = 6;
-    const int cv_aa = 16;
+    //const int cv_aa = 16;
     for(unsigned int mtch = 0; mtch < matches.size(); mtch++) {
         cv::Point2f p,q; //TODO: Use sub-pixel-accuracy
         unsigned int newer_idx = matches[mtch].queryIdx;
@@ -1005,18 +1034,18 @@ void drawFeatureConnectors(cv::Mat& canvas, cv::Scalar line_color,
         double angle;    angle = atan2( (double) p.y - q.y, (double) p.x - q.x );
         double hypotenuse = cv::norm(p-q);
         if(hypotenuse > 0.1){  //only larger motions larger than one pix get an arrow line
-            cv::line( canvas, p, q, line_color, line_thickness, cv_aa );
+            cv::line( canvas, p, q, line_color, line_thickness, line_type );
         } else { //draw a smaller circle into the bigger one 
-            cv::circle(canvas, p, 1, line_color, line_thickness, cv_aa);
+            cv::circle(canvas, p, 1, line_color, line_thickness, line_type);
         }
         if(hypotenuse > 3.0){  //only larger motions larger than this get an arrow tip
             /* Now draw the tips of the arrow.  */
             p.x =  (q.x + 4 * cos(angle + pi_fourth));
             p.y =  (q.y + 4 * sin(angle + pi_fourth));
-            cv::line( canvas, p, q, line_color, line_thickness, cv_aa );
+            cv::line( canvas, p, q, line_color, line_thickness, line_type );
             p.x =  (q.x + 4 * cos(angle - pi_fourth));
             p.y =  (q.y + 4 * sin(angle - pi_fourth));
-            cv::line( canvas, p, q, line_color, line_thickness, cv_aa );
+            cv::line( canvas, p, q, line_color, line_thickness, line_type );
         } 
     }
 }
@@ -1061,15 +1090,141 @@ void GraphManager::drawFeatureFlow(cv::Mat& canvas, cv::Scalar line_color,
       }
     }
 
+    //Juergen: commented out to draw key points seperately
     //Draw normal keypoints in given color 
-    cv::drawKeypoints(canvas, with_depth, tmpimage, circle_color, 5);
+    //cv::drawKeypoints(canvas, with_depth, tmpimage, circle_color, 5);
     //Draw depthless keypoints in orange 
-    cv::drawKeypoints(canvas, without_depth, tmpimage, cv::Scalar(0,128,255,0), 5);
-    canvas+=tmpimage;
+    //cv::drawKeypoints(canvas, without_depth, tmpimage, cv::Scalar(0,128,255,0), 5);
+    //canvas+=tmpimage;
 
-    drawFeatureConnectors(canvas, cv::Scalar(0.0), curr_best_result_.all_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
-    drawFeatureConnectors(canvas, line_color, curr_best_result_.inlier_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
+    //drawFeatureConnectors(canvas, cv::Scalar(150.0), 4, curr_best_result_.all_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
+    drawFeatureConnectors(canvas, line_color, 16, curr_best_result_.inlier_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
 
     clock_gettime(CLOCK_MONOTONIC, &finish); elapsed = (finish.tv_sec - starttime.tv_sec); elapsed += (finish.tv_nsec - starttime.tv_nsec) / 1000000000.0; ROS_INFO_STREAM_COND_NAMED(elapsed > ParameterServer::instance()->get<double>("min_time_reported"), "timings", __FUNCTION__ << " runtime: "<< elapsed <<" s");
 }
 
+void GraphManager::drawFeatureFlow(cv::Mat& canvas, cv::Mat& canvas_features, cv::Scalar line_color,
+                                   cv::Scalar circle_color)
+{
+    struct timespec starttime, finish; double elapsed; clock_gettime(CLOCK_MONOTONIC, &starttime);
+    if(!ParameterServer::instance()->get<bool>("use_gui")){ return; }
+    ROS_DEBUG("Number of features to draw: %d", (int)curr_best_result_.inlier_matches.size());
+
+    if(graph_.empty()) {
+      ROS_WARN("Feature Flow for empty graph requested. Bug?");
+      return;
+    } else if(graph_.size() == 1 || curr_best_result_.edge.id1 == -1 ) {//feature flow is only available between at least two nodes
+      Node* newernode = graph_[graph_.size()-1];
+      cv::drawKeypoints(canvas, newernode->feature_locations_2d_, canvas, cv::Scalar(255), 5);
+      return;
+    } 
+
+    Node* earliernode = graph_[curr_best_result_.edge.id1];//graph_.size()-2; //compare current to previous
+    Node* newernode = graph_[curr_best_result_.edge.id2];
+    if(earliernode == NULL){
+      if(newernode == NULL ){ ROS_ERROR("Nullpointer for Node %u", (unsigned int)graph_.size()-1); }
+      ROS_ERROR("Nullpointer for Node %d", curr_best_result_.edge.id1);
+      curr_best_result_.edge.id1 = 0;
+      return;
+    } else if(newernode == NULL ){
+      ROS_ERROR("Nullpointer for Node %u", (unsigned int)graph_.size()-1);
+      return;
+    }
+
+    cv::Mat tmpimage = cv::Mat::zeros(canvas.rows, canvas.cols, canvas.type());
+    if(canvas.type() == CV_8UC1) circle_color = cv::Scalar(255);
+
+    //Generate different keypoint sets for those with depth and those without
+    std::vector<cv::KeyPoint> with_depth, without_depth;
+    for(int i = 0; i < newernode->feature_locations_2d_.size(); i++){
+      if(isnan(newernode->feature_locations_3d_[i](2))){
+          without_depth.push_back(newernode->feature_locations_2d_[i]);
+      } else {
+          with_depth.push_back(newernode->feature_locations_2d_[i]);
+      }
+    }
+
+    //Juergen: commented out to draw key points seperately
+    //Draw normal keypoints in given color 
+    //cv::drawKeypoints(canvas, with_depth, tmpimage, circle_color, 5);
+    //Draw depthless keypoints in orange 
+    //cv::drawKeypoints(canvas, without_depth, tmpimage, cv::Scalar(0,128,255,0), 5);
+    //canvas+=tmpimage;
+
+    //drawFeatureConnectors(canvas, cv::Scalar(150.0), 4, curr_best_result_.all_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
+    drawFeatureConnectors(canvas, line_color, 16, curr_best_result_.inlier_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
+
+    clock_gettime(CLOCK_MONOTONIC, &finish); elapsed = (finish.tv_sec - starttime.tv_sec); elapsed += (finish.tv_nsec - starttime.tv_nsec) / 1000000000.0; ROS_INFO_STREAM_COND_NAMED(elapsed > ParameterServer::instance()->get<double>("min_time_reported"), "timings", __FUNCTION__ << " runtime: "<< elapsed <<" s");
+}
+void GraphManager::savePlyFile(QString filename, pointcloud_normal_type& full_cloud){
+    
+  
+    std::fstream file;
+    file.open(filename.toStdString().c_str(), std::fstream::out);
+
+
+    if (!file.is_open()) {
+      std::cerr << "Could not write to file " << filename.toStdString() << std::endl;
+      return;
+    }
+
+	float x,y,z,nx,ny,nz;
+
+        unsigned int r,g,b;
+	int n=0;
+	std::stringstream data;
+	data << std::setprecision(5);
+
+	for (int i = 0; i < full_cloud.points.size(); ++i) {
+                point_normal_type p = full_cloud.points[i];
+                
+                x=full_cloud.points[i].x;
+                y=full_cloud.points[i].y;
+                z=full_cloud.points[i].z;
+                nx=full_cloud.points[i].normal_x;
+                ny=full_cloud.points[i].normal_y;
+                nz=full_cloud.points[i].normal_z;
+		if (std::isnan(x)||std::isnan(y)||std::isnan(z)||std::isnan(nx)||std::isnan(ny)||std::isnan(nz)){
+			continue;
+		}
+		data << x  << " " << y << " " << z << " " << nx << " " << ny << " " << nz << " "; //std::endl;
+
+                
+                #ifdef RGB_IS_4TH_DIM
+                b = *(  (unsigned char*)(&p.data[3]));
+                g = *(1+(unsigned char*)(&p.data[3]));
+                r = *(2+(unsigned char*)(&p.data[3]));
+                #else
+                b = *(  (unsigned char*)(&p.rgb));
+                g = *(1+(unsigned char*)(&p.rgb));
+                r = *(2+(unsigned char*)(&p.rgb));
+                #endif
+		
+                if (r>255) r=255; 
+                if (g>255) g=255; 
+                if (b>255) b=255; 
+                data << r << " " << g << " " << b << " " << r << " " << g << " " << b << std::endl;
+                n++;
+	}
+
+    file << "ply\n";
+    file << "format ascii 1.0\n";
+    file << "element vertex " << n << "\n";
+	file << "property float x\n";
+	file << "property float y\n";
+	file << "property float z\n";
+	file << "property float nx\n";
+	file << "property float ny\n";
+	file << "property float nz\n";
+	file << "property uchar red\n";
+	file << "property uchar green\n";
+	file << "property uchar blue\n";
+//	file << "property uchar alpha\n";
+	file << "property uchar diffuse_red\n";
+	file << "property uchar diffuse_green\n";
+	file << "property uchar diffuse_blue\n";
+	file << "end_header\n";
+
+	file << data.str();
+	file.close();
+}

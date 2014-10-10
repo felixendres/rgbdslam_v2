@@ -55,7 +55,39 @@
 typedef message_filters::Subscriber<sensor_msgs::Image> image_sub_type;      
 typedef message_filters::Subscriber<sensor_msgs::CameraInfo> cinfo_sub_type;      
 typedef message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub_type;      
-typedef message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub_type;      
+typedef message_filters::Subscriber<nav_msgs::Odometry> odom_sub_type;
+
+
+///Helper for loadBag to circumvent ugly pointer mess if using tflistener 
+///by sending out tf messages instead of directly adding it to the "Transformer" 
+///base class of TransformListener
+void addTFMessageDirectlyToTransformer(tf::tfMessageConstPtr msg, tf::Transformer* transformer)
+{
+  for (size_t i = 0; i < msg->transforms.size(); i++)
+  {
+    if(msg->transforms[i].header.frame_id == "/world"
+       || msg->transforms[i].header.frame_id == "/kinect")
+    {
+      continue;//HACK for non-tree tf-graph of rgbd_benchmark
+    }
+
+    try
+    {
+      tf::StampedTransform stTrans;
+      tf::transformStampedMsgToTF(msg->transforms[i], stTrans);
+
+      transformer->setTransform(stTrans);
+      ROS_INFO("Set transform from %s to %s with timestamp %20.10f", 
+               msg->transforms[i].header.frame_id.c_str(), 
+               msg->transforms[i].child_frame_id.c_str(), 
+               stTrans.stamp_.toSec());
+    }
+    catch (tf::TransformException& ex)
+    {
+      ROS_ERROR("Failure to set recieved transform from %s to %s with error: %s\n", msg->transforms[i].child_frame_id.c_str(), msg->transforms[i].header.frame_id.c_str(), ex.what());
+    }
+  }
+}
 
 
 void OpenNIListener::visualize_images(cv::Mat visual_image, cv::Mat depth_image){
@@ -138,6 +170,10 @@ OpenNIListener::OpenNIListener(GraphManager* graph_mgr)
       stereo_sync_->registerCallback(boost::bind(&OpenNIListener::stereoCallback, this, _1, _2));
       ROS_INFO_STREAM("Listening to " << widev_tpc << " and " << widec_tpc );
     } 
+    if(ps->get<bool>("use_robot_odom")){
+    	odom_sub_= new odom_sub_type(nh, ps->get<std::string>("odometry_tpc"), 3);
+    	odom_sub_->registerCallback(boost::bind(&OpenNIListener::odomCallback,this,_1));
+    }
   } 
   detector_ = createDetector(ps->get<std::string>("feature_detector_type"));
   extractor_ = createDescriptorExtractor(ps->get<std::string>("feature_extractor_type"));
@@ -157,8 +193,11 @@ void OpenNIListener::loadBag(std::string filename)
   std::string depth_tpc = ps->get<std::string>("topic_image_depth");
   std::string points_tpc = ps->get<std::string>("topic_points");
   std::string cinfo_tpc = ps->get<std::string>("camera_info_topic");
+  std::string odom_tpc = ps->get<std::string>("odometry_tpc");
+
   int q = ps->get<int>("subscriber_queue_size");
   std::string tf_tpc = std::string("/tf");
+
 
   tf_pub_ = nh.advertise<tf::tfMessage>(tf_tpc, 10);
   //All information from Kinect
@@ -217,6 +256,9 @@ void OpenNIListener::loadBag(std::string filename)
       topics.push_back(points_tpc);
     }
     topics.push_back(tf_tpc);
+    if(ps->get<bool>("use_robot_odom")){
+      topics.push_back(odom_tpc);
+    }
 
     rosbag::View view(bag, rosbag::TopicQuery(topics));
     Q_EMIT iamBusy(4, "Processing Bagfile", view.size());
@@ -225,8 +267,9 @@ void OpenNIListener::loadBag(std::string filename)
     std::deque<sensor_msgs::Image::ConstPtr> dep_images;
     std::deque<sensor_msgs::CameraInfo::ConstPtr> cam_infos;
     std::deque<sensor_msgs::PointCloud2::ConstPtr> pointclouds;
+    std::deque<nav_msgs::OdometryConstPtr> odometries;
     //ros::Time last_tf=ros::Time(0);
-    ros::Time last_tf=ros::Time::now();
+    ros::Time last_tf=ros::TIME_MIN;
     int counter = 0;
     BOOST_FOREACH(rosbag::MessageInstance const m, view)
     {
@@ -236,46 +279,55 @@ void OpenNIListener::loadBag(std::string filename)
         if(!ros::ok()) return;
       } while(pause_);
 
-      if (m.getTopic() == visua_tpc || ("/" + m.getTopic() == visua_tpc))
+      if (m.getTopic() == odom_tpc || ("/" + m.getTopic() == odom_tpc)) {
+        ROS_INFO("Processing %s of type %s with timestamp %f", m.getTopic().c_str(), m.getDataType().c_str(), m.getTime().toSec());
+        nav_msgs::OdometryConstPtr odommsg = m.instantiate<nav_msgs::Odometry>();
+        if (odommsg) odometries.push_back(odommsg);
+      }
+      else if (m.getTopic() == visua_tpc || ("/" + m.getTopic() == visua_tpc))
       {
         sensor_msgs::Image::ConstPtr rgb_img = m.instantiate<sensor_msgs::Image>();
         if (rgb_img) vis_images.push_back(rgb_img);
         ROS_DEBUG("Found Message of %s", visua_tpc.c_str());
       }
       
-      if (m.getTopic() == depth_tpc || ("/" + m.getTopic() == depth_tpc))
+      else if (m.getTopic() == depth_tpc || ("/" + m.getTopic() == depth_tpc))
       {
         sensor_msgs::Image::ConstPtr depth_img = m.instantiate<sensor_msgs::Image>();
         //if (depth_img) depth_img_sub_->newMessage(depth_img);
         if (depth_img) dep_images.push_back(depth_img);
         ROS_DEBUG("Found Message of %s", depth_tpc.c_str());
       }
-      if (m.getTopic() == points_tpc || ("/" + m.getTopic() == points_tpc))
+      else if (m.getTopic() == points_tpc || ("/" + m.getTopic() == points_tpc))
       {
         sensor_msgs::PointCloud2::ConstPtr pointcloud = m.instantiate<sensor_msgs::PointCloud2>();
         //if (cam_info) cam_info_sub_->newMessage(cam_info);
         if (pointcloud) pointclouds.push_back(pointcloud);
         ROS_DEBUG("Found Message of %s", points_tpc.c_str());
       }
-      if (m.getTopic() == cinfo_tpc || ("/" + m.getTopic() == cinfo_tpc))
+      else if (m.getTopic() == cinfo_tpc || ("/" + m.getTopic() == cinfo_tpc))
       {
         sensor_msgs::CameraInfo::ConstPtr cam_info = m.instantiate<sensor_msgs::CameraInfo>();
         //if (cam_info) cam_info_sub_->newMessage(cam_info);
         if (cam_info) cam_infos.push_back(cam_info);
         ROS_DEBUG("Found Message of %s", cinfo_tpc.c_str());
       }
-      if (m.getTopic() == tf_tpc|| ("/" + m.getTopic() == tf_tpc)){
+      else if (m.getTopic() == tf_tpc|| ("/" + m.getTopic() == tf_tpc)){
         tf::tfMessage::ConstPtr tf_msg = m.instantiate<tf::tfMessage>();
         if (tf_msg) {
-          //if(tf_msg->transforms[0].header.frame_id == "/kinect") continue;//avoid destroying tf tree if odom is used
-          //prevents missing callerid warning
-          boost::shared_ptr<std::map<std::string, std::string> > msg_header_map = tf_msg->__connection_header;
-          (*msg_header_map)["callerid"] = "rgbdslam";
-          tf_pub_.publish(tf_msg);
-          ROS_DEBUG("Found Message of %s", tf_tpc.c_str());
+          addTFMessageDirectlyToTransformer(tf_msg, tflistener_);
           last_tf = tf_msg->transforms[0].header.stamp;
-          last_tf -= ros::Duration(1.0);
+          last_tf -= ros::Duration(0.1);
         }
+      }
+      if (last_tf == ros::TIME_MIN){//If not a valid time yet, set to something before first message's stamp
+        last_tf = m.getTime();
+        last_tf -= ros::Duration(0.1);
+      }
+      while(!odometries.empty() && odometries.front()->header.stamp < last_tf){
+          ROS_INFO("Sending Odometry message");
+          odomCallback(odometries.front());
+          odometries.pop_front();
       }
       while(!vis_images.empty() && vis_images.front()->header.stamp < last_tf){
           rgb_img_sub_->newMessage(vis_images.front());
@@ -730,10 +782,26 @@ void OpenNIListener::callProcessing(cv::Mat visual_img, Node* node_ptr)
 void OpenNIListener::processNode(Node* new_node)
 {
   ScopedTimer s(__FUNCTION__);
+  ParameterServer* ps = ParameterServer::instance();
   Q_EMIT setGUIStatus("Adding Node to Graph");
   bool has_been_added = graph_mgr_->addNode(new_node);
   ++num_processed_;
   Q_EMIT setGUIInfo2(QString("Frames processed: ")+QString::number(num_processed_));
+
+  ///ODOMETRY
+  if(has_been_added && !ps->get<std::string>("odom_frame_name").empty()){
+    ros::Time latest_odom_time;
+    std::string odom_frame  = ps->get<std::string>("odom_frame_name");
+    std::string base_frame  = ps->get<std::string>("base_frame_name");
+    std::string error_msg;
+    int ev = tflistener_->getLatestCommonTime(odom_frame, base_frame, latest_odom_time, &error_msg); 
+    if(ev == tf::NO_ERROR){
+      graph_mgr_->addOdometry(latest_odom_time, tflistener_);
+    } else {
+      ROS_WARN_STREAM("Couldn't get time of lates tf transform between " << odom_frame << " and " << base_frame << ": " << error_msg);
+    }
+  }
+
 
   //######### Visualization code  #############################################
   if(ParameterServer::instance()->get<bool>("use_gui")){
@@ -1094,3 +1162,14 @@ void OpenNIListener::loadBagFileFromGUI(QString file)
     QtConcurrent::run(this, &OpenNIListener::loadBag, file.toStdString());
 }
 
+
+//! Callback for the robot odometry
+void OpenNIListener::odomCallback(const nav_msgs::OdometryConstPtr& odom_msg){
+  tf::Transform tfTransf;
+  tf::poseMsgToTF (odom_msg->pose.pose, tfTransf);
+  tf::StampedTransform stTransf(tfTransf, odom_msg->header.stamp, odom_msg->header.frame_id, odom_msg->child_frame_id); 
+  printTransform("Odometry Transformation", stTransf);
+  tflistener_->setTransform(stTransf);
+  //Is done now after creation of Node
+	//graph_mgr_->addOdometry(odom_msg->header.stamp,tflistener_);
+}

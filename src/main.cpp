@@ -59,6 +59,7 @@ void gui_connections(Graphical_UI* gui, GraphManager* graph_mgr, OpenNIListener*
 {
     QObject::connect(listener,  SIGNAL(newVisualImage(QImage)), gui, SLOT(setVisualImage(QImage)));
     QObject::connect(listener,  SIGNAL(newFeatureFlowImage(QImage)), gui, SLOT(setFeatureFlowImage(QImage)));
+    QObject::connect(listener,  SIGNAL(newFeatureImage(QImage)), gui, SLOT(setFeatureImage(QImage)));
     QObject::connect(listener,  SIGNAL(newDepthImage(QImage)), gui, SLOT(setDepthImage(QImage)));
     QObject::connect(graph_mgr, SIGNAL(sendFinished()), gui, SLOT(sendFinished()));
     QObject::connect(graph_mgr, SIGNAL(iamBusy(int, const char*, int)), gui, SLOT(showBusy(int, const char*, int)));

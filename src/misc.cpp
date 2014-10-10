@@ -252,9 +252,9 @@ void mat2components(const Eigen::Matrix4f& t, double& roll, double& pitch, doubl
 }
 
 void trafoSize(const Eigen::Isometry3d& t, double& angle, double& dist){
-    angle = acos((t.rotation().trace() -1)/2 ) *180.0 / M_PI;
-    dist = t.translation().norm();
-    ROS_INFO("Rotation:% 4.2f, Distance: % 4.3fm", angle, dist);
+  angle = acos((t.rotation().trace() -1)/2 ) *180.0 / M_PI;
+  dist = t.translation().norm();
+  ROS_INFO("Rotation:% 4.2f, Distance: % 4.3fm", angle, dist);
 }
 
 bool isBigTrafo(const Eigen::Isometry3d& t){
@@ -293,7 +293,7 @@ bool isSmallTrafo(const Eigen::Isometry3d& t, double seconds){
 
     ParameterServer* ps =  ParameterServer::instance();
     return (dist / seconds < ps->get<double>("max_translation_meter") &&
-            angle_around_axis / seconds < ps->get<int>("max_rotation_degree"));
+            angle_around_axis / seconds < ps->get<double>("max_rotation_degree"));
 }
 
 bool isSmallTrafo(const g2o::SE3Quat& t, double seconds){
@@ -310,7 +310,7 @@ bool isSmallTrafo(const g2o::SE3Quat& t, double seconds){
     ParameterServer* ps =  ParameterServer::instance();
     //Too big fails too
     return (dist / seconds < ps->get<double>("max_translation_meter") &&
-            angle_around_axis / seconds < ps->get<int>("max_rotation_degree"));
+            angle_around_axis / seconds < ps->get<double>("max_rotation_degree"));
 }
 
 bool isBigTrafo(const g2o::SE3Quat& t){
@@ -856,7 +856,6 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
     return;
   }
   pointcloud_type new_pc_transformed;
-  //ROS_INFO_STREAM("Transforming with\n" << proposed_transformation);
   pcl::transformPointCloud(*new_pc, new_pc_transformed, proposed_transformation);
 
   //Camera Calibration FIXME: Get actual values from cameraInfo (need to store in node?)

@@ -1162,7 +1162,7 @@ unsigned int GraphManager::pruneEdgesWithErrorAbove(float thresh){
     }
 
     //Discount cam2cam edges
-    g2o::HyperGraph::EdgeSet remaining_cam_cam_edges;
+    g2o::HyperGraph::EdgeSet remaining_cam_cam_edges, edges_to_remove;
     EdgeSet::iterator edge_iter = cam_cam_edges_.begin();
     for(;edge_iter != cam_cam_edges_.end(); edge_iter++) {
         g2o::EdgeSE3* myedge = dynamic_cast<g2o::EdgeSE3*>(*edge_iter);
@@ -1178,25 +1178,34 @@ unsigned int GraphManager::pruneEdgesWithErrorAbove(float thresh){
         ROS_DEBUG("Mahalanobis Distance for edge from node %d to %d is %f", n_id1, n_id2, myedge->chi2());
         if(myedge->chi2() > thresh){
           counter++;
-          //if(abs(n_id1 - n_id2) == 1){ //predecessor-successor
-            // Only for sequential camera edges
-            //Constant position estimate
+
+            //Constant position estimate 
             Eigen::Quaterniond eigen_quat(1,0,0,0);
             Eigen::Vector3d translation(0,0,0);
             g2o::SE3Quat unit_tf(eigen_quat, translation);
             myedge->setMeasurement(unit_tf);
+
             if(abs(n_id1 - n_id2) != 1)//Non-Consecutive
             { 
-              ROS_WARN("Setting edge from node %d to %d to Identity and Information to diag(1e-100), because error is %f", n_id1, n_id2, ev.squaredNorm());
-              //Set highly uncertain, so non-erroneous edges prevail
-              Eigen::Matrix<double,6,6> new_info = Eigen::Matrix<double,6,6>::Identity()* 1e-100;
-              new_info(3,3) = 1e-100;
-              new_info(4,4) = 1e-100;
-              new_info(5,5) = 1e-100;
-              myedge->setInformation(new_info);
+              //If not disconnecting a vertex, remove it completely
+              if(v1->edges().size() > 1 && v2->edges().size() > 1){
+                ROS_WARN("Removing edge from node %d to %d, because error is %f", n_id1, n_id2, ev.squaredNorm());
+                edges_to_remove.insert(myedge);
+              }
+              else {
+                ROS_WARN("Setting edge from node %d to %d to Identity and Information to diag(1e-100), because error is %f", n_id1, n_id2, ev.squaredNorm());
+                //Set highly uncertain, so non-erroneous edges prevail
+                Eigen::Matrix<double,6,6> new_info = Eigen::Matrix<double,6,6>::Identity()* 1e-100;
+                new_info(3,3) = 1e-100;
+                new_info(4,4) = 1e-100;
+                new_info(5,5) = 1e-100;
+                myedge->setInformation(new_info);
+              }
             } else {
               //consecutive: zero motion assumption
               ROS_WARN("Setting edge from node %d to %d and Information to Identity because error is %f", n_id1, n_id2, ev.squaredNorm());
+              Eigen::Matrix<double,6,6> new_info = Eigen::Matrix<double,6,6>::Identity();
+              myedge->setInformation(new_info);
             }
           /*
           }
@@ -1233,6 +1242,10 @@ unsigned int GraphManager::pruneEdgesWithErrorAbove(float thresh){
           }
         }*/
         //remaining_cam_cam_edges.insert(*edge_iter);
+    }
+    EdgeSet::iterator remove_edge_iter = edges_to_remove.begin();
+    for(;remove_edge_iter!= edges_to_remove.end();remove_edge_iter++) {
+      cam_cam_edges_.erase(*remove_edge_iter);
     }
     //Now cut, without making vertices disconnected
     /*

@@ -77,16 +77,20 @@ void Graphical_UI::setup(){
     // create widgets for image and map display
     feature_flow_image_label->setWordWrap(true);
     feature_flow_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
-    if(ParameterServer::instance()->get<bool>("scalable_2d_display")) 
+    if(ParameterServer::instance()->get<bool>("scalable_2d_display")) {
       feature_flow_image_label->setScaledContents(true);
+      feature_flow_image_label->setMinimumSize(4,3);
+    }
 
     std::string visual_topic = ParameterServer::instance()->get<std::string>("topic_image_mono");
     QString vl("Waiting for visual image on topic<br/><i>\""); vl += visual_topic.c_str(); vl += "\"</i>";
     visual_image_label = new QLabel(vl);
     visual_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     visual_image_label->setAlignment(Qt::AlignCenter);
-    if(ParameterServer::instance()->get<bool>("scalable_2d_display")) 
+    if(ParameterServer::instance()->get<bool>("scalable_2d_display")) {
       visual_image_label->setScaledContents(true);
+      visual_image_label->setMinimumSize(4,3);
+    }
 
     std::string depth_topic = ParameterServer::instance()->get<std::string>("topic_image_depth");
     QString dl("Waiting for depth image on topic<br/><i>\""); dl += depth_topic.c_str(); 
@@ -94,8 +98,10 @@ void Graphical_UI::setup(){
     depth_image_label = new QLabel(dl);
     depth_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     depth_image_label->setAlignment(Qt::AlignCenter);
-    if(ParameterServer::instance()->get<bool>("scalable_2d_display")) 
+    if(ParameterServer::instance()->get<bool>("scalable_2d_display")) {
       depth_image_label->setScaledContents(true);
+      depth_image_label->setMinimumSize(4,3);
+    }
     //transform_label = new QLabel(tr("<i>Waiting for transformation matrix...</i>"));
     //transform_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     //transform_label->setAlignment(Qt::AlignCenter);

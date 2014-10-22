@@ -806,10 +806,13 @@ void OpenNIListener::processNode(Node* new_node)
   //######### Visualization code  #############################################
   if(ParameterServer::instance()->get<bool>("use_gui")){
     if(has_been_added){
+      cv::Mat kp_img = visualization_img_.clone();
       graph_mgr_->drawFeatureFlow(visualization_img_, cv::Scalar(0,0,255), cv::Scalar(0,128,0) );
       //graph_mgr_->drawFeatureFlow(depth_mono8_img_, cv::Scalar(0,0,255), cv::Scalar(0,128,0) );
       Q_EMIT newFeatureFlowImage(cvMat2QImage(visualization_img_, 5)); //show registration
       //Q_EMIT newDepthImage(cvMat2QImage(depth_mono8_img_, 6)); //show registration
+      cv::drawKeypoints(visualization_img_, new_node->feature_locations_2d_, kp_img, cv::Scalar(0,255,0), 5);
+      Q_EMIT newFeatureImage(cvMat2QImage(kp_img, 4)); //show registration
     } else {
       cv::drawKeypoints(visualization_img_, new_node->feature_locations_2d_, visualization_img_, cv::Scalar(0, 100,0), 5);
       Q_EMIT newFeatureFlowImage(cvMat2QImage(visualization_img_, 2)); //show registration

@@ -1052,7 +1052,6 @@ void drawFeatureConnectors(cv::Mat& canvas, cv::Scalar line_color, int line_type
 void GraphManager::drawFeatureFlow(cv::Mat& canvas, cv::Scalar line_color,
                                    cv::Scalar circle_color)
 {
-    struct timespec starttime, finish; double elapsed; clock_gettime(CLOCK_MONOTONIC, &starttime);
     if(!ParameterServer::instance()->get<bool>("use_gui")){ return; }
     ROS_DEBUG("Number of features to draw: %d", (int)curr_best_result_.inlier_matches.size());
 
@@ -1100,13 +1099,11 @@ void GraphManager::drawFeatureFlow(cv::Mat& canvas, cv::Scalar line_color,
     //drawFeatureConnectors(canvas, cv::Scalar(150.0), 4, curr_best_result_.all_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
     drawFeatureConnectors(canvas, line_color, 16, curr_best_result_.inlier_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
 
-    clock_gettime(CLOCK_MONOTONIC, &finish); elapsed = (finish.tv_sec - starttime.tv_sec); elapsed += (finish.tv_nsec - starttime.tv_nsec) / 1000000000.0; ROS_INFO_STREAM_COND_NAMED(elapsed > ParameterServer::instance()->get<double>("min_time_reported"), "timings", __FUNCTION__ << " runtime: "<< elapsed <<" s");
 }
 
 void GraphManager::drawFeatureFlow(cv::Mat& canvas, cv::Mat& canvas_features, cv::Scalar line_color,
                                    cv::Scalar circle_color)
 {
-    struct timespec starttime, finish; double elapsed; clock_gettime(CLOCK_MONOTONIC, &starttime);
     if(!ParameterServer::instance()->get<bool>("use_gui")){ return; }
     ROS_DEBUG("Number of features to draw: %d", (int)curr_best_result_.inlier_matches.size());
 
@@ -1154,7 +1151,6 @@ void GraphManager::drawFeatureFlow(cv::Mat& canvas, cv::Mat& canvas_features, cv
     //drawFeatureConnectors(canvas, cv::Scalar(150.0), 4, curr_best_result_.all_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
     drawFeatureConnectors(canvas, line_color, 16, curr_best_result_.inlier_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
 
-    clock_gettime(CLOCK_MONOTONIC, &finish); elapsed = (finish.tv_sec - starttime.tv_sec); elapsed += (finish.tv_nsec - starttime.tv_nsec) / 1000000000.0; ROS_INFO_STREAM_COND_NAMED(elapsed > ParameterServer::instance()->get<double>("min_time_reported"), "timings", __FUNCTION__ << " runtime: "<< elapsed <<" s");
 }
 void GraphManager::savePlyFile(QString filename, pointcloud_normal_type& full_cloud){
     

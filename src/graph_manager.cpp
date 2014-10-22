@@ -551,7 +551,7 @@ bool GraphManager::nodeComparisons(Node* new_node,
             MatchingResult& mr = results[i];
             ROS_INFO("Result of comparison %d: %s", i, mr.toString());
             if (mr.edge.id1 >= 0 ) {
-              ROS_INFO("new node has id %i", new_node->id_);
+              //ROS_INFO("new node has id %i", new_node->id_);
               assert(graph_[mr.edge.id1]);
 
               ros::Duration delta_time = new_node->header_.stamp - graph_[mr.edge.id1]->header_.stamp;
@@ -627,13 +627,14 @@ bool GraphManager::nodeComparisons(Node* new_node,
                         (((int)new_node->feature_locations_3d_.size() > ps->get<int>("min_matches")) 
                          && ps->get<bool>("keep_good_nodes")));
     ros::Duration delta_time = new_node->header_.stamp - graph_[sequentially_previous_id]->header_.stamp;
-    ROS_WARN_COND(delta_time.toSec() >= 0.1, "Time jump (time delta: %.2f)", delta_time.toSec());
+    float time_delta_sec = fabs(delta_time.toSec());
+    ROS_WARN_COND(time_delta_sec >= 0.1, "Time jump (time delta: %.2f)", time_delta_sec);
 
     //If no trafo is found, only keep if a parameter says so. 
     //Otherwise only add a constant position edge, if the predecessor wasn't matched and its timestamp is nearby
     if(invalid_odometry && 
        ((!found_trafo && keep_anyway) || 
-        (!predecessor_matched && fabs(delta_time.toSec()) < 0.1))) //FIXME: Add parameter for constant position assumption and time_delta
+        (!predecessor_matched && time_delta_sec < 0.1))) //FIXME: Add parameter for constant position assumption and time_delta
     { 
       LoadedEdge3D odom_edge;
 
@@ -646,7 +647,7 @@ bool GraphManager::nodeComparisons(Node* new_node,
       ///10000 corresponds to 1cm std deviation, i.e. we expect the camera to travel about 1cm in any direction (with mean 0)
       ///FIXME this should have a dependency on time.
       ROS_WARN("No valid (sequential) transformation between %d and %d: Using constant position assumption.", odom_edge.id1, odom_edge.id2);
-      odom_edge.informationMatrix = Eigen::Matrix<double,6,6>::Identity() * 1;//e-9; 
+      odom_edge.informationMatrix = Eigen::Matrix<double,6,6>::Identity() / time_delta_sec;//e-9; 
       /*
       odom_edge.informationMatrix(3,3) = 1e-100;
       odom_edge.informationMatrix(4,4) = 1e-100;
@@ -751,10 +752,10 @@ bool GraphManager::addNode(Node* new_node)
       ROS_INFO("Adding node with id %i and seq id %i to the graph", new_node->id_, new_node->seq_id_);
 
       //Juergen: bad hack, should instead prevent the creation of the cloud, but this is faster implementation wise
-      ROS_WARN_STREAM("create cloud " << new_node->id_ << " " << ps->get<int>("create_cloud_every_nth_node") << " " << new_node->id_%ps->get<int>("create_cloud_every_nth_node")) ;
-        if((new_node->id_%ps->get<int>("create_cloud_every_nth_node"))!=0){
-          new_node->clearPointCloud();
-        }
+      ROS_INFO_STREAM("create cloud " << new_node->id_ << " " << ps->get<int>("create_cloud_every_nth_node") << " " << new_node->id_%ps->get<int>("create_cloud_every_nth_node")) ;
+      if((new_node->id_%ps->get<int>("create_cloud_every_nth_node"))!=0){
+        new_node->clearPointCloud();
+      }
 
       if(!edge_to_last_keyframe_found && earliest_loop_closure_node_ > keyframe_ids_.back()) {
         this->addKeyframe(new_node->id_-1);//use the id of the node before, because that one is still localized w.r.t. a keyframe. So keyframes are connected

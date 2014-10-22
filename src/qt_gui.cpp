@@ -547,6 +547,7 @@ void Graphical_UI::set2DStream(bool is_on) {
         visual_image_label->show();
         depth_image_label->show(); 
         feature_flow_image_label->show(); 
+        feature_image_label->show(); 
         QList<int> list;
         list.append(1);//upper part on
         list.append(1);//lower part on
@@ -555,6 +556,7 @@ void Graphical_UI::set2DStream(bool is_on) {
         visual_image_label->hide(); 
         depth_image_label->hide(); 
         feature_flow_image_label->hide(); 
+        feature_image_label->hide(); 
         QList<int> list;
         list.append(1);//upper part on
         list.append(0);//lower part off

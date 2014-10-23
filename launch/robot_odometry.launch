@@ -1,8 +1,4 @@
-<!-- This file demonstrates online visual odometry. The graph optimization backend 
-     is only used to combine the motione estimates to several predecessor frames 
-
-     The visual odometry will be sent as the frame "/vodom" on the "/tf" topic.
-     
+<!-- This file contains the settings to use odometry messages from a robot.
      To get the cloud, you can subscribe to the online_cloud_out_topic (subsampled
      according to cloud_creation_skip_step or to the original point cloud from the 
      openni driver. 
@@ -10,7 +6,6 @@
 <launch>
   <!-- Delete the next line, if you start the openni driver separately -->
   <include file="$(find openni_launch)/launch/openni.launch"/>
-  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find rgbdslam)/launch/fast_visual_odometry.rviz"/> 
 
   <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" cwd="node" required="true" output="screen"> 
     <!-- Input data settings-->
@@ -24,20 +19,20 @@
 
     <param name="config/feature_extractor_type"        value="ORB"/><!-- ORB are fastest descriptors and require no GPU -->
 
-    <param name="config/odometry_tpc"                  value="/pose"/>
-    <param name="config/use_robot_odom"                value="true"/>
-    <param name="config/odom_frame_name"               value="odom"/>
-    <param name="config/calibrate_odometry_online"     value="true"/>
-    <param name="config/base_frame_name"               value="base_link"/>
-    <param name="config/odometry_information_factor"   value="1"/>
+    <!-- ODOMETRY RELATED -->
+    <param name="config/odometry_tpc"                  value="/pose"/><!-- should be of type nav_msgs/Odometry -->
+    <param name="config/use_robot_odom"                value="true"/><!-- activate -->
+    <param name="config/odom_frame_name"               value="odom"/><!-- the fixed coordinate frame according to odometry -->
+    <param name="config/base_frame_name"               value="base_link"/><!-- the robot's position -->
+    <param name="config/odometry_information_factor"   value="1"/><!-- weight for the odometry edges in the pose graph -->
 
     <param name="config/min_sampled_candidates"        value="4"/><!-- Frame-to-frame comparisons to random frames (big loop closures) -->
     <param name="config/predecessor_candidates"        value="4"/><!-- Frame-to-frame comparisons to sequential frames-->
     <param name="config/neighbor_candidates"           value="4"/><!-- Frame-to-frame comparisons to graph neighbor frames-->
     <param name="config/nn_distance_ratio"             value="0.8"/><!-- set empirically -->
-    <param name="config/pose_relative_to"              value="largest_loop"/><!-- only optimize part of graph with new constraints -->
+    <param name="config/pose_relative_to"              value="largest_loop"/><!-- only optimize part of graph up to the earliest matched frame -->
     <param name="config/keep_all_nodes"                value="true"/><!-- assume zero motion if no motion could be found and continue -->
-    <param name="config/fixed_frame_name"              value="/map"/><!-- Signify that this is not mapping -->
+    <param name="config/fixed_frame_name"              value="/map"/><!-- Output: fixed frame according to rgbdslam (and the incorporated odometry) -->
 
 
     <param name="config/backend_solver"                value="pcg"/> <!-- pcg is fast and good for online operation -->

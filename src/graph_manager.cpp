@@ -427,10 +427,11 @@ bool GraphManager::nodeComparisons(Node* new_node,
     process_node_runs_ = true;
 
     ParameterServer* ps = ParameterServer::instance();
-    if ((int)new_node->feature_locations_2d_.size() < ps->get<int>("min_matches") && 
+    int num_keypoints = (int)new_node->feature_locations_2d_.size();
+    if (num_keypoints < ps->get<int>("min_matches") && 
         ! ps->get<bool>("keep_all_nodes"))
     {
-        ROS_INFO("Found only %i features on image, node is not included",(int)new_node->feature_locations_2d_.size());
+        ROS_INFO("Found only %i features on image, node is not included", num_keypoints);
         process_node_runs_ = false;
         return false;
     }
@@ -621,7 +622,7 @@ bool GraphManager::nodeComparisons(Node* new_node,
 
     //END OF MAIN LOOP: Compare node pairs ######################################################################
     bool found_trafo = (cam_cam_edges_.size() != num_edges_before);
-    bool invalid_odometry = ps->get<std::string>("odom_frame_name").empty();// || odom_tf_old.frame_id_ == "missing_odometry" || odom_tf_new.frame_id_ == "missing_odometry"; 
+    bool valid_odometry = !ps->get<std::string>("odom_frame_name").empty();// || odom_tf_old.frame_id_ == "missing_odometry" || odom_tf_new.frame_id_ == "missing_odometry"; 
 
     bool keep_anyway = (ps->get<bool>("keep_all_nodes") || 
                         (((int)new_node->feature_locations_3d_.size() > ps->get<int>("min_matches")) 
@@ -630,9 +631,9 @@ bool GraphManager::nodeComparisons(Node* new_node,
     float time_delta_sec = fabs(delta_time.toSec());
     ROS_WARN_COND(time_delta_sec >= 0.1, "Time jump (time delta: %.2f)", time_delta_sec);
 
-    //If no trafo is found, only keep if a parameter says so. 
+    //If no trafo is found, only keep if a parameter says so or odometry is available. 
     //Otherwise only add a constant position edge, if the predecessor wasn't matched and its timestamp is nearby
-    if(invalid_odometry && 
+    if((!found_trafo && valid_odometry) || 
        ((!found_trafo && keep_anyway) || 
         (!predecessor_matched && time_delta_sec < 0.1))) //FIXME: Add parameter for constant position assumption and time_delta
     { 
@@ -643,47 +644,16 @@ bool GraphManager::nodeComparisons(Node* new_node,
       odom_edge.transform.setIdentity();
       curr_motion_estimate = eigenTF2QMatrix(odom_edge.transform);
       odom_edge.informationMatrix = Eigen::Matrix<double,6,6>::Zero(); 
-      ///High information value for translation 
-      ///10000 corresponds to 1cm std deviation, i.e. we expect the camera to travel about 1cm in any direction (with mean 0)
-      ///FIXME this should have a dependency on time.
       ROS_WARN("No valid (sequential) transformation between %d and %d: Using constant position assumption.", odom_edge.id1, odom_edge.id2);
       odom_edge.informationMatrix = Eigen::Matrix<double,6,6>::Identity() / time_delta_sec;//e-9; 
-      /*
-      odom_edge.informationMatrix(3,3) = 1e-100;
-      odom_edge.informationMatrix(4,4) = 1e-100;
-      odom_edge.informationMatrix(5,5) = 1e-100;
-      */
       addEdgeToG2O(odom_edge,graph_[sequentially_previous_id],new_node, true,true, curr_motion_estimate);
       graph_[new_node->id_] = new_node; //Needs to be added
       new_node->valid_tf_estimate_ = false; //Don't use for postprocessing, rendering etc
-      //new_node->clearPointCloud();
-
-      //Used (only?) for visualization
       MatchingResult mr;
       mr.edge = odom_edge;
       curr_best_result_ = mr;
     }
-     /* 
-    { 
-      LoadedEdge3D const_pos_edge;
-      const_pos_edge.id1 = sequentially_previous_id;
-      const_pos_edge.id2 = new_node->id_;
 
-      Eigen::Quaterniond eigen_quat(1,0,0,0);
-      Eigen::Vector3d translation(0,0,0);
-      g2o::SE3Quat unit_tf(eigen_quat, translation);
-
-      const_pos_edge.transform.setIdentity();
-      const_pos_edge.informationMatrix = Eigen::Matrix<double,6,6>::Identity() * 1e-9; 
-      //Rotation should be less than translation, so translation is not changed to have constant orientation, which gives bad effects
-      const_pos_edge.informationMatrix(3,3) = 1e-50;
-      const_pos_edge.informationMatrix(4,4) = 1e-50;
-      const_pos_edge.informationMatrix(5,5) = 1e-50;
-      QMatrix4x4 tmp;
-      addEdgeToG2O(const_pos_edge, graph_[sequentially_previous_id], new_node, true, false, tmp);
-      new_node->valid_tf_estimate_ = false; //Don't use for postprocessing, rendering etc
-    }
-    */
     return cam_cam_edges_.size() > num_edges_before;
 }
 

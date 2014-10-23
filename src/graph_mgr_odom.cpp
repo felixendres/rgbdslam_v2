@@ -3,6 +3,7 @@
 #include "misc.h"
 #include "g2o/core/robust_kernel_factory.h"
 #include <tf/transform_listener.h>
+#include "g2o/types/slam3d/edge_se3.h"
 
 void createOdometryEdge(int id1, int id2, tf::Transform& odomTf, LoadedEdge3D& edge)
 {
@@ -143,6 +144,7 @@ void GraphManager::addOdometry(ros::Time timestamp,
   for (; prev_rit != graph_.rend(); ++prev_rit, ++rit) {
     Node *start = prev_rit->second;
     Node *end = rit->second;
+    ROS_INFO("Processing odometry between %d and %d.", start->id_, end->id_); 
     //if we have already received the odometry for the node which we would like to point to
     //we know we can interpolate instead of extrapolate the odometry and insert an edge as well as the odometry to the node
     if (!start->has_odometry_edge_) {
@@ -184,6 +186,7 @@ void GraphManager::addOdometry(ros::Time timestamp,
           ROS_ERROR_STREAM(listener->allFramesAsString());
         }
     } else {// Encountered node with odometry edge = true
+        ROS_WARN("Node already has odometry: %d", start->id_); 
       //break;
     }
 
@@ -217,7 +220,20 @@ bool GraphManager::addOdometryEdgeToG2O(const LoadedEdge3D& edge,
       ROS_ERROR("Creating new id for odometry. This is unexpected by the programmer");
       return false;
     }
-
+    else
+    { 
+      g2o::EdgeSE3* g2o_edge = new g2o::EdgeSE3;
+      g2o_edge->vertices()[0] = v1;
+      g2o_edge->vertices()[1] = v2;
+      Eigen::Isometry3d meancopy(edge.transform); 
+      g2o_edge->setMeasurement(meancopy);
+      g2o_edge->setInformation(edge.informationMatrix);
+      optimizer_->addEdge(g2o_edge);
+      ROS_INFO_STREAM("Added Edge ("<< edge.id1 << "-" << edge.id2 << ") to Optimizer:\n" << edge.transform.matrix() << "\nInformation Matrix:\n" << edge.informationMatrix);
+      cam_cam_edges_.insert(g2o_edge);
+      odometry_edges_.insert(g2o_edge);
+      current_match_edges_.insert(g2o_edge); //Used if all previous vertices are fixed ("pose_relative_to" == "all")
+    } 
     if (ParameterServer::instance()->get<std::string>("pose_relative_to") == "inaffected") {
       v1->setFixed(false);
       v2->setFixed(false);
@@ -226,6 +242,7 @@ bool GraphManager::addOdometryEdgeToG2O(const LoadedEdge3D& edge,
       earliest_loop_closure_node_ = std::min(earliest_loop_closure_node_, edge.id1);
       earliest_loop_closure_node_ = std::min(earliest_loop_closure_node_, edge.id2);
     }
+    ROS_INFO("Added odometry edge between %d and %d.", n1->id_, n2->id_);
     return true;
 }
 /*

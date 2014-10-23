@@ -172,9 +172,13 @@ OpenNIListener::OpenNIListener(GraphManager* graph_mgr)
     } 
     if(ps->get<bool>("use_robot_odom")){
     	odom_sub_= new odom_sub_type(nh, ps->get<std::string>("odometry_tpc"), 3);
+      ROS_INFO_STREAM("Listening to odometry on " << ps->get<std::string>("odometry_tpc"));
     	odom_sub_->registerCallback(boost::bind(&OpenNIListener::odomCallback,this,_1));
     }
   } 
+  else {
+    ROS_WARN("RGBDSLAM loads a bagfile - therefore doesn't subscribe to topics.");
+  }
   detector_ = createDetector(ps->get<std::string>("feature_detector_type"));
   extractor_ = createDescriptorExtractor(ps->get<std::string>("feature_extractor_type"));
 }
@@ -257,6 +261,7 @@ void OpenNIListener::loadBag(std::string filename)
     }
     topics.push_back(tf_tpc);
     if(ps->get<bool>("use_robot_odom")){
+      ROS_INFO_STREAM("Using odometry on topic " << odom_tpc);
       topics.push_back(odom_tpc);
     }
 
@@ -790,6 +795,7 @@ void OpenNIListener::processNode(Node* new_node)
 
   ///ODOMETRY
   if(has_been_added && !ps->get<std::string>("odom_frame_name").empty()){
+    ROS_INFO("Verifying Odometry Information");
     ros::Time latest_odom_time;
     std::string odom_frame  = ps->get<std::string>("odom_frame_name");
     std::string base_frame  = ps->get<std::string>("base_frame_name");
@@ -798,7 +804,7 @@ void OpenNIListener::processNode(Node* new_node)
     if(ev == tf::NO_ERROR){
       graph_mgr_->addOdometry(latest_odom_time, tflistener_);
     } else {
-      ROS_WARN_STREAM("Couldn't get time of lates tf transform between " << odom_frame << " and " << base_frame << ": " << error_msg);
+      ROS_WARN_STREAM("Couldn't get time of latest tf transform between " << odom_frame << " and " << base_frame << ": " << error_msg);
     }
   }
 

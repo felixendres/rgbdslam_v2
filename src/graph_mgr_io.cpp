@@ -1013,13 +1013,14 @@ void publishCloud(Node* node, ros::Time timestamp, ros::Publisher pub){
   }
 }
 
-void drawFeatureConnectors(cv::Mat& canvas, cv::Scalar line_color, int line_type,
+void drawFeatureConnectors(cv::Mat& canvas, cv::Scalar line_color, 
                            const std::vector<cv::DMatch> matches,
                            const std::vector<cv::KeyPoint>& newer_keypoints,
-                           const std::vector<cv::KeyPoint>& older_keypoints)
+                           const std::vector<cv::KeyPoint>& older_keypoints,
+                           int line_thickness = 2,
+                           int line_type = 16)
 {
     const double pi_fourth = 3.14159265358979323846 / 4.0;
-    const int line_thickness = 2;
     const int circle_radius = 6;
     //const int cv_aa = 16;
     for(unsigned int mtch = 0; mtch < matches.size(); mtch++) {
@@ -1096,8 +1097,11 @@ void GraphManager::drawFeatureFlow(cv::Mat& canvas, cv::Scalar line_color,
     //cv::drawKeypoints(canvas, without_depth, tmpimage, cv::Scalar(0,128,255,0), 5);
     //canvas+=tmpimage;
 
-    //drawFeatureConnectors(canvas, cv::Scalar(150.0), 4, curr_best_result_.all_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
-    drawFeatureConnectors(canvas, line_color, 16, curr_best_result_.inlier_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
+
+    //Outliers
+    drawFeatureConnectors(canvas, cv::Scalar(100.0), curr_best_result_.all_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_, 1);
+    //Inliers
+    drawFeatureConnectors(canvas, line_color, curr_best_result_.inlier_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_, 2);
 
 }
 
@@ -1148,8 +1152,8 @@ void GraphManager::drawFeatureFlow(cv::Mat& canvas, cv::Mat& canvas_features, cv
     //cv::drawKeypoints(canvas, without_depth, tmpimage, cv::Scalar(0,128,255,0), 5);
     //canvas+=tmpimage;
 
-    //drawFeatureConnectors(canvas, cv::Scalar(150.0), 4, curr_best_result_.all_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
-    drawFeatureConnectors(canvas, line_color, 16, curr_best_result_.inlier_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
+    //drawFeatureConnectors(canvas, cv::Scalar(150.0), curr_best_result_.all_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
+    drawFeatureConnectors(canvas, line_color, curr_best_result_.inlier_matches, newernode->feature_locations_2d_, earliernode->feature_locations_2d_);
 
 }
 void GraphManager::savePlyFile(QString filename, pointcloud_normal_type& full_cloud){

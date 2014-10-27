@@ -344,7 +344,7 @@ void GraphManager::resetGraph(){
     keyframe_ids_.clear();
     Q_EMIT resetGLViewer();
     curr_best_result_ = MatchingResult();
-    current_poses_.clear();
+    //current_poses_.clear();
     current_edges_.clear();
     reset_request_ = false;
     loop_closures_edges = 0; 
@@ -390,7 +390,7 @@ void GraphManager::firstNode(Node* new_node)
       Q_EMIT setPointCloud(new_node->pc_col.get(), latest_transform);
       Q_EMIT setFeatures(&(new_node->feature_locations_3d_));
     }
-    current_poses_.append(latest_transform);
+    //current_poses_.append(latest_transform);
     this->addKeyframe(new_node->id_);
     if(ParameterServer::instance()->get<bool>("octomap_online_creation")) { 
       optimizeGraph(); //will do the following at the end:
@@ -1279,26 +1279,26 @@ QList<QPair<int, int> >* GraphManager::getGraphEdges()
     return current_edges;
 }
 
-QList<QMatrix4x4>* GraphManager::getAllPosesAsMatrixList(){
+QList<QMatrix4x4>* GraphManager::getAllPosesAsMatrixList() const{
     ScopedTimer s(__FUNCTION__);
+    //QList<QMatrix4x4> current_poses;
     ROS_DEBUG("Retrieving all transformations from optimizer");
-    //QList<QMatrix4x4>* result = new QList<QMatrix4x4>();
-    current_poses_.clear();
+    QList<QMatrix4x4>* current_poses = new QList<QMatrix4x4>();
+    //current_poses.clear();
 #if defined(QT_VERSION) && QT_VERSION >= 0x040700
-    current_poses_.reserve(camera_vertices.size());//only allocates the internal pointer array
+    current_poses->reserve(camera_vertices.size()+10);//only allocates the internal pointer array. +10 for things like calibration vertices or whatever
 #endif
 
-    for (graph_it it = graph_.begin(); it !=graph_.end(); ++it){
-      Node *node = it->second;
-
+    for (auto it = graph_.cbegin(); it !=graph_.cend(); ++it){
+      const Node *node = it->second;
       g2o::VertexSE3* v = dynamic_cast<g2o::VertexSE3*>(optimizer_->vertex( node->vertex_id_));
       if(v){ 
-        current_poses_.push_back(eigenTF2QMatrix(v->estimate())); 
+        current_poses->push_back(eigenTF2QMatrix(v->estimate())); 
       } else {
         ROS_ERROR("Nullpointer in graph at position %i!", it->first);
       }
     }
-    return new QList<QMatrix4x4>(current_poses_); //pointer to a copy
+    return current_poses;// new QList<QMatrix4x4>(current_poses); //pointer to a copy
 }
 
 void GraphManager::reducePointCloud(pointcloud_type const * pc) {

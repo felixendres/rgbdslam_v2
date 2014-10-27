@@ -142,16 +142,16 @@ void GraphManager::addOdometry(ros::Time timestamp,
   bool ok = false;
   
   for (; prev_rit != graph_.rend(); ++prev_rit, ++rit) {
-    Node *start = prev_rit->second;
-    Node *end = rit->second;
-    ROS_INFO("Processing odometry between %d and %d.", start->id_, end->id_); 
+    Node *earlier_node = prev_rit->second;
+    Node *later_node = rit->second;
     //if we have already received the odometry for the node which we would like to point to
     //we know we can interpolate instead of extrapolate the odometry and insert an edge as well as the odometry to the node
-    if (!start->has_odometry_edge_) {
+    if (!earlier_node->has_odometry_edge_) {
+        ROS_INFO("Processing odometry between %d and %d.", earlier_node->id_, later_node->id_); 
         //Get Frames
         if(odom_target_frame.empty()){//Use data frame
-          odom_target_frame1 = start->pc_col->header.frame_id;
-          odom_target_frame2 = end->pc_col->header.frame_id;
+          odom_target_frame1 = earlier_node->pc_col->header.frame_id;
+          odom_target_frame2 = later_node->pc_col->header.frame_id;
         } else{//Use value from parameter
           odom_target_frame1 = odom_target_frame;
           odom_target_frame2 = odom_target_frame;
@@ -159,39 +159,38 @@ void GraphManager::addOdometry(ros::Time timestamp,
 
         ROS_WARN_STREAM("ODOM Target Frame " << odom_target_frame1 << " " << odom_target_frame2 << " " << odom_fixed_frame); 
  
-        ok = listener->canTransform(odom_target_frame1, start->timestamp_, //frame and time of earlier node
-                                    odom_target_frame2, end->timestamp_,   //frame and time of newer node
+        ok = listener->canTransform(odom_target_frame1, earlier_node->timestamp_, //frame and time of earlier node
+                                    odom_target_frame2, later_node->timestamp_,   //frame and time of newer node
                                     odom_fixed_frame, &error_msg);
         if(ok){
           //from http://wiki.ros.org/tf/Tutorials/Time%20travel%20with%20tf%20%28C%2B%2B%29
           //listener.lookupTransform("/turtle2", now, "/turtle1", past, "/world", transform);
-          listener->lookupTransform(odom_target_frame1, start->timestamp_, //frame and time of earlier node
-                                    odom_target_frame2, end->timestamp_,   //frame and time of newer node
+          listener->lookupTransform(odom_target_frame1, earlier_node->timestamp_, //frame and time of earlier node
+                                    odom_target_frame2, later_node->timestamp_,   //frame and time of newer node
                                     odom_fixed_frame, deltaTransform);
 
           printTransform("Odometry Delta", deltaTransform);
           //ADD edge here
           //JUERGEN: TODO: REMOVE
-     //     if(((start->id_ < 671) || (start->id_ > 852)) & ((end->id_ <671) || (end->id_ > 852))){
+     //     if(((earlier_node->id_ < 671) || (earlier_node->id_ > 852)) & ((later_node->id_ <671) || (later_node->id_ > 852))){
 
           LoadedEdge3D edge;
-          createOdometryEdge(start->id_, end->id_, deltaTransform, edge);
+          createOdometryEdge(earlier_node->id_, later_node->id_, deltaTransform, edge);
           QMatrix4x4 motion_estimate =eigenTF2QMatrix(edge.transform);//not used
-          addOdometryEdgeToG2O(edge, start, end, motion_estimate);
-          start->has_odometry_edge_=true;
+          addOdometryEdgeToG2O(edge, earlier_node, later_node, motion_estimate);
+          earlier_node->has_odometry_edge_=true;
     //      }
         } else {//couldn't transform
           ROS_ERROR("Cannot transform between node %d (time %d.%09d) and %d (time %d.%09d). Stated reason: %s", 
-                    start->id_, start->timestamp_.sec, start->timestamp_.nsec, end->id_, end->timestamp_.sec, end->timestamp_.nsec, error_msg.c_str());
+                    earlier_node->id_, earlier_node->timestamp_.sec, earlier_node->timestamp_.nsec, later_node->id_, later_node->timestamp_.sec, later_node->timestamp_.nsec, error_msg.c_str());
           ROS_ERROR_STREAM(listener->allFramesAsString());
         }
     } else {// Encountered node with odometry edge = true
-        ROS_WARN("Node already has odometry: %d", start->id_); 
-      //break;
+        //ROS_DEBUG("Node already has odometry: %d", earlier_node->id_); 
+      //break; //One could save the latest node before which all nodes have odometry, but running through the nodes is quick
     }
 
   }
-
   //Hack: Update display after adding edge
   Q_EMIT updateTransforms(getAllPosesAsMatrixList());
 }

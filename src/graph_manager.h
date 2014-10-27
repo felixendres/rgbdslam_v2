@@ -302,14 +302,14 @@ protected:
      return graph_[node_id]->vertex_id_;
     }
     //! Return pointer to a list of the optimizers graph poses on the heap(!)
-    QList<QMatrix4x4>* getAllPosesAsMatrixList();
+    QList<QMatrix4x4>* getAllPosesAsMatrixList() const;
     //! Return pointer to a list of the optimizers graph edges on the heap(!)
     QList<QPair<int, int> >* getGraphEdges(); 
 
     // MEMBER VARIABLES
     QList<QPair<int, int> > current_edges_;
     //QMutex current_edges_lock_;
-    QList<QMatrix4x4> current_poses_;
+    //QList<QMatrix4x4> current_poses_;
 
     //void mergeAllClouds(pointcloud_type & merge);
     double geodesicDiscount(g2o::HyperDijkstra& hypdij, const MatchingResult& mr);

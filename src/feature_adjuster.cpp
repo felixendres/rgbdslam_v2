@@ -155,6 +155,14 @@ bool VideoDynamicAdaptedFeatureDetector::empty() const
     return !adjuster_ || adjuster_->empty();
 }
 
+bool hasNonZero(const cv::Mat& img){
+  for (int y = 0; y < img.cols; y++) {
+    for(int x = 0; x < img.rows; x++) {
+      if(img.at<uchar>(x,y) != 0) return true;
+    }
+  }
+  return false;
+}
 void VideoDynamicAdaptedFeatureDetector::detectImpl(const cv::Mat& _image, std::vector<KeyPoint>& keypoints, const cv::Mat& _mask) const
 {
     //In contraast to the original, no oscillation testing is needed as
@@ -162,6 +170,7 @@ void VideoDynamicAdaptedFeatureDetector::detectImpl(const cv::Mat& _image, std::
 
     //break if the desired number hasn't been reached.
     int iter_count = escape_iters_;
+    bool checked_for_non_zero_mask = false;
 
     do { // detect at least once
         keypoints.clear();
@@ -169,9 +178,18 @@ void VideoDynamicAdaptedFeatureDetector::detectImpl(const cv::Mat& _image, std::
         //the adjuster takes care of calling the detector with updated parameters
         adjuster_->detect(_image, keypoints,_mask);
         //ROS_INFO("Detected %zu keypoints", keypoints.size());
-        if( int(keypoints.size()) < min_features_ )
+        int found_keypoints = static_cast<int>(keypoints.size());
+        if(found_keypoints < min_features_ )
         {
-            adjuster_->tooFew(min_features_, (int)keypoints.size());
+            adjuster_->tooFew(min_features_, found_keypoints);
+            //Specific to depth images
+            if(found_keypoints == 0 && !checked_for_non_zero_mask){
+              checked_for_non_zero_mask = true;
+              if(!hasNonZero(_mask)){
+                std::cout << ("Breaking detection iterations, because of missing depth");
+                break; //does not help to iterate if no points have depth
+              }
+            }
         }
         else if( int(keypoints.size()) > max_features_ )
         {

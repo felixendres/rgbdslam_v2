@@ -576,7 +576,7 @@ void OpenNIListener::noCloudCallback (const sensor_msgs::ImageConstPtr& visual_i
     }
     return;
   }
-  noCloudCameraCallback(visual_img, depth_float_img, depth_mono8_img_, depth_img_msg->header, cam_info_msg);
+  noCloudCameraCallback(visual_img, depth_float_img, depth_mono8_img_, visual_img_msg->header, cam_info_msg);
 }
 
 
@@ -665,7 +665,7 @@ void OpenNIListener::cameraCallback(cv::Mat visual_img,
   else if(pause_) { return; }//Visualization and nothing else
 
   //######### Main Work: create new node ##############################################################
-  Q_EMIT setGUIStatus("Computing Keypoints and Features");
+  //Q_EMIT setGUIStatus("Computing Keypoints and Features");
   Node* node_ptr = new Node(visual_img, detector_, extractor_, point_cloud, depth_mono8_img);
 
   retrieveTransformations(pcl_conversions::fromPCL(point_cloud->header), node_ptr);
@@ -690,7 +690,7 @@ void OpenNIListener::noCloudCameraCallback(cv::Mat visual_img,
   }
   ScopedTimer s(__FUNCTION__);
   //######### Main Work: create new node ##############################################################
-  Q_EMIT setGUIStatus("Computing Keypoints and Features");
+  //Q_EMIT setGUIStatus("Computing Keypoints and Features");
   Node* node_ptr = new Node(visual_img, depth, depth_mono8_img, cam_info, depth_header, detector_, extractor_);
 
   retrieveTransformations(depth_header, node_ptr);//Retrieve the transform between the lens and the base-link at capturing time;

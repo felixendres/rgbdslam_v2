@@ -54,6 +54,30 @@ def align(model,data):
         
     return rot,trans,trans_error
 
+def plot_traj3d(ax,stamps,traj,style,color,label, linewidth):
+    from matplotlib import cm
+    stamps.sort()
+    interval = numpy.median([s-t for s,t in zip(stamps[1:],stamps[:-1])])
+    x = []
+    y = []
+    z = []
+    last = stamps[0]
+    for i in range(len(stamps)):
+        if stamps[i]-last < 5*interval:
+            x.append(traj[i][0])
+            y.append(traj[i][1])
+            z.append(traj[i][2])
+        elif len(x)>0:
+            ax.plot(x,y, style,zs=z,color=color,label=label, linewidth=linewidth)
+            label=""
+            x=[]
+            y=[]
+            z=[]
+        last= stamps[i]
+    if len(x)>0:
+      ax.plot(x,y,style, zs=z,color=color,label=label, linewidth=linewidth)
+      ax.scatter(x,y,zs=z,c=color,label=label, marker='o', cmap=cm.jet)
+            
 def plot_traj(ax,stamps,traj,style,color,label, linewidth):
     stamps.sort()
     interval = numpy.median([s-t for s,t in zip(stamps[1:],stamps[:-1])])
@@ -73,6 +97,67 @@ def plot_traj(ax,stamps,traj,style,color,label, linewidth):
     if len(x)>0:
         ax.plot(x,y,style,color=color,label=label, linewidth=linewidth)
             
+def plot2d(rmse, first_stamps, first_xyz_full, second_stamps, second_xyz_full_aligned, matches, first_xyz, second_xyz_aligned):
+  import matplotlib
+  matplotlib.use('Agg')
+  import matplotlib.pyplot as plt
+  import matplotlib.pylab as pylab
+  from matplotlib.patches import Ellipse
+  font = {'family' : 'serif', 'weight' : 'normal', 'size'   : 16}
+  matplotlib.rc('font', **font)
+
+  fig = plt.figure(figsize=(10,10))
+  ax = fig.add_subplot(111)
+  plt.title("ATE RMSE: %0.2f m"%(rmse))
+  plot_traj(ax,first_stamps,first_xyz_full.transpose().A,'-',"black","Ground Truth", linewidth=2)
+  plot_traj(ax,second_stamps,second_xyz_full_aligned.transpose().A,'-',"green","Estimate", linewidth=2)
+
+  label="Difference"
+  i = 0
+  for (a,b),(x1,y1,z1),(x2,y2,z2) in zip(matches,first_xyz.transpose().A,second_xyz_aligned.transpose().A):
+      i+=1
+      if i % 10 == 0:
+        ax.plot([x1,x2],[y1,y2],'-',color="red",label=label, linewidth=1)
+        label=""
+      
+  ax.legend(loc="upper right")
+      
+  ax.set_xlabel('x [m]')
+  ax.set_ylabel('y [m]')
+  fig.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.95)
+  plt.savefig(args.plot,dpi=300)
+
+def plot3d(rmse, first_stamps, first_xyz_full, second_stamps, second_xyz_full_aligned, matches, first_xyz, second_xyz_aligned):
+  import matplotlib
+  matplotlib.use('Qt4Agg')
+  from mpl_toolkits.mplot3d import Axes3D
+  import matplotlib.pyplot as plt
+  import matplotlib.pylab as pylab
+  from matplotlib.patches import Ellipse
+  font = {'family' : 'serif', 'weight' : 'normal', 'size'   : 16}
+  matplotlib.rc('font', **font)
+
+  fig = plt.figure(figsize=(10,10))
+  ax = fig.gca(projection='3d')
+  plt.title("ATE RMSE: %0.2f m"%(rmse))
+  plot_traj3d(ax,first_stamps,first_xyz_full.transpose().A,'-',"black","Ground Truth", linewidth=2)
+  plot_traj3d(ax,second_stamps,second_xyz_full_aligned.transpose().A,'-',"green","Estimate", linewidth=2)
+
+  label="Difference"
+  i = 0
+  for (a,b),(x1,y1,z1),(x2,y2,z2) in zip(matches,first_xyz.transpose().A,second_xyz_aligned.transpose().A):
+    i+=1
+    if i % 30 == 0:
+      ax.plot([x1,x2],[y1,y2],zs=[z1,z2],color="red",label=label, linewidth=1)
+      label=""
+
+  ax.legend(loc="upper right")
+
+  ax.set_xlabel('x [m]')
+  ax.set_ylabel('y [m]')
+  ax.set_zlabel('z [m]')
+  plt.show()
+
 
 if __name__=="__main__":
     # parse command line
@@ -86,7 +171,8 @@ if __name__=="__main__":
     parser.add_argument('--max_difference', help='maximally allowed time difference for matching entries (default: 0.02)',default=0.02)
     parser.add_argument('--save', help='save aligned second trajectory to disk (format: stamp2 x2 y2 z2)')
     parser.add_argument('--save_associations', help='save associated first and aligned second trajectory to disk (format: stamp1 x1 y1 z1 stamp2 x2 y2 z2)')
-    parser.add_argument('--plot', help='plot the first and the aligned second trajectory to an image (format: png)')
+    parser.add_argument('--plot', help='plot the first and the aligned second trajectory to an image. Not compatible with --plot3d')
+    parser.add_argument('--plot3d', action="store_true", help='plot interactively in 3d. Not compatible with --plot')
     parser.add_argument('--verbose', help='print all evaluation data (otherwise, only the RMSE absolute translational error in meters after alignment will be printed)', action='store_true')
     args = parser.parse_args()
 
@@ -103,7 +189,7 @@ if __name__=="__main__":
     rot,trans,trans_error = align(second_xyz,first_xyz)
     #rot,trans,trans_error = align_first(second_xyz,first_xyz)
     
-    second_xyz_aligned = rot * second_xyz + trans
+    second_xyz_aligned = rot * second_xyz +trans
     
     first_stamps = first_list.keys()
     first_stamps.sort()
@@ -143,29 +229,11 @@ if __name__=="__main__":
         file.close()
 
     if args.plot:
-        import matplotlib
-        matplotlib.use('Agg')
-        import matplotlib.pyplot as plt
-        import matplotlib.pylab as pylab
-        from matplotlib.patches import Ellipse
-        fig = plt.figure(figsize=(10,10))
-        ax = fig.add_subplot(111)
-        plt.title("ATE RMSE: "+str(rmse))
-        plot_traj(ax,first_stamps,first_xyz_full.transpose().A,'-',"black","Ground Truth", linewidth=2)
-        plot_traj(ax,second_stamps,second_xyz_full_aligned.transpose().A,'-',"green","Estimate", linewidth=2)
+      if args.plot and args.plot3d:
+        args.plot3d = False
+        print "Plotting interactively (--plot3d) and to file (--plot <filename>) is not compatible. Plotting to file."
 
-        label="Difference"
-        i = 0
-        for (a,b),(x1,y1,z1),(x2,y2,z2) in zip(matches,first_xyz.transpose().A,second_xyz_aligned.transpose().A):
-            i+=1
-            if i % 10 == 0:
-              ax.plot([x1,x2],[y1,y2],'-',color="red",label=label, linewidth=1)
-              label=""
-            
-        ax.legend(loc="upper right")
-            
-        ax.set_xlabel('x [m]')
-        ax.set_ylabel('y [m]')
-        plt.show()
-        plt.savefig(args.plot,dpi=300)
+      plot2d(rmse, first_stamps, first_xyz_full, second_stamps, second_xyz_full_aligned, matches, first_xyz, second_xyz_aligned)
         
+    if args.plot3d:
+      plot3d(rmse, first_stamps, first_xyz_full, second_stamps, second_xyz_full_aligned, matches, first_xyz, second_xyz_aligned)

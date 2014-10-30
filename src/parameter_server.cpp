@@ -81,6 +81,7 @@ void ParameterServer::defaultConfig() {
   addOption("max_keypoints",                 static_cast<int> (600),                    "Extract no more than this many keypoints ");
   addOption("min_keypoints",                 static_cast<int> (000),                    "Extract no less than this many keypoints ");
   addOption("min_matches",                   static_cast<int> (20),                     "Don't try RANSAC if less than this many matches (if using SiftGPU and GLSL you should use max. 60 matches)");
+  addOption("max_matches",                   static_cast<int> (1e9),                    "Reduce the feature matches to the best n, speeding up ransac (but not feature matching itself)");
   addOption("detector_grid_resolution",      static_cast<int> (0),                      "If >1, split image into x by x subimages (overlapping b/c of keypoint size) and detect keypoints in parallel");
   addOption("sufficient_matches",            static_cast<int> (1e9),                    "Extract no less than this many only honored by the adjustable SURF and FAST features");
   addOption("adjuster_max_iterations",       static_cast<int> (0),                      "If outside of bounds for max_kp and min_kp, retry this many times with adapted threshold");

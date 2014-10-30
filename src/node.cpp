@@ -492,8 +492,20 @@ const cv::flann::Index* Node::getFlannIndex() const {
   return flannIndex;
 }
 
+//Throw away the worst matches based on their distance - which is the nn_ratio set in featureMatching(...)
+static void keepStrongestMatches(int n, std::vector<cv::DMatch>* matches)
+{
+  if(matches->size() > n)
+  {
+    //m1 better than m2?
+    auto lambda = [](const cv::DMatch& m1, const cv::DMatch& m2) { return m1.distance < m2.distance; };
 
-  
+    std::vector<cv::DMatch>::iterator nth = matches->begin() + n;
+    std::nth_element(matches->begin(), nth, matches->end(), lambda);
+    matches->erase(nth, matches->end());
+  }
+}
+
 
 //TODO: This function seems to be resistant to parallelization probably due to knnSearch
 unsigned int Node::featureMatching(const Node* other, std::vector<cv::DMatch>* matches) const 
@@ -641,6 +653,8 @@ unsigned int Node::featureMatching(const Node* other, std::vector<cv::DMatch>* m
                        "matcher_type ("           << ps->get<std::string>("matcher_type") << ") and " <<
                        "feature_extractor_type (" << ps->get<std::string>("feature_extractor_type") << ") chosen.");
   }
+
+  keepStrongestMatches(ps->get<int>("max_matches"), matches);
 
   ROS_DEBUG_NAMED("statistics", "count_matrix(%3d, %3d) =  %4d;",
                   this->id_+1, other->id_+1, (int)matches->size());

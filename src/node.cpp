@@ -16,6 +16,7 @@
 
 
 #include "node.h"
+#include "features.h"
 #include "transformation_estimation_euclidean.h"
 #include "transformation_estimation.h"
 #include <cmath>
@@ -540,8 +541,20 @@ unsigned int Node::featureMatching(const Node* other, std::vector<cv::DMatch>* m
     cv::Ptr<cv::DescriptorMatcher> matcher;
     std::string brute_force_type("BruteForce"); //L2 per default
     if(ps->get<std::string> ("feature_extractor_type") == "ORB"){
-      brute_force_type.append("-HammingLUT");
+        ScopedTimer s("My bruteforce Search", false, true);
+        uint64_t* query_value =  reinterpret_cast<uint64_t*>(this->feature_descriptors_.data);
+        uint64_t* search_array = reinterpret_cast<uint64_t*>(other->feature_descriptors_.data);
+        for(unsigned int i = 0; i < this->feature_locations_2d_.size(); ++i){
+          int result_index = -1;
+          int hd = bruteForceSearchORB(query_value, search_array, other->feature_locations_2d_.size(), result_index);
+          query_value += 4;//ORB feature = 32*8bit = 4*64bit
+          cv::DMatch match(i, result_index, hd /64.0 + (float)rand()/(1000.0*RAND_MAX));
+          matches->push_back(match);
+        }
+      //brute_force_type.append("-HammingLUT");
     }
+    else
+    {
     matcher = cv::DescriptorMatcher::create(brute_force_type);
     std::vector< std::vector<cv::DMatch> > bruteForceMatches;
     matcher->knnMatch(feature_descriptors_, other->feature_descriptors_, bruteForceMatches, k);
@@ -565,6 +578,7 @@ unsigned int Node::featureMatching(const Node* other, std::vector<cv::DMatch>* m
             matches->push_back(m1);
         } 
 
+    }
     }
     //matcher->match(feature_descriptors_, other->feature_descriptors_, *matches);
   } 

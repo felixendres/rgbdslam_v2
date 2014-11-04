@@ -1,5 +1,6 @@
 #include <cv.h>
 #include <string>
+#include <stdint.h>
 
 /// Creates Feature Detector Objects accordingt to the type.
 /// Possible detectorTypes: FAST, STAR, SIFT, SURF, GFTT
@@ -7,3 +8,5 @@
 cv::FeatureDetector* createDetector( const std::string& detectorType );
 /// Create an object to extract features at keypoints. The Exctractor is passed to the Node constructor and must be the same for each node.
 cv::DescriptorExtractor* createDescriptorExtractor( const std::string& descriptorType );
+
+int bruteForceSearchORB(uint64_t* v, uint64_t* search_array, const unsigned int& size, int& result_index);

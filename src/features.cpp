@@ -210,3 +210,24 @@ DescriptorExtractor* createDescriptorExtractor( const string& descriptorType )
     return extractor;
 }
 
+static inline int hamming_distance_orb32x8_popcountll(const uint64_t* v1, const uint64_t* v2) {
+  return (__builtin_popcountll(v1[0] ^ v2[0]) + __builtin_popcountll(v1[1] ^ v2[1])) +
+         (__builtin_popcountll(v1[2] ^ v2[2]) + __builtin_popcountll(v1[3] ^ v2[3]));
+}
+
+int bruteForceSearchORB(uint64_t* v, uint64_t* search_array, const unsigned int& size, int& result_index){
+  const int howmany64bitwords = 4;//32*8/64;
+  int i = 0;
+  int min_index = 0;
+  int min_distance = 1 + 256;//Maximum distance
+  int hamming_distance_i = 1+256;
+  for(; i < size; ++i){
+    hamming_distance_i = hamming_distance_orb32x8_popcountll(v, &search_array[i*4]);
+    if(hamming_distance_i < min_distance){
+      min_distance = hamming_distance_i;
+      min_index = i;
+    }
+  }
+  result_index = min_index; 
+  return min_distance;
+}

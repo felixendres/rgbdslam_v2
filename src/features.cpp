@@ -217,11 +217,10 @@ static inline int hamming_distance_orb32x8_popcountll(const uint64_t* v1, const 
 
 int bruteForceSearchORB(uint64_t* v, uint64_t* search_array, const unsigned int& size, int& result_index){
   const int howmany64bitwords = 4;//32*8/64;
-  int i = 0;
   int min_index = 0;
   int min_distance = 1 + 256;//Maximum distance
   int hamming_distance_i = 1+256;
-  for(; i < size; ++i){
+  for(int i = 0; i < size; ++i){
     hamming_distance_i = hamming_distance_orb32x8_popcountll(v, &search_array[i*4]);
     if(hamming_distance_i < min_distance){
       min_distance = hamming_distance_i;

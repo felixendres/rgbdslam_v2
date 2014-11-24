@@ -39,10 +39,10 @@ void ParameterServer::defaultConfig() {
   addOption("minimum_depth",                 static_cast<double> (0.1),                 "Clip near points when reconstructing the cloud. In meter.");
   addOption("encoding_bgr",                  static_cast<bool> (true),                   "Whether the color image encoding is bgr (fuerte openni_launch) as opposed to rgb (electric openni_camera)");
   //Camera settings (Internal calibration is not consistent though. It's best, the input is calibrated.)
-  addOption("depth_camera_fx",               static_cast<double> (-1.0),                "Focal length w.r.t. horizontal pixel size. Use negative value to get from CameraInfo");
-  addOption("depth_camera_fy",               static_cast<double> (-1.0),                "Focal length w.r.t. vertical pixel size. Use negative value to get from CameraInfo");
-  addOption("depth_camera_cx",               static_cast<double> (-1.0),                "Horizontal image center. Use negative value to get from CameraInfo");
-  addOption("depth_camera_cy",               static_cast<double> (-1.0),                "Vertical image center. Use negative value to get from CameraInfo");
+  addOption("depth_camera_fx",               static_cast<double> (0.0),                 "Focal length w.r.t. horizontal pixel size. Use negative value to get from CameraInfo");
+  addOption("depth_camera_fy",               static_cast<double> (0.0),                 "Focal length w.r.t. vertical pixel size. Use negative value to get from CameraInfo");
+  addOption("depth_camera_cx",               static_cast<double> (0.0),                 "Horizontal image center. Use negative value to get from CameraInfo");
+  addOption("depth_camera_cy",               static_cast<double> (0.0),                 "Vertical image center. Use negative value to get from CameraInfo");
   addOption("sigma_depth",                   static_cast<double> (0.01),                "Factor c for the standard deviation of depth measurements: sigma_Z = c * depth * depth. Khoshelham 2012 (0.001425) seems to be a bit overconfident.");
 
   // Output data settings

@@ -13,6 +13,7 @@ Eigen::Matrix4f getTransformFromMatches(const Node* newer_node,
   pcl::TransformationFromCorrespondences tfc;
   valid = true;
   std::vector<Eigen::Vector3f> t, f;
+  float weight = 1.0;
 
   BOOST_FOREACH(const cv::DMatch& m, matches)
   {
@@ -20,7 +21,9 @@ Eigen::Matrix4f getTransformFromMatches(const Node* newer_node,
     Eigen::Vector3f to = earlier_node->feature_locations_3d_[m.trainIdx].head<3>();
     if(isnan(from(2)) || isnan(to(2)))
       continue;
-    float weight = 1.0;
+
+    weight = 1.0/(from(2) * to(2));
+#ifdef HEMACLOUDS
     ParameterServer* ps = ParameterServer::instance();
 
     //Create point cloud inf necessary
@@ -31,20 +34,23 @@ Eigen::Matrix4f getTransformFromMatches(const Node* newer_node,
       weight =1/( earlier_node->feature_locations_3d_[m.trainIdx][2] \
                 + newer_node->feature_locations_3d_[m.queryIdx][2]);
     }
-    //Validate that 3D distances are corresponding
-    if (max_dist_m > 0) {  //storing is only necessary, if max_dist is given
-      if(f.size() >= 1)
-      {
-        float delta_f = (from - f.back()).squaredNorm();//distance to the previous query point
-        float delta_t = (to   - t.back()).squaredNorm();//distance from one to the next train point
+#endif
+    if(false){//is that code useful?
+      //Validate that 3D distances are corresponding
+      if (max_dist_m > 0) {  //storing is only necessary, if max_dist is given
+        if(f.size() >= 1)
+        {
+          float delta_f = (from - f.back()).squaredNorm();//distance to the previous query point
+          float delta_t = (to   - t.back()).squaredNorm();//distance from one to the next train point
 
-        if ( abs(delta_f-delta_t) > max_dist_m * max_dist_m ) {
-          valid = false;
-          return Eigen::Matrix4f();
+          if ( abs(delta_f-delta_t) > max_dist_m * max_dist_m ) {
+            valid = false;
+            return Eigen::Matrix4f();
+          }
         }
+        f.push_back(from);
+        t.push_back(to);    
       }
-      f.push_back(from);
-      t.push_back(to);    
     }
 
     tfc.add(from, to, weight);// 1.0/(to(2)*to(2)));//the further, the less weight b/c of quadratic accuracy decay

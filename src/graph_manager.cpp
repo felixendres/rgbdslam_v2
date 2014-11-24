@@ -686,7 +686,8 @@ bool GraphManager::addNode(Node* new_node)
   ParameterServer* ps = ParameterServer::instance();
   if (new_node->feature_locations_2d_.size() < ps->get<int>("min_matches")) {
       ROS_WARN("Skipping node because it has only %zu features (minimum is %d)",new_node->feature_locations_2d_.size(), ps->get<int>("min_matches"));
-      }
+      return false;
+  }
 
   //First Node, so only build its index, insert into storage and add a
   //vertex at the origin, of which the position is very certain

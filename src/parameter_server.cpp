@@ -81,12 +81,12 @@ void ParameterServer::defaultConfig() {
   addOption("feature_extractor_type",        std::string("SURF"),                       "SIFTGPU, SURF, SIFT or ORB");
   addOption("matcher_type",                  std::string("FLANN"),                      "SIFTGPU (matching on the gpu) or FLANN or BRUTEFORCE");
   addOption("max_keypoints",                 static_cast<int> (600),                    "Extract no more than this many keypoints ");
-  addOption("min_keypoints",                 static_cast<int> (000),                    "Extract no less than this many keypoints ");
+  addOption("min_keypoints",                 static_cast<int> (000),                    "Deprecated: Extract no less than this many keypoints ");
   addOption("min_matches",                   static_cast<int> (20),                     "Don't try RANSAC if less than this many matches (if using SiftGPU and GLSL you should use max. 60 matches)");
   addOption("max_matches",                   static_cast<int> (1e9),                    "Reduce the feature matches to the best n, speeding up ransac (but not feature matching itself)");
-  addOption("detector_grid_resolution",      static_cast<int> (0),                      "If >1, split image into x by x subimages (overlapping b/c of keypoint size) and detect keypoints in parallel");
+  addOption("detector_grid_resolution",      static_cast<int> (3),                      "If >1, split image into x by x subimages (overlapping b/c of keypoint size) and detect keypoints in parallel");
   addOption("sufficient_matches",            static_cast<int> (1e9),                    "Extract no less than this many only honored by the adjustable SURF and FAST features");
-  addOption("adjuster_max_iterations",       static_cast<int> (0),                      "If outside of bounds for max_kp and min_kp, retry this many times with adapted threshold");
+  addOption("adjuster_max_iterations",       static_cast<int> (5),                      "If outside of bounds for max_kp and min_kp, retry this many times with adapted threshold");
   addOption("use_feature_min_depth",         static_cast<bool>(false),                  "Consider the nearest point in the neighborhood of the feature as its depth, as it will dominate the motion");
   addOption("use_feature_mask",              static_cast<bool>(false),                  "Whether to extract features without depth");
   addOption("use_root_sift",                 static_cast<bool>(true),                   "Whether to use euclidean distance or Hellman kernel for feature comparison");
@@ -150,7 +150,7 @@ void ParameterServer::defaultConfig() {
   addOption("cloud_display_type",            static_cast<std::string>("TRIANGLE_STRIP"),        "Drastically affects rendering time. GL_xxx type of compiled list GL_TRIANGLE_STRIP (fastest processing of new clouds), GL_POINTS (fastest display) GL_TRIANGLES (no good), or ELLIPSOIDS (very slow, but visualizes standard deviation)");
 
   // Misc 
-  addOption("start_paused",                  static_cast<bool> (true),                  "Whether to directly start mapping with the first input image, or to wait for the user to start manually");
+  addOption("start_paused",                  static_cast<bool> (false),                  "Whether to directly start mapping with the first input image, or to wait for the user to start manually");
   addOption("batch_processing",              static_cast<bool> (false),                 "Store results and close after bagfile has been processed");
   addOption("concurrent_node_construction",  static_cast<bool> (true),                  "Detect+extract features for new frame, while current frame is inserted into graph ");
   addOption("concurrent_edge_construction",  static_cast<bool> (true),                  "Compare current frame to many predecessors in parallel. Note that SIFTGPU matcher and GICP are mutex'ed for thread-safety");

@@ -79,7 +79,7 @@ void Graphical_UI::setup(){
     // create widgets for image and map display
     feature_flow_image_label->setWordWrap(true);
     feature_flow_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
-    feature_flow_image_label->setMinimumSize(4,3);
+    feature_flow_image_label->setMinimumSize(4,100);
     if(ps->get<bool>("scalable_2d_display")) {
       feature_flow_image_label->setScaledContents(true);
     }
@@ -89,7 +89,7 @@ void Graphical_UI::setup(){
     visual_image_label = new QLabel(vl);
     visual_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     visual_image_label->setAlignment(Qt::AlignCenter);
-    visual_image_label->setMinimumSize(4,3);
+    visual_image_label->setMinimumSize(4,100);
     if(ps->get<bool>("scalable_2d_display")) {
       visual_image_label->setScaledContents(true);
     }
@@ -101,7 +101,7 @@ void Graphical_UI::setup(){
     depth_image_label = new QLabel(dl);
     depth_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     depth_image_label->setAlignment(Qt::AlignCenter);
-    depth_image_label->setMinimumSize(4,3);
+    depth_image_label->setMinimumSize(4,100);
     if(ParameterServer::instance()->get<bool>("scalable_2d_display")) {
       depth_image_label->setScaledContents(true);
     }
@@ -111,7 +111,7 @@ void Graphical_UI::setup(){
     feature_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     feature_image_label->setAlignment(Qt::AlignCenter);
     feature_image_label->setVisible(false);
-    feature_image_label->setMinimumSize(4,3);
+    feature_image_label->setMinimumSize(4,100);
     if(ps->get<bool>("scalable_2d_display")) {
       feature_image_label->setScaledContents(true);
     }
@@ -168,6 +168,7 @@ void Graphical_UI::setup(){
 }
 void Graphical_UI::setFeatureImage(QImage qimage){
   if(feature_image_label->isVisible()){
+    feature_image_label->setMinimumSize(QSize(qimage.size().width()/2, qimage.size().height()/2));
     feature_image_label->setAlignment(Qt::AlignCenter);
     feature_image_label->setPixmap(QPixmap::fromImage(qimage));
     feature_image_label->repaint();
@@ -177,6 +178,7 @@ void Graphical_UI::setFeatureImage(QImage qimage){
 
 void Graphical_UI::setFeatureFlowImage(QImage qimage){
   if(feature_flow_image_label->isVisible()){
+    feature_flow_image_label->setMinimumSize(QSize(qimage.size().width()/2, qimage.size().height()/2));
     feature_flow_image_label->setAlignment(Qt::AlignCenter);
     feature_flow_image_label->setPixmap(QPixmap::fromImage(qimage));
     feature_flow_image_label->repaint();
@@ -184,6 +186,7 @@ void Graphical_UI::setFeatureFlowImage(QImage qimage){
 }
 void Graphical_UI::setVisualImage(QImage qimage){
   if(visual_image_label->isVisible()){
+    visual_image_label->setMinimumSize(QSize(qimage.size().width()/2, qimage.size().height()/2));
     visual_image_label->setPixmap(QPixmap::fromImage(qimage));
     visual_image_label->repaint();
   }
@@ -191,6 +194,7 @@ void Graphical_UI::setVisualImage(QImage qimage){
 
 void Graphical_UI::setDepthImage(QImage qimage){
   if(depth_image_label->isVisible()){
+      depth_image_label->setMinimumSize(QSize(qimage.size().width()/4, qimage.size().height()/2));
       depth_image_label->setPixmap(QPixmap::fromImage(qimage));
       depth_image_label->repaint();
   }
@@ -1218,8 +1222,9 @@ void Graphical_UI::setBusy(int id, const char* message, int val){
       busydialog->setFormat(QString(message) + " %p%");
       busydialog->update();
     }
-  } else 
-    statusBar()->showMessage("Error: Set Value for non-existing progressbar");
+  } else {
+    statusBar()->showMessage(QString("Error: Set Value for non-existing progressbar ")+QString::number(id));
+  }
 }
 
 void Graphical_UI::saveAllImages() {

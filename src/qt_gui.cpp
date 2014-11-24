@@ -74,12 +74,14 @@ void Graphical_UI::setup(){
                 "    <li><i>Ctrl + Double click (on background):</i> reset camera position to first pose (only works if follow mode is off).</li>"
                 "    <li><i>Double click on object:</i> set pivot to clicked point (only works if follow mode is off).</li>"
                 "<ul></p>")); feature_flow_image_label = new QLabel(*mouseHelpText);
+
+    ParameterServer* ps = ParameterServer::instance();
     // create widgets for image and map display
     feature_flow_image_label->setWordWrap(true);
     feature_flow_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
-    if(ParameterServer::instance()->get<bool>("scalable_2d_display")) {
+    feature_flow_image_label->setMinimumSize(4,3);
+    if(ps->get<bool>("scalable_2d_display")) {
       feature_flow_image_label->setScaledContents(true);
-      feature_flow_image_label->setMinimumSize(4,3);
     }
 
     std::string visual_topic = ParameterServer::instance()->get<std::string>("topic_image_mono");
@@ -87,25 +89,36 @@ void Graphical_UI::setup(){
     visual_image_label = new QLabel(vl);
     visual_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     visual_image_label->setAlignment(Qt::AlignCenter);
-    if(ParameterServer::instance()->get<bool>("scalable_2d_display")) {
+    visual_image_label->setMinimumSize(4,3);
+    if(ps->get<bool>("scalable_2d_display")) {
       visual_image_label->setScaledContents(true);
-      visual_image_label->setMinimumSize(4,3);
     }
 
     std::string depth_topic = ParameterServer::instance()->get<std::string>("topic_image_depth");
     QString dl("Waiting for depth image on topic<br/><i>\""); dl += depth_topic.c_str(); 
     dl += "\"</i><br/>";
+
     depth_image_label = new QLabel(dl);
     depth_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     depth_image_label->setAlignment(Qt::AlignCenter);
+    depth_image_label->setMinimumSize(4,3);
     if(ParameterServer::instance()->get<bool>("scalable_2d_display")) {
       depth_image_label->setScaledContents(true);
-      depth_image_label->setMinimumSize(4,3);
+    }
+
+
+    feature_image_label = new QLabel(tr("<i>Waiting for feature image...</i>"));
+    feature_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
+    feature_image_label->setAlignment(Qt::AlignCenter);
+    feature_image_label->setVisible(false);
+    feature_image_label->setMinimumSize(4,3);
+    if(ps->get<bool>("scalable_2d_display")) {
+      feature_image_label->setScaledContents(true);
     }
     //transform_label = new QLabel(tr("<i>Waiting for transformation matrix...</i>"));
     //transform_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     //transform_label->setAlignment(Qt::AlignCenter);
-    if(ParameterServer::instance()->get<bool>("use_glwidget")) glviewer = new GLViewer(this);//displays the cloud in 3d
+    if(ps->get<bool>("use_glwidget")) glviewer = new GLViewer(this);//displays the cloud in 3d
 
     //QFont typewriter_font;
     //typewriter_font.setStyleHint(QFont::TypeWriter);
@@ -124,6 +137,7 @@ void Graphical_UI::setup(){
     //h_layout->setContentsMargins(0, 0, 0, 0);
     hsplitter->addWidget(visual_image_label);
     hsplitter->addWidget(depth_image_label);
+    hsplitter->addWidget(feature_image_label);
     hsplitter->addWidget(feature_flow_image_label);
     //QWidget* bottom_widget = new QWidget;
     //bottom_widget->setLayout(h_layout);
@@ -151,6 +165,14 @@ void Graphical_UI::setup(){
 
     setMinimumSize(790, 290);
     resize(1000, 700);
+}
+void Graphical_UI::setFeatureImage(QImage qimage){
+  if(feature_image_label->isVisible()){
+    feature_image_label->setAlignment(Qt::AlignCenter);
+    feature_image_label->setPixmap(QPixmap::fromImage(qimage));
+    feature_image_label->repaint();
+  }
+  feature_image = qimage;
 }
 
 void Graphical_UI::setFeatureFlowImage(QImage qimage){
@@ -535,6 +557,7 @@ void Graphical_UI::set2DStream(bool is_on) {
         visual_image_label->show();
         depth_image_label->show(); 
         feature_flow_image_label->show(); 
+        feature_image_label->show(); 
         QList<int> list;
         list.append(1);//upper part on
         list.append(1);//lower part on
@@ -543,6 +566,7 @@ void Graphical_UI::set2DStream(bool is_on) {
         visual_image_label->hide(); 
         depth_image_label->hide(); 
         feature_flow_image_label->hide(); 
+        feature_image_label->hide(); 
         QList<int> list;
         list.append(1);//upper part on
         list.append(0);//lower part off
@@ -563,7 +587,8 @@ void Graphical_UI::createMenus() {
     QMenu *dataMenu;
     QMenu *octoMapMenu;
     QMenu *actionMenu;
-    QMenu *viewMenu;
+    QMenu *viewMenu3d;
+    QMenu *viewMenu2d;
     QMenu *settingsMenu;
     QMenu *helpMenu;
 
@@ -827,6 +852,12 @@ void Graphical_UI::createMenus() {
     actionMenu->addAction(psOutputAct);
     this->addAction(psOutputAct);
 
+    QAction *saveImages = new QAction(tr("&Write All Images to file."), this);
+    saveImages->setStatusTip(tr("Write All images shown in the gui to appropriate files"));
+    saveImages->setIcon(QIcon::fromTheme("application-pdf"));//doesn't work for gnome
+    connect(saveImages, SIGNAL(triggered()), this, SLOT(saveAllImages()));
+    actionMenu->addAction(saveImages);
+    this->addAction(saveImages);
     QAction *toggleCloudStorageAct = new QAction(tr("&Store Point Clouds"), this);
     QList<QKeySequence> tcs_shortcuts;
     tcs_shortcuts.append(QString("Ctrl+P"));
@@ -840,49 +871,41 @@ void Graphical_UI::createMenus() {
     this->addAction(toggleCloudStorageAct);
 
 
-    //View Menu ###############################################################
-    viewMenu = menuBar()->addMenu(tr("&View"));
-
-
-    /* Crashes the program even if neither 2d nor 3d widget are activated *
-    QAction *toggleFullscreenAct = new QAction(tr("&Fullscreen"), this);
-    //QList<QKeySequence> shortcuts;
-    //shortcuts.append(QString("F"));
-    //toggleFullscreenAct->setShortcuts(shortcuts);
-    toggleFullscreenAct->setCheckable(true);
-    toggleFullscreenAct->setChecked(false);
-    toggleFullscreenAct->setStatusTip(tr("Toggle Fullscreen"));
-    toggleFullscreenAct->setIcon(QIcon::fromTheme("view-fullscreen"));//doesn't work for gnome
-    connect(toggleFullscreenAct, SIGNAL(toggled(bool)), this, SLOT(toggleFullscreen(bool)));
-    viewMenu->addAction(toggleFullscreenAct);
-    this->addAction(toggleFullscreenAct);
-    */
-
-    QAction *toggleStreamAct = new QAction(tr("Toggle &2D Stream"), this);
-    toggleStreamAct->setShortcut(QString("2"));
-    toggleStreamAct->setCheckable(true);
-    toggleStreamAct->setChecked(true);
-    toggleStreamAct->setStatusTip(tr("Turn off the Image Stream"));
-    connect(toggleStreamAct, SIGNAL(toggled(bool)), this, SLOT(set2DStream(bool)));
-    viewMenu->addAction(toggleStreamAct);
-    this->addAction(toggleStreamAct);
+    //View Menus ###############################################################
+    //View Menus ###############################################################
 
     if(ParameterServer::instance()->get<bool>("use_glwidget"))
     {
+      viewMenu3d = menuBar()->addMenu(tr("&3D View"));
+
+
+      /* Crashes the program even if neither 2d nor 3d widget are activated *
+      QAction *toggleFullscreenAct = new QAction(tr("&Fullscreen"), this);
+      //QList<QKeySequence> shortcuts;
+      //shortcuts.append(QString("F"));
+      //toggleFullscreenAct->setShortcuts(shortcuts);
+      toggleFullscreenAct->setCheckable(true);
+      toggleFullscreenAct->setChecked(false);
+      toggleFullscreenAct->setStatusTip(tr("Toggle Fullscreen"));
+      toggleFullscreenAct->setIcon(QIcon::fromTheme("view-fullscreen"));//doesn't work for gnome
+      connect(toggleFullscreenAct, SIGNAL(toggled(bool)), this, SLOT(toggleFullscreen(bool)));
+      viewMenu3d->addAction(toggleFullscreenAct);
+      this->addAction(toggleFullscreenAct);
+      */
       QAction *toggleGLViewerAct = new QAction(tr("Toggle &3D Display"), this);
       toggleGLViewerAct->setShortcut(QString("3"));
       toggleGLViewerAct->setCheckable(true);
       toggleGLViewerAct->setChecked(true);
       toggleGLViewerAct->setStatusTip(tr("Turn off the OpenGL Display"));
       connect(toggleGLViewerAct, SIGNAL(toggled(bool)), glviewer, SLOT(setVisible(bool)));
-      viewMenu->addAction(toggleGLViewerAct);
+      viewMenu3d->addAction(toggleGLViewerAct);
       this->addAction(toggleGLViewerAct);
 
       QAction *toggleTriangulationAct = new QAction(tr("&Toggle Triangulation"), this);
       toggleTriangulationAct->setShortcut(QString("T"));
       toggleTriangulationAct->setStatusTip(tr("Switch between surface, wireframe and point cloud"));
       connect(toggleTriangulationAct, SIGNAL(triggered(bool)), glviewer, SLOT(toggleTriangulation()));
-      viewMenu->addAction(toggleTriangulationAct);
+      viewMenu3d->addAction(toggleTriangulationAct);
       this->addAction(toggleTriangulationAct);
 
       QAction *toggleFollowAct = new QAction(tr("Follow &Camera"), this);
@@ -891,7 +914,7 @@ void Graphical_UI::createMenus() {
       toggleFollowAct->setChecked(true);
       toggleFollowAct->setStatusTip(tr("Always use viewpoint of last frame (except zoom)"));
       connect(toggleFollowAct, SIGNAL(toggled(bool)), glviewer, SLOT(toggleFollowMode(bool)));
-      viewMenu->addAction(toggleFollowAct);
+      viewMenu3d->addAction(toggleFollowAct);
       this->addAction(toggleFollowAct);
 
       QAction *toggleShowGrid = new QAction(tr("Show Grid"), this);
@@ -899,7 +922,7 @@ void Graphical_UI::createMenus() {
       toggleShowGrid->setChecked(false);
       toggleShowGrid->setStatusTip(tr("Display XY plane grid"));
       connect(toggleShowGrid, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowGrid(bool)));
-      viewMenu->addAction(toggleShowGrid);
+      viewMenu3d->addAction(toggleShowGrid);
       this->addAction(toggleShowGrid);
 
       QAction *toggleShowTFs = new QAction(tr("Show Pose TFs"), this);
@@ -907,7 +930,7 @@ void Graphical_UI::createMenus() {
       toggleShowTFs->setChecked(false);
       toggleShowTFs->setStatusTip(tr("Display pose transformations at axes"));
       connect(toggleShowTFs, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowTFs(bool)));
-      viewMenu->addAction(toggleShowTFs);
+      viewMenu3d->addAction(toggleShowTFs);
       this->addAction(toggleShowTFs);
 
       QAction *toggleShowIDsAct = new QAction(tr("Show Pose IDs"), this);
@@ -916,7 +939,7 @@ void Graphical_UI::createMenus() {
       toggleShowIDsAct->setChecked(false);
       toggleShowIDsAct->setStatusTip(tr("Display pose ids at axes"));
       connect(toggleShowIDsAct, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowIDs(bool)));
-      viewMenu->addAction(toggleShowIDsAct);
+      viewMenu3d->addAction(toggleShowIDsAct);
       this->addAction(toggleShowIDsAct);
 
       QAction *toggleShowPosesAct = new QAction(tr("Show &Poses of Graph"), this);
@@ -925,7 +948,7 @@ void Graphical_UI::createMenus() {
       toggleShowPosesAct->setChecked(ParameterServer::instance()->get<bool>("show_axis"));
       toggleShowPosesAct->setStatusTip(tr("Display poses as axes"));
       connect(toggleShowPosesAct, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowPoses(bool)));
-      viewMenu->addAction(toggleShowPosesAct);
+      viewMenu3d->addAction(toggleShowPosesAct);
       this->addAction(toggleShowPosesAct);
 
       QAction *toggleShowEdgesAct = new QAction(tr("Show &Edges of Graph"), this);
@@ -934,7 +957,7 @@ void Graphical_UI::createMenus() {
       toggleShowEdgesAct->setChecked(ParameterServer::instance()->get<bool>("show_axis"));
       toggleShowEdgesAct->setStatusTip(tr("Display edges of pose graph as lines"));
       connect(toggleShowEdgesAct, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowEdges(bool)));
-      viewMenu->addAction(toggleShowEdgesAct);
+      viewMenu3d->addAction(toggleShowEdgesAct);
       this->addAction(toggleShowEdgesAct);
 
       QAction *toggleStereoAct = new QAction(tr("Stere&o View"), this);
@@ -943,7 +966,7 @@ void Graphical_UI::createMenus() {
       toggleStereoAct->setChecked(false);
       toggleStereoAct->setStatusTip(tr("Split screen view with slightly shifted Camera"));
       connect(toggleStereoAct, SIGNAL(toggled(bool)), glviewer, SLOT(toggleStereo(bool)));
-      viewMenu->addAction(toggleStereoAct);
+      viewMenu3d->addAction(toggleStereoAct);
       this->addAction(toggleStereoAct);
 
       QAction *toggleShowFeatures = new QAction(tr("Show &Feature Locations"), this);
@@ -951,7 +974,7 @@ void Graphical_UI::createMenus() {
       toggleShowFeatures->setChecked(false);
       toggleShowFeatures->setStatusTip(tr("Toggle whether feature locations should be rendered"));
       connect(toggleShowFeatures, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowFeatures(bool)));
-      viewMenu->addAction(toggleShowFeatures);
+      viewMenu3d->addAction(toggleShowFeatures);
       this->addAction(toggleShowFeatures);
 
       QAction *toggleOctoMapDisplay = new QAction(tr("Show &Octomap"), this);
@@ -960,7 +983,7 @@ void Graphical_UI::createMenus() {
       toggleOctoMapDisplay->setChecked(true);
       toggleOctoMapDisplay->setStatusTip(tr("Toggle whether octomap should be displayed"));
       connect(toggleOctoMapDisplay, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowOctoMap(bool)));
-      viewMenu->addAction(toggleOctoMapDisplay);
+      viewMenu3d->addAction(toggleOctoMapDisplay);
       this->addAction(toggleOctoMapDisplay);
 
       QAction *toggleCloudDisplay = new QAction(tr("Show &Clouds"), this);
@@ -969,7 +992,7 @@ void Graphical_UI::createMenus() {
       toggleCloudDisplay->setChecked(true);
       toggleCloudDisplay->setStatusTip(tr("Toggle whether point clouds should be rendered"));
       connect(toggleCloudDisplay, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowClouds(bool)));
-      viewMenu->addAction(toggleCloudDisplay);
+      viewMenu3d->addAction(toggleCloudDisplay);
       this->addAction(toggleCloudDisplay);
 
       QAction *toggleBGColor = new QAction(tr("Toggle Background"), this);
@@ -978,25 +1001,71 @@ void Graphical_UI::createMenus() {
       toggleBGColor->setChecked(true);
       toggleBGColor->setStatusTip(tr("Toggle whether background should be white or black"));
       connect(toggleBGColor, SIGNAL(toggled(bool)), glviewer, SLOT(toggleBackgroundColor(bool)));
-      viewMenu->addAction(toggleBGColor);
+      viewMenu3d->addAction(toggleBGColor);
       this->addAction(toggleBGColor);
 
       QAction *setRotationGridAct = new QAction(tr("Set Rotation &Grid"), this);
       setRotationGridAct->setShortcut(QString("G"));
       setRotationGridAct->setStatusTip(tr("Discretize Rotation in Viewer"));
       connect(setRotationGridAct, SIGNAL(triggered()), this, SLOT(setRotationGrid()));
-      viewMenu->addAction(setRotationGridAct);
+      viewMenu3d->addAction(setRotationGridAct);
       this->addAction(setRotationGridAct);
 
       QAction *setShiftAct = new QAction(tr("Set Stereo Offset"), this);
       setShiftAct->setShortcut(QString("<"));
       setShiftAct->setStatusTip(tr("Set the distance between the virtual cameras for stereo view"));
       connect(setShiftAct, SIGNAL(triggered()), this, SLOT(setStereoShift()));
-      viewMenu->addAction(setShiftAct);
+      viewMenu3d->addAction(setShiftAct);
       this->addAction(setShiftAct);
 
     }
 
+
+
+    //2D View Menu ###############################################################
+    viewMenu2d = menuBar()->addMenu(tr("&2D View"));
+
+    QAction *toggleStreamAct = new QAction(tr("Toggle &2D Stream"), this);
+    toggleStreamAct->setShortcut(QString("2"));
+    toggleStreamAct->setCheckable(true);
+    toggleStreamAct->setChecked(true);
+    toggleStreamAct->setStatusTip(tr("Turn off the Image Stream"));
+    connect(toggleStreamAct, SIGNAL(toggled(bool)), this, SLOT(set2DStream(bool)));
+    viewMenu2d->addAction(toggleStreamAct);
+    this->addAction(toggleStreamAct);
+
+
+    QAction *setLabelVisibility1 = new QAction(tr("Show Visual Image"), this);
+    setLabelVisibility1->setStatusTip(tr("Show/Hide visual (color/monochrome) image."));
+    setLabelVisibility1->setCheckable(true);
+    setLabelVisibility1->setChecked(true);
+    connect(setLabelVisibility1, SIGNAL(toggled(bool)), visual_image_label, SLOT(setVisible(bool)));
+    viewMenu2d->addAction(setLabelVisibility1);
+    this->addAction(setLabelVisibility1);
+
+    QAction *setLabelVisibility2 = new QAction(tr("Show Depth Image"), this);
+    setLabelVisibility2->setStatusTip(tr("Show/Hide depth image."));
+    setLabelVisibility2->setCheckable(true);
+    setLabelVisibility2->setChecked(true);
+    connect(setLabelVisibility2, SIGNAL(toggled(bool)), depth_image_label, SLOT(setVisible(bool)));
+    viewMenu2d->addAction(setLabelVisibility2);
+    this->addAction(setLabelVisibility2);
+
+    QAction *setLabelVisibility3 = new QAction(tr("Show Keypoint Image"), this);
+    setLabelVisibility3->setStatusTip(tr("Show/Hide image with keypoints."));
+    setLabelVisibility3->setCheckable(true);
+    setLabelVisibility3->setChecked(false);
+    connect(setLabelVisibility3, SIGNAL(toggled(bool)), feature_image_label, SLOT(setVisible(bool)));
+    viewMenu2d->addAction(setLabelVisibility3);
+    this->addAction(setLabelVisibility3);
+
+    QAction *setLabelVisibility4 = new QAction(tr("Show Visual Flow Image"), this);
+    setLabelVisibility4->setStatusTip(tr("Show/Hide image with sparse feature flow (arrows)."));
+    setLabelVisibility4->setCheckable(true);
+    setLabelVisibility4->setChecked(true);
+    connect(setLabelVisibility4, SIGNAL(toggled(bool)), feature_flow_image_label, SLOT(setVisible(bool)));
+    viewMenu2d->addAction(setLabelVisibility4);
+    this->addAction(setLabelVisibility4);
 
     //Settings Menu
     settingsMenu = menuBar()->addMenu(tr("&Settings"));
@@ -1153,3 +1222,23 @@ void Graphical_UI::setBusy(int id, const char* message, int val){
     statusBar()->showMessage("Error: Set Value for non-existing progressbar");
 }
 
+void Graphical_UI::saveAllImages() {
+	QString tmp="~";
+    QString file_basename = QFileDialog::getSaveFileName(this, "Save all images to file", tmp, tr("PNG (*.png)"));
+    file_basename.remove(".png", Qt::CaseInsensitive);
+
+    QString depth_file =file_basename+"-depth.png";
+    QString feature_file =file_basename+"-feature.png";
+    QString flow_file =file_basename+"-flow.png";
+    QString visual_file =file_basename+"-visual.png";
+    QString vector_file =file_basename+"-points.ps";
+    std::cout << visual_file.toStdString() << std::endl;
+    depth_image.save(depth_file);
+    feature_image.save(feature_file);
+    feature_flow_image.save(flow_file);
+    visual_image.save(visual_file);
+
+    //glviewer->drawToPS(vector_file);
+    QString message = tr("Saving all images.");
+    statusBar()->showMessage(message);
+}

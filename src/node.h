@@ -156,6 +156,9 @@ public:
 	int vertex_id_;   //<id of the corresponding vertex in the g2o graph
   bool valid_tf_estimate_;      //<Flags whether the data of this node should be considered for postprocessing steps, e.g., visualization, trajectory, map creation
   bool matchable_;        //< Flags whether the data for matching is (still) available
+  ros::Time timestamp_; 		//< Time of the data belonging to the node
+  bool has_odometry_edge_;
+  bool odometry_set_;
   pointcloud_type::Ptr pc_col;
 #ifdef USE_PCL_ICP
   pointcloud_type::Ptr filtered_pc_col; //<Used for icp. May not contain NaN

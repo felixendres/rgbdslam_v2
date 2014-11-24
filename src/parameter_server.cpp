@@ -34,6 +34,7 @@ void ParameterServer::defaultConfig() {
   addOption("depth_scaling_factor",          static_cast<double> (1.0),                 "Some kinects have a wrongly scaled depth");
   addOption("data_skip_step",                static_cast<int> (1),                      "Skip every n-th frame completely  ");
   addOption("cloud_creation_skip_step",      static_cast<int> (1),                      "Downsampling factor (rows and colums, so size reduction is quadratic) for the point cloud. Only active if cloud is computed (i.e. \"topic_points\" is empty. This value multiplies to emm__skip_step and visualization_skip_step.");
+  addOption("create_cloud_every_nth_node",   static_cast<int> (1),                      "Create a point cloud only for every nth frame");
   addOption("maximum_depth",                 static_cast<double> (dInf),                "Clip far points when reconstructing the cloud. In meter.");
   addOption("minimum_depth",                 static_cast<double> (0.1),                 "Clip near points when reconstructing the cloud. In meter.");
   addOption("encoding_bgr",                  static_cast<bool> (true),                   "Whether the color image encoding is bgr (fuerte openni_launch) as opposed to rgb (electric openni_camera)");
@@ -70,6 +71,7 @@ void ParameterServer::defaultConfig() {
   // TF information settings 
   addOption("fixed_frame_name",              std::string("/map"),                       "The computed camera transforms are with respect to this frame. It is set to the identity for the first frame processed or, if ground truth is available, to the ground truth of the first frame");
   addOption("odom_frame_name",               std::string(""),                           "A fixed frame estimation from somewhere else (e.g. odometry, laser-based mapping). Doesn't need to correspond to the pose of the fixed_frame_name");
+  addOption("odom_target_frame_name",        std::string(""),                           "If given, try to get the odometry transformation from odom_frame_name to this frame instead of the frame of the points. Meant to compute the offset between robot base and sensor online.");
   addOption("ground_truth_frame_name",       std::string(""),                           "Use empty string if no ground truth tf frame available");
   addOption("base_frame_name",               std::string("/openni_rgb_optical_frame"),               "If the camera is articulated use robot base");
   addOption("fixed_camera",                  static_cast<bool> (true),                  "Is camera fixed relative to base?");
@@ -91,7 +93,7 @@ void ParameterServer::defaultConfig() {
 
   // Frontend settings 
   addOption("max_translation_meter",         static_cast<double> (1e10),                "Sanity check for smooth motion.");
-  addOption("max_rotation_degree",           static_cast<int> (360),                    "Sanity check for smooth motion.");
+  addOption("max_rotation_degree",           static_cast<double> (360),                    "Sanity check for smooth motion.");
   addOption("min_translation_meter",         static_cast<double> (0.0),                 "Frames with motion less than this, will be omitted ");
   addOption("min_rotation_degree",           static_cast<double> (0.0),                 "Frames with motion less than this, will be omitted ");
   addOption("max_dist_for_inliers",          static_cast<double> (3),                   "Mahalanobis distance for matches to be considered inliers by ransac");
@@ -119,9 +121,18 @@ void ParameterServer::defaultConfig() {
   addOption("concurrent_optimization",       static_cast<bool> (true),                  "Do graph optimization in a seperate thread");
   addOption("backend_solver",                std::string("cholmod"),                    "Which solver to use in g2o for matrix inversion: 'csparse' , 'cholmod' or 'pcg'");
 
+  // Robot odometry options
+  addOption("use_robot_odom",                static_cast<bool> (false),                 "In addition to frame-to-frame transformation use odometry information in the graph");
+  addOption("use_robot_odom_only",           static_cast<bool> (false),                 "In addition to frame-to-frame transformation use odometry information in the graph");
+  addOption("constrain_2d",                  static_cast<bool> (false),                 "Constrain camera motion to 2d plus heading");
+  addOption("use_odom_for_prediction",       static_cast<bool> (false),                 "Use odometry information to predict feature locations. Do not use Kd-Tree anymore.");
+  addOption("odometry_tpc",                  std::string("/odom"),                      "Robot odometry topic. Not required if odometry comes via /tf. Only the pose of the odometry is used.");
+  addOption("odometry_information_factor",   static_cast<double> (1e4),                 "Diagonal coefficients of the information matrix of the odometry edges. Default: Std Dev of 0.01m and 0.01rad");
+
   // Visualization Settings 
   addOption("use_glwidget",                  static_cast<bool> (true),                  "3D view");
   addOption("use_gui",                       static_cast<bool> (true),                  "GUI vs Headless Mode");
+  addOption("show_2d_display",               static_cast<bool> (true),                  "show or hide 2D view initially");
   addOption("glwidget_without_clouds",       static_cast<bool> (false),                 "3D view should only display the graph");
   addOption("visualize_mono_depth_overlay",  static_cast<bool> (false),                 "Show Depth and Monochrome image as overlay in featureflow");
   addOption("visualization_skip_step",       static_cast<int> (1),                      "Draw only every nth pointcloud row and line, high values require higher squared_meshing_threshold ");
@@ -225,5 +236,13 @@ void ParameterServer::checkValues() {
             && get<bool>("concurrent_edge_construction") == true) {
         config["concurrent_edge_construction"] = static_cast<bool>(false);
         ROS_WARN("Cannot use concurrent edge construction with SiftGPU matcher! 'concurrent_edge_construction' was set to false. Everything should work fine, but the CPU-threading won't happen (because you are using the GPU instead).");
+    }
+    if (get<double>("max_translation_meter") <= 0){
+      double dInf = std::numeric_limits<double>::infinity();
+      set("max_translation_meter", dInf);
+    }
+    if (get<double>("max_rotation_degree") <= 0){
+      double dInf = std::numeric_limits<double>::infinity();
+      set("max_rotation_degree", dInf);
     }
 }

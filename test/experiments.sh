@@ -21,15 +21,16 @@ export ROS_MASTER_URI=http://localhost:11386
 #ROSCOREPID=$!
 #echo Waiting for roscore
 #sleep 3
-for FEAT_TYPE in SURF SIFT; do 
-  for MAXFEATURES in 200 400 800; do
-    for CANDIDATES in 2 4 8; do
-      for OBS_EVAL in  0.00; do
-        for RANSAC_ITER in 250; do
-          for DISTANCEMSR in GridAdjuster Adjuster Regular; do 
+for MAXFEATURES in 1000; do
+  for FEAT_TYPE in ORB; do 
+    for CANDIDATES in 8; do
+      for OBS_EVAL in  0.75; do
+      for NN in  0.95 ; do
+        for RANSAC_ITER in 500; do
+          for DISTANCEMSR in GridAdjuster; do 
             if [[ $DISTANCEMSR == GridAdjuster ]]; then
-              GRID_RESOLUTION=2
-              ADJUSTER_ITERATION=20
+              GRID_RESOLUTION=3
+              ADJUSTER_ITERATION=10
               echo Using GridAdjuster $FEAT_TYPE Detector
             elif [[ $DISTANCEMSR == Adjuster ]]; then
               GRID_RESOLUTION=0
@@ -45,10 +46,9 @@ for FEAT_TYPE in SURF SIFT; do
             for OPT_SKIP in 10; do #online/offline
 
               echo "Will evaluate RGBD-SLAM on the following bagfiles:"
-              SELECTION=`ls rgbd*.bag`
+              SELECTION=`ls rgbd_dataset_freiburg2_large_no_loo*bag rgbd_dataset_freiburg2_desk*bag` # rgbd_dataset_freiburg1_floor.bag rgbd_dataset_freiburg1_teddy.bag rgbd_dataset_freiburg1_room.bag`
               echo $SELECTION
-
-              PARAM_DIRECTORY="$BASE_DIRECTORY/$TESTNAME/emm__$OBS_EVAL/CANDIDATES_$CANDIDATES/RANSAC_$RANSAC_ITER/HellingerDistance_$DISTANCEMSR/NN_0.5/OPT_SKIP_$OPT_SKIP/${FEAT_TYPE}/${MAXFEATURES}_Features/"
+              PARAM_DIRECTORY="$BASE_DIRECTORY/$TESTNAME/emm__$OBS_EVAL/CANDIDATES_$CANDIDATES/RANSAC_$RANSAC_ITER/HellingerDistance_$DISTANCEMSR/NN_$NN/OPT_SKIP_$OPT_SKIP/${FEAT_TYPE}/${MAXFEATURES}_Features/"
               for bagfile in $SELECTION; do
                 BASE_NAME=`basename $bagfile .bag` 
                 DIRECTORY="$PARAM_DIRECTORY/$BASE_NAME"
@@ -65,8 +65,9 @@ for FEAT_TYPE in SURF SIFT; do
                 fi
                 #Remove old summary results if a new individual one is computed (will be recomputed further below)
                 rm $PARAM_DIRECTORY/ate_evaluation_*.csv 2> /dev/null
+                cat `readlink -f $bagfile` > /dev/null
                 echo `date +%H:%M:%S` Results for $BASE_NAME are stored in `readlink -f $DIRECTORY`
-                roslaunch rgbdslam `basename $LAUNCHFILE`  bagfile_name:=`readlink -f $bagfile` match_candidates:=$CANDIDATES sampled_candidates:=$CANDIDATES feature_type:=$FEAT_TYPE max_keypoints:=$MAXFEATURES ransac_iterations:=$RANSAC_ITER optimizer_skip_step:=$OPT_SKIP observability_threshold:=$OBS_EVAL adjuster_max_iterations:=$ADJUSTER_ITERATION detector_grid_resolution:=$GRID_RESOLUTION >  $DIRECTORY/logfile 2>&1
+                roslaunch rgbdslam `basename $LAUNCHFILE`  bagfile_name:=`readlink -f $bagfile` match_candidates:=$CANDIDATES sampled_candidates:=$CANDIDATES feature_type:=$FEAT_TYPE max_keypoints:=$MAXFEATURES ransac_iterations:=$RANSAC_ITER optimizer_skip_step:=$OPT_SKIP nn_ratio:=$NN observability_threshold:=$OBS_EVAL adjuster_max_iterations:=$ADJUSTER_ITERATION detector_grid_resolution:=$GRID_RESOLUTION >  $DIRECTORY/logfile 2>&1
                 #rosparam get /rgbdslam/config >>  $DIRECTORY/logfile 2>&1
                 echo `date +%H:%M:%S` Finished processing $BASE_NAME
 
@@ -85,6 +86,7 @@ for FEAT_TYPE in SURF SIFT; do
               grep "absolute translational error.rmse" $PARAM_DIRECTORY >> $BASE_DIRECTORY/$TESTNAME/all_results.csv
             done
           done
+        done
         done
       done
     done

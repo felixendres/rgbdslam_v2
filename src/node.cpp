@@ -103,7 +103,11 @@ Node::Node(const cv::Mat& visual,
            myHeader depth_header,
            cv::Ptr<cv::FeatureDetector> detector,
            cv::Ptr<cv::DescriptorExtractor> extractor) :
-  id_(-1), seq_id_(-1), vertex_id_(-1), valid_tf_estimate_(true), matchable_(true),
+  id_(-1), seq_id_(-1), vertex_id_(-1), valid_tf_estimate_(true),
+  timestamp_(depth_header.stamp),
+  has_odometry_edge_(false),
+  odometry_set_(false),
+  matchable_(true),
   pc_col(new pointcloud_type()),
   flannIndex(NULL),
   header_(depth_header),
@@ -247,6 +251,9 @@ Node::Node(const cv::Mat visual,
            pointcloud_type::Ptr point_cloud,
            const cv::Mat detection_mask) : 
   id_(-1), seq_id_(-1), vertex_id_(-1), valid_tf_estimate_(true), matchable_(true),
+  timestamp_(point_cloud->header.stamp),
+  has_odometry_edge_(false),
+  odometry_set_(false),
   pc_col(point_cloud),
   flannIndex(NULL),
   header_(point_cloud->header),
@@ -362,6 +369,7 @@ Node::~Node() {
 
 void Node::setOdomTransform(tf::StampedTransform gt){
     odom_transform_ = gt;
+    odometry_set_=true;
 }
 void Node::setGroundTruthTransform(tf::StampedTransform gt){
     ground_truth_transform_ = gt;
@@ -857,6 +865,7 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
   ScopedTimer s(__FUNCTION__);
 
   size_t max_keyp = ParameterServer::instance()->get<int>("max_keypoints");
+  double maximum_depth = ParameterServer::instance()->get<double>("maximum_depth");
   cv::Point2f p2d;
 
   if(feature_locations_3d.size()){
@@ -877,7 +886,7 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
     point_type p3d = point_cloud->at((int) p2d.x,(int) p2d.y);
 
     // Check for invalid measurements
-    if ( isnan(p3d.x) || isnan(p3d.y) || isnan(p3d.z))
+    if ( (p3d.z > maximum_depth) || isnan(p3d.x) || isnan(p3d.y) || isnan(p3d.z))
     {
       ROS_DEBUG_NAMED(__FILE__, "Feature %d has been extracted at NaN depth. Omitting", i);
       feature_locations_2d.erase(feature_locations_2d.begin()+i);
@@ -1448,6 +1457,7 @@ void Node::clearFeatureInformation(){
 }
 void Node::addPointCloud(pointcloud_type::Ptr new_pc){
   pc_col = new_pc;
+  header_=pc_col->header;
 }
 void Node::reducePointCloud(double vfs){
   if(vfs > 0.0){

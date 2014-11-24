@@ -140,5 +140,6 @@ void GraphManager::setEmpiricalCovariances(){
   optimizer_->computeActiveErrors();
 
   setEmpiricalCovariancesForEdgeSet(cam_cam_edges_);
+  //setEmpiricalCovariancesForEdgeSet(odometry_edges_);
 }
 

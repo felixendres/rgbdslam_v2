@@ -92,12 +92,15 @@ Q_SIGNALS:
 public Q_SLOTS:
     void setVisualImage(QImage);
     void setFeatureFlowImage(QImage);
+    void setFeatureImage(QImage);
     void setDepthImage(QImage);
     void sendFinished(); ///< Call to display, that sending finished
     void showOptions();
     void showBusy(int id, const char* message, int max);
     void setBusy(int id, const char* message, int val);
     void set2DStream(bool is_on);
+    //save depth color feature and correspondences image
+    void saveAllImages();
 
 private Q_SLOTS:
     void saveVectorGraphic();
@@ -157,6 +160,7 @@ private:
     QLabel *visual_image_label;
     QLabel *feature_flow_image_label;
     QLabel *depth_image_label;
+    QLabel *feature_image_label;
     QLabel *stats_image_label;
     //QLabel *transform_label;
     QGridLayout* gridlayout;
@@ -164,6 +168,10 @@ private:
     GLViewer* glviewer;
     bool pause_on;
     QMap<int, QProgressBar*> progressbars;
+    QImage depth_image;
+    QImage visual_image;
+    QImage feature_image;
+    QImage feature_flow_image;
 };
 
 #endif

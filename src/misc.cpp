@@ -458,8 +458,8 @@ pointcloud_type* createXYZRGBPointCloud (const cv::Mat& depth_img,
   cloud->is_dense         = false; //single point of view, 2d rasterized NaN where no depth value was found
 
   ParameterServer* ps = ParameterServer::instance();
-  float fx = 1./ (ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : cam_info->K[0]); //(cloud->width >> 1) - 0.5f;
-  float fy = 1./ (ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : cam_info->K[4]); //(cloud->width >> 1) - 0.5f;
+  float fxinv = 1./ (ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : cam_info->K[0]); //(cloud->width >> 1) - 0.5f;
+  float fyinv = 1./ (ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : cam_info->K[4]); //(cloud->width >> 1) - 0.5f;
   float cx = ps->get<double>("depth_camera_cx") > 0 ? ps->get<double>("depth_camera_cx") : cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
   float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") : cam_info->K[5]; //(cloud->width >> 1) - 0.5f;
   int data_skip_step = ParameterServer::instance()->get<int>("cloud_creation_skip_step");
@@ -516,15 +516,13 @@ pointcloud_type* createXYZRGBPointCloud (const cv::Mat& depth_img,
       // Check for invalid measurements
       if (!(Z >= min_depth)) //Should also be trigger on NaN//std::isnan (Z))
       {
-        pt.x = (u - cx) * 1.0 * fx; //FIXME: better solution as to act as at 1meter?
-        pt.y = (v - cy) * 1.0 * fy;
+        pt.x = (u - cx) * 1.0 * fxinv; //FIXME: better solution as to act as at 1meter?
+        pt.y = (v - cy) * 1.0 * fyinv;
         pt.z = std::numeric_limits<float>::quiet_NaN();
       }
       else // Fill in XYZ
       {
-        pt.x = (u - cx) * Z * fx;
-        pt.y = (v - cy) * Z * fy;
-        pt.z = Z;
+        backProject(fxinv, fyinv, cx, cy, u, v, Z, pt.x, pt.y, pt.z);
       }
       // Fill in color
       RGBValue color;
@@ -569,8 +567,8 @@ pointcloud_type* createXYZRGBPointCloud (const sensor_msgs::ImageConstPtr& depth
   cloud->height = depth_msg->height / data_skip_step;
   cloud->width = depth_msg->width / data_skip_step;
   //Reciprocal to use multiplication in loop, not slower division
-  fx = 1.0f / fx;//1.0f / cam_info->K[0]; 
-  fy = 1.0f / fy;//1.0f / cam_info->K[4]; 
+  float fxinv = 1.0f / fx;//1.0f / cam_info->K[0]; 
+  float fyinv = 1.0f / fy;//1.0f / cam_info->K[4]; 
   int pixel_data_size = 3;
   char red_idx = 0, green_idx = 1, blue_idx = 2;
   if(rgb_msg->encoding.compare("mono8") == 0) pixel_data_size = 1;
@@ -606,15 +604,11 @@ pointcloud_type* createXYZRGBPointCloud (const sensor_msgs::ImageConstPtr& depth
       // Check for invalid measurements
       if (!(Z <= max_depth)) //Should also be trigger on NaN//std::isnan (Z))
       {
-        pt.x = (u - cx) * 1.0 * fx; //FIXME: better solution as to act as at 1meter?
-        pt.y = (v - cy) * 1.0 * fy;
         pt.z = std::numeric_limits<float>::quiet_NaN();
       }
       else // Fill in XYZ
       {
-        pt.x = (u - cx) * Z * fx;
-        pt.y = (v - cy) * Z * fy;
-        pt.z = Z;
+        backProject(fxinv, fyinv, cx, cy, u, v, Z, pt.x, pt.y, pt.z);
       }
       // Fill in color
       RGBValue color;
@@ -714,25 +708,13 @@ double errorFunction2(const Eigen::Vector4f& x1,
   bool nan1 = isnan(x1(2));
   bool nan2 = isnan(x2(2));
   if(nan1||nan2){
-    //FIXME: Handle Features with NaN, by reporting the reprojection error
+    //TODO: Handle Features with NaN, by reporting the reprojection error
     return std::numeric_limits<double>::max();
   }
   Eigen::Vector4d x_1 = x1.cast<double>();
   Eigen::Vector4d x_2 = x2.cast<double>();
 
   Eigen::Matrix4d tf_12 = transformation;
-  /* NaNs filtered before
-  if(nan1) x_1(2) = 1.0; //FIXME: Bad Hack 
-  if(nan2) x_2(2) = 1.0; //FIXME: Bad Hack 
-  if(nan1 && !nan2){ //If x_1 is nan, but not x_2, switch them, so the "good one" is transformed to the frame of the other
-    x_1 = x2.cast<double>();
-    x_2 = x1.cast<double>();
-    x_2(2) = 1.0; //FIXME: Bad Hack 
-    tf_12 = transformation.inverse().eval();
-    nan1 = false;
-    nan2 = true;
-  }*/
-
   Eigen::Vector3d mu_1 = x_1.head<3>();
   Eigen::Vector3d mu_2 = x_2.head<3>();
   Eigen::Vector3d mu_1_in_frame_2 = (tf_12 * x_1).head<3>(); // μ₁⁽²⁾  = T₁₂ μ₁⁽¹⁾  
@@ -752,31 +734,29 @@ double errorFunction2(const Eigen::Vector4f& x1,
 
   //Point 1
   Eigen::Matrix3d cov1 = Eigen::Matrix3d::Zero();
-  cov1(0,0) = 1 * raster_cov_x * mu_1(2); //how big is 1px std dev in meter, depends on depth
-  cov1(1,1) = 1 * raster_cov_y * mu_1(2); //how big is 1px std dev in meter, depends on depth
-  if(nan1) cov1(2,2) = 1e9; //stddev for unknown: should be within 100m
-  else     cov1(2,2) = depth_covariance(mu_1(2));
+  cov1(0,0) = raster_cov_x * mu_1(2); //how big is 1px std dev in meter, depends on depth
+  cov1(1,1) = raster_cov_y * mu_1(2); //how big is 1px std dev in meter, depends on depth
+  cov1(2,2) = depth_covariance(mu_1(2));
 
   //Point2
   Eigen::Matrix3d cov2 = Eigen::Matrix3d::Zero();
-  cov2(0,0) = 1 * raster_cov_x* mu_2(2); //how big is 1px std dev in meter, depends on depth
-  cov2(1,1) = 1 * raster_cov_y* mu_2(2); //how big is 1px std dev in meter, depends on depth
-  if(nan2) cov2(2,2) = 1e9; //stddev for unknown: should be within 100m
-  else     cov2(2,2) = depth_covariance(mu_2(2));
+  cov2(0,0) = raster_cov_x* mu_2(2); //how big is 1px std dev in meter, depends on depth
+  cov2(1,1) = raster_cov_y* mu_2(2); //how big is 1px std dev in meter, depends on depth
+  cov2(2,2) = depth_covariance(mu_2(2));
 
   Eigen::Matrix3d cov1_in_frame_2 = rotation_mat.transpose() * cov1 * rotation_mat;//Works since the cov is diagonal => Eig-Vec-Matrix is Identity
 
   // Δμ⁽²⁾ =  μ₁⁽²⁾ - μ₂⁽²⁾
   Eigen::Vector3d delta_mu_in_frame_2 = mu_1_in_frame_2 - mu_2;
   if(isnan(delta_mu_in_frame_2(2))){
-    ROS_WARN("Unexpected NaN");
-    delta_mu_in_frame_2(2) = 0.0;//FIXME: Hack: set depth error to 0 if NaN 
+    ROS_ERROR("Unexpected NaN");
+    return std::numeric_limits<double>::max();
   }
   // Σc = (Σ₁ + Σ₂)
   Eigen::Matrix3d cov_mat_sum_in_frame_2 = cov1_in_frame_2 + cov2;     
   //ΔμT Σc⁻¹Δμ  
   //double sqrd_mahalanobis_distance = delta_mu_in_frame_2.transpose() * cov_mat_sum_in_frame_2.inverse() * delta_mu_in_frame_2;
-  double sqrd_mahalanobis_distance = delta_mu_in_frame_2.transpose() *cov_mat_sum_in_frame_2.ldlt().solve(delta_mu_in_frame_2);
+  double sqrd_mahalanobis_distance = delta_mu_in_frame_2.transpose() *cov_mat_sum_in_frame_2.llt().solve(delta_mu_in_frame_2);
   
   if(!(sqrd_mahalanobis_distance >= 0.0))
   {

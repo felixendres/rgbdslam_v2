@@ -1157,7 +1157,7 @@ unsigned int GraphManager::pruneEdgesWithErrorAbove(float thresh){
             { 
               //If not disconnecting a vertex, remove it completely
               if(v1->edges().size() > 1 && v2->edges().size() > 1){
-                ROS_WARN("Removing edge from node %d to %d, because error is %f", n_id1, n_id2, ev.squaredNorm());
+                ROS_INFO("Removing edge from node %d to %d, because error is %f", n_id1, n_id2, ev.squaredNorm());
                 edges_to_remove.insert(myedge);
               }
               else {

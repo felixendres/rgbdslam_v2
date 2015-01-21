@@ -11,11 +11,6 @@
     <param name="config/topic_image_mono"              value="/camera/rgb/image_rect_color"/> <!--could also be color -->
     <param name="config/topic_image_depth"             value="/camera/depth_registered/sw_registered/image_rect_raw"/>
 
-    <param name="config/feature_detector_type"         value="SIFTGPU"/><!-- If SIFTGPU is enabled in CMakeLists.txt, use SURF here -->
-    <param name="config/feature_extractor_type"        value="SIFTGPU"/><!-- If SIFTGPU is enabled in CMakeLists.txt, use SURF here -->
-    <param name="config/nn_distance_ratio"             value="0.75"/> <!-- Feature correspondence is valid if distance to nearest neighbour is smaller than this parameter times the distance to the 2nd neighbour -->
-    <param name="config/max_keypoints"                 value="300"/><!-- Extract no more than this many keypoints (not honored by SIFTGPU)-->
-    <param name="config/visualization_skip_step"       value="1"/> <!-- draw only every nth pointcloud row and line, high values require higher squared_meshing_threshold -->
     <param name="config/depth_camera_fx"               value="295.0"/>
     <param name="config/depth_camera_fy"               value="295.0"/>
     <param name="config/depth_camera_cx"               value="160.0"/>

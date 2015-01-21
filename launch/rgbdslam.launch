@@ -9,13 +9,22 @@
     <param name="config/topic_image_depth"             value="/camera/depth_registered/sw_registered/image_rect_raw"/>
     <param name="config/topic_points"                  value=""/> <!--if empty, poincloud will be reconstructed from image and depth -->
 
-    <param name="config/feature_detector_type"         value="SIFTGPU"/><!-- also available: SIFT, SURF, GFTT (good features to track), ORB. -->
-    <param name="config/feature_extractor_type"        value="SIFTGPU"/><!-- also available: SIFT, SURF, SURF128 (extended SURF), ORB. -->
-    <param name="config/nn_distance_ratio"             value="0.5"/> <!-- Feature correspondence is valid if distance to nearest neighbour is smaller than this parameter times the distance to the 2nd neighbour -->
-    <param name="config/max_keypoints"                 value="600"/><!-- Extract no more than this many keypoints (not honored by SIFTGPU)-->
-    <param name="config/ransac_iterations"             value="200"/>
-    <param name="config/cloud_creation_skip_step"      value="1"/><!-- subsample the images' pixels (in both, width and height), when creating the cloud -->
-    <param name="config/data_skip_step"                value="1"/><!-- subsample the image frames (in time) -->
+    <!-- These are the default values of some important parameters -->
+    <param name="config/feature_extractor_type"        value="ORB"/><!-- also available: SIFT, SIFTGPU, SURF, SURF128 (extended SURF), ORB. -->
+    <param name="config/feature_detector_type"         value="ORB"/><!-- also available: SIFT, SURF, GFTT (good features to track), ORB. -->
+    <param name="config/detector_grid_resolution"      value="3"/><!-- detect on a 3x3 grid (to spread ORB keypoints and parallelize SIFT and SURF) -->
+    <param name="config/max_keypoints"                 value="600"/><!-- Extract no more than this many keypoints -->
 
+    <param name="config/min_sampled_candidates"        value="4"/><!-- Frame-to-frame comparisons to random frames (big loop closures) -->
+    <param name="config/predecessor_candidates"        value="4"/><!-- Frame-to-frame comparisons to sequential frames-->
+    <param name="config/neighbor_candidates"           value="4"/><!-- Frame-to-frame comparisons to graph neighbor frames-->
+    <param name="config/ransac_iterations"             value="100"/>
+    <param name="config/cloud_creation_skip_step"      value="2"/><!-- subsample the images' pixels (in both, width and height), when creating the cloud (and therefore reduce memory consumption) -->
+
+    
+    <param name="config/cloud_display_type"            value="POINTS"/><!-- Show pointclouds as points (as opposed to TRIANGLE_STRIP) -->
+    <param name="config/pose_relative_to"              value="largest_loop"/><!-- optimize only a subset of the graph: "largest_loop" = Everything from the earliest matched frame to the current one. Use "first" to optimize the full graph, "inaffected" to optimize only the frames that were matched (not those inbetween for loops) -->
+    <param name="config/backend_solver"                value="pcg"/><!-- pcg is faster and good for continuous online optimization, cholmod and csparse are better for offline optimization (without good initial guess)-->
+    <param name="config/optimizer_skip_step"           value="1"/><!-- optimize only every n-th frame -->
   </node>
 </launch>

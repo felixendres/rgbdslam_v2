@@ -33,16 +33,16 @@ void ParameterServer::defaultConfig() {
   addOption("drop_async_frames",             static_cast<bool> (false),                 "Check timestamps of depth and visual image, reject if not in sync ");
   addOption("depth_scaling_factor",          static_cast<double> (1.0),                 "Some kinects have a wrongly scaled depth");
   addOption("data_skip_step",                static_cast<int> (1),                      "Skip every n-th frame completely  ");
-  addOption("cloud_creation_skip_step",      static_cast<int> (1),                      "Downsampling factor (rows and colums, so size reduction is quadratic) for the point cloud. Only active if cloud is computed (i.e. \"topic_points\" is empty. This value multiplies to emm__skip_step and visualization_skip_step.");
+  addOption("cloud_creation_skip_step",      static_cast<int> (2),                      "Downsampling factor (rows and colums, so size reduction is quadratic) for the point cloud. Only active if cloud is computed (i.e. \"topic_points\" is empty. This value multiplies to emm__skip_step and visualization_skip_step.");
   addOption("create_cloud_every_nth_node",   static_cast<int> (1),                      "Create a point cloud only for every nth frame");
   addOption("maximum_depth",                 static_cast<double> (dInf),                "Clip far points when reconstructing the cloud. In meter.");
   addOption("minimum_depth",                 static_cast<double> (0.1),                 "Clip near points when reconstructing the cloud. In meter.");
   addOption("encoding_bgr",                  static_cast<bool> (true),                   "Whether the color image encoding is bgr (fuerte openni_launch) as opposed to rgb (electric openni_camera)");
   //Camera settings (Internal calibration is not consistent though. It's best, the input is calibrated.)
-  addOption("depth_camera_fx",               static_cast<double> (0.0),                 "Focal length w.r.t. horizontal pixel size. Use negative value to get from CameraInfo");
-  addOption("depth_camera_fy",               static_cast<double> (0.0),                 "Focal length w.r.t. vertical pixel size. Use negative value to get from CameraInfo");
-  addOption("depth_camera_cx",               static_cast<double> (0.0),                 "Horizontal image center. Use negative value to get from CameraInfo");
-  addOption("depth_camera_cy",               static_cast<double> (0.0),                 "Vertical image center. Use negative value to get from CameraInfo");
+  addOption("depth_camera_fx",               static_cast<double> (0.0),                 "Focal length w.r.t. horizontal pixel size. Use zero to use values from CameraInfo");
+  addOption("depth_camera_fy",               static_cast<double> (0.0),                 "Focal length w.r.t. vertical pixel size. Use zero to use values from CameraInfo");
+  addOption("depth_camera_cx",               static_cast<double> (0.0),                 "Horizontal image center. Use zero to use values from CameraInfo");
+  addOption("depth_camera_cy",               static_cast<double> (0.0),                 "Vertical image center. Use zero to use values from CameraInfo");
   addOption("sigma_depth",                   static_cast<double> (0.01),                "Factor c for the standard deviation of depth measurements: sigma_Z = c * depth * depth. Khoshelham 2012 (0.001425) seems to be a bit overconfident.");
 
   // Output data settings
@@ -77,14 +77,14 @@ void ParameterServer::defaultConfig() {
   addOption("fixed_camera",                  static_cast<bool> (true),                  "Is camera fixed relative to base?");
 
   // Visual Features, to activate GPU-based features see CMakeLists.txt 
-  addOption("feature_detector_type",         std::string("SURF"),                       "SIFTGPU, SURF, SIFT or ORB, or variants like GridDynamicORB or DynamicSURF (however, not GridXXX only, and not in combination with SIFTGPU)");
-  addOption("feature_extractor_type",        std::string("SURF"),                       "SIFTGPU, SURF, SIFT or ORB");
-  addOption("matcher_type",                  std::string("FLANN"),                      "SIFTGPU (matching on the gpu) or FLANN or BRUTEFORCE");
+  addOption("feature_detector_type",         std::string("ORB"),                        "SIFTGPU, SURF, SIFT or ORB, or variants like GridDynamicORB or DynamicSURF (however, not GridXXX only, and not in combination with SIFTGPU)");
+  addOption("feature_extractor_type",        std::string("ORB"),                        "SIFTGPU, SURF, SIFT or ORB");
+  addOption("matcher_type",                  std::string("FLANN"),                      "SIFTGPU (matching on the gpu) or FLANN or BRUTEFORCE. FLANN is fast for SURF. For ORB FLANN is slower than Bruteforce for few keypoints (less than ~3000).");
   addOption("max_keypoints",                 static_cast<int> (600),                    "Extract no more than this many keypoints ");
   addOption("min_keypoints",                 static_cast<int> (000),                    "Deprecated: Extract no less than this many keypoints ");
   addOption("min_matches",                   static_cast<int> (20),                     "Don't try RANSAC if less than this many matches (if using SiftGPU and GLSL you should use max. 60 matches)");
-  addOption("max_matches",                   static_cast<int> (1e9),                    "Reduce the feature matches to the best n, speeding up ransac (but not feature matching itself)");
-  addOption("detector_grid_resolution",      static_cast<int> (3),                      "If >1, split image into x by x subimages (overlapping b/c of keypoint size) and detect keypoints in parallel");
+  addOption("max_matches",                   static_cast<int> (300),                    "Reduce the feature matches to the best n, speeding up ransac (but not feature matching itself)");
+  addOption("detector_grid_resolution",      static_cast<int> (3),                      "If >1, split image into x by x subimages (overlapping b/c of keypoint size) and detect keypoints in parallel. Good to spread ORB keypoints over the image and speed up the slow SURF detection.");
   addOption("sufficient_matches",            static_cast<int> (1e9),                    "Extract no less than this many only honored by the adjustable SURF and FAST features");
   addOption("adjuster_max_iterations",       static_cast<int> (5),                      "If outside of bounds for max_kp and min_kp, retry this many times with adapted threshold");
   addOption("use_feature_min_depth",         static_cast<bool>(false),                  "Consider the nearest point in the neighborhood of the feature as its depth, as it will dominate the motion");
@@ -102,9 +102,9 @@ void ParameterServer::defaultConfig() {
   addOption("g2o_transformation_refinement", static_cast<int> (0),                      "Use g2o to refine the ransac result for that many iterations, i.e. optimize the Mahalanobis distance in a final step. Use zero to disable.");
   addOption("max_connections",               static_cast<int> (-1),                     "Stop frame comparisons after this many succesfully found spation relations. Negative value: No limit.");
   addOption("geodesic_depth",                static_cast<int> (3),                      "For comparisons with neighbors, consider those with a graph distance (hop count) equal or below this value as neighbors of the direct predecessor");
-  addOption("predecessor_candidates",        static_cast<int> (2),                      "Compare Features to this many direct sequential predecessors");
-  addOption("neighbor_candidates",           static_cast<int> (2),                      "Compare Features to this many graph neighbours. Sample from the candidates");
-  addOption("min_sampled_candidates",        static_cast<int> (2),                      "Compare Features to this many uniformly sampled nodes for corrspondences ");
+  addOption("predecessor_candidates",        static_cast<int> (4),                      "Compare Features to this many direct sequential predecessors");
+  addOption("neighbor_candidates",           static_cast<int> (4),                      "Compare Features to this many graph neighbours. Sample from the candidates");
+  addOption("min_sampled_candidates",        static_cast<int> (4),                      "Compare Features to this many uniformly sampled nodes for corrspondences ");
   addOption("use_icp",                       static_cast<bool> (false),                 "Activate ICP Fallback. Ignored if ICP is not compiled in (see top of CMakeLists.txt) ");
   addOption("icp_method",                    std::string("icp"),                        "gicp, icp or icp_nl");
   addOption("gicp_max_cloud_size",           static_cast<int> (10000),                  "Subsample for increased speed");
@@ -114,12 +114,12 @@ void ParameterServer::defaultConfig() {
   addOption("allow_features_without_depth",  static_cast<bool> (false),                 "Keep matches without depth (currently has no benefit)");
 
   //Backend
-  addOption("pose_relative_to",              std::string("first"),                      "This option allows to choose which frame(s) should be set fixed during optimization: first, previous, inaffected, largest_loop. The latter sets all frames as fixed to which no transformation has been found.");
-  addOption("optimizer_iterations",          static_cast<double> (0.01),                 "Maximum of iterations. If between 0 and 1, optimizer stops after improvement is less than the given fraction (default: 1%).");
+  addOption("pose_relative_to",              std::string("largest_loop"),               "This option allows to choose which frame(s) should be set fixed during optimization: first, previous, inaffected, largest_loop. The latter sets all frames as fixed to which no transformation has been found.");
+  addOption("optimizer_iterations",          static_cast<double> (0.01),                "Maximum of iterations. If between 0 and 1, optimizer stops after improvement is less than the given fraction (default: 1%).");
   addOption("optimizer_skip_step",           static_cast<int> (1),                      "Optimize every n-th frame. Set negative for offline operation ");
   addOption("optimize_landmarks",            static_cast<bool> (false),                 "Consider the features as landmarks in optimization. Otherwise optimize camera pose graph only");
   addOption("concurrent_optimization",       static_cast<bool> (true),                  "Do graph optimization in a seperate thread");
-  addOption("backend_solver",                std::string("cholmod"),                    "Which solver to use in g2o for matrix inversion: 'csparse' , 'cholmod' or 'pcg'");
+  addOption("backend_solver",                std::string("pcg"),                        "Which solver to use in g2o for matrix inversion: 'csparse' , 'cholmod' or 'pcg'");
 
   // Robot odometry options
   addOption("use_robot_odom",                static_cast<bool> (false),                 "In addition to frame-to-frame transformation use odometry information in the graph");
@@ -147,7 +147,7 @@ void ParameterServer::defaultConfig() {
   addOption("squared_meshing_threshold",     static_cast<double> (0.0009),              "Don't triangulate over depth jumps. Should be increased with increasing visualization_skip_step");
   addOption("show_axis",                     static_cast<bool> (true),                  "Do/don't visualize the pose graph in glwidget");
   addOption("scalable_2d_display",           static_cast<bool> (false),                 "Whether the input images are expanded. Consumes CPU time");
-  addOption("cloud_display_type",            static_cast<std::string>("TRIANGLE_STRIP"),        "Drastically affects rendering time. GL_xxx type of compiled list GL_TRIANGLE_STRIP (fastest processing of new clouds), GL_POINTS (fastest display) GL_TRIANGLES (no good), or ELLIPSOIDS (very slow, but visualizes standard deviation)");
+  addOption("cloud_display_type",            static_cast<std::string>("POINTS"),        "Drastically affects rendering time. GL_xxx type of compiled list GL_TRIANGLE_STRIP (fastest processing of new clouds), GL_POINTS (fastest display) GL_TRIANGLES (no good), or ELLIPSOIDS (very slow, but visualizes standard deviation)");
 
   // Misc 
   addOption("start_paused",                  static_cast<bool> (false),                  "Whether to directly start mapping with the first input image, or to wait for the user to start manually");
@@ -156,7 +156,7 @@ void ParameterServer::defaultConfig() {
   addOption("concurrent_edge_construction",  static_cast<bool> (true),                  "Compare current frame to many predecessors in parallel. Note that SIFTGPU matcher and GICP are mutex'ed for thread-safety");
   addOption("concurrent_io",                 static_cast<bool> (true),                  "Whether saving/sending should be done in background threads.");
   addOption("voxelfilter_size",              static_cast<double> (-1.0),                "In meter voxefilter displayed and stored pointclouds, useful to reduce the time for, e.g., octomap generation. Set negative to disable");
-  addOption("nn_distance_ratio",             static_cast<double> (0.50),                 "Feature correspondence is valid if distance to nearest neighbour is smaller than this parameter times the distance to the 2nd neighbour. This needs to be 0.9-1.0 for SIFTGPU w/ FLANN, since SIFTGPU Features are normalized");
+  addOption("nn_distance_ratio",             static_cast<double> (0.95),                "Feature correspondence is valid if distance to nearest neighbour is smaller than this parameter times the distance to the 2nd neighbour. This needs to be 0.9-1.0 for ORB and SIFTGPU w/ FLANN, since SIFTGPU Features are normalized and ORB become ambiguous for blurry images. For SURF and SIFT (CPU) use 0.5-0.8");
   addOption("keep_all_nodes",                static_cast<bool> (false),                 "Keep all nodes with 'no motion' assumption");
   addOption("keep_good_nodes",               static_cast<bool> (false),                 "Keep nodes without transformation estimation but enough features (according to min_matches) with 'no motion' assumption. These are not rendered in visualization.");
   addOption("clear_non_keyframes",           static_cast<bool> (false),                 "Remove the net data of nodes when it becomes clear that they will not be used as keyframe. However, this makes matching against them impossible.");

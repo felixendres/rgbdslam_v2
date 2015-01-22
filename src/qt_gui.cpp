@@ -170,42 +170,34 @@ void Graphical_UI::setup(){
     setMinimumSize(790, 290);
     resize(1000, 700);
 }
-void Graphical_UI::setFeatureImage(QImage qimage){
-  if(feature_image_label->isVisible()){
-    feature_image_label->setMaximumSize(QSize(qimage.size().width(), qimage.size().height()));
-    feature_image_label->setMinimumSize(QSize(qimage.size().width()/2, qimage.size().height()/2));
-    feature_image_label->setAlignment(Qt::AlignCenter);
-    feature_image_label->setPixmap(QPixmap::fromImage(qimage));
-    feature_image_label->repaint();
+
+
+
+
+void Graphical_UI::setLabelToImage(QLabel* label, QImage image){
+  if(label->isVisible()){
+    //label->setMaximumSize(QSize(image.size().width(), image.size().height()));
+    label->setMinimumSize(QSize(image.size().width()/2, image.size().height()/2));
+    label->setAlignment(Qt::AlignCenter);
+    label->setPixmap(QPixmap::fromImage(image));
+    label->repaint();
   }
-  feature_image = qimage;
+}
+
+void Graphical_UI::setFeatureImage(QImage qimage){
+  setLabelToImage(feature_image_label, qimage);
 }
 
 void Graphical_UI::setFeatureFlowImage(QImage qimage){
-  if(feature_flow_image_label->isVisible()){
-    feature_flow_image_label->setMaximumSize(QSize(qimage.size().width(), qimage.size().height()));
-    feature_flow_image_label->setMinimumSize(QSize(qimage.size().width()/2, qimage.size().height()/2));
-    feature_flow_image_label->setAlignment(Qt::AlignCenter);
-    feature_flow_image_label->setPixmap(QPixmap::fromImage(qimage));
-    feature_flow_image_label->repaint();
-  }
+  setLabelToImage(feature_flow_image_label, qimage);
 }
+
 void Graphical_UI::setVisualImage(QImage qimage){
-  if(visual_image_label->isVisible()){
-    visual_image_label->setMaximumSize(QSize(qimage.size().width(), qimage.size().height()));
-    visual_image_label->setMinimumSize(QSize(qimage.size().width()/2, qimage.size().height()/2));
-    visual_image_label->setPixmap(QPixmap::fromImage(qimage));
-    visual_image_label->repaint();
-  }
+  setLabelToImage(visual_image_label, qimage);
 }
 
 void Graphical_UI::setDepthImage(QImage qimage){
-  if(depth_image_label->isVisible()){
-    depth_image_label->setMaximumSize(QSize(qimage.size().width(), qimage.size().height()));
-    depth_image_label->setMinimumSize(QSize(qimage.size().width()/4, qimage.size().height()/2));
-    depth_image_label->setPixmap(QPixmap::fromImage(qimage));
-    depth_image_label->repaint();
-  }
+  setLabelToImage(depth_image_label, qimage);
 }
 
 void Graphical_UI::reloadConfig() {
@@ -489,7 +481,7 @@ void Graphical_UI::pruneEdgesWithHighError(){
     float value = QInputDialog::getDouble(this, tr("Set Max Edge Error"),
                                           tr("No Text"), 1.00, -10000000, 10000000, 4, &ok);
     if(ok){
-    	Q_EMIT pruneEdgesWithErrorAbove(value);
+        Q_EMIT pruneEdgesWithErrorAbove(value);
     }
 }
 void Graphical_UI::sendFinished() {
@@ -593,164 +585,223 @@ void Graphical_UI::set3DDisplay(bool is_on) {
     else { glviewer->hide(); } 
 }
 */
+QAction* Graphical_UI::newAction(QMenu* menu, const char* title, const char* statustip, QIcon icon){
+    QAction *new_action = new QAction(tr(title), this);
+    new_action->setStatusTip(tr(statustip));
+    new_action->setIcon(icon);
+    this->addAction(new_action);
+    menu->addAction(new_action);
+    return new_action;
+}
+
+QAction* Graphical_UI::newMenuItem(QMenu* menu, const char* title, QObject* receiver, const char* callback, const char* statustip, const char* key_seq_str, QIcon icon){
+    QAction *new_action = newAction(menu, title, statustip, icon);
+    new_action->setShortcut(QString(key_seq_str));
+    connect(new_action, SIGNAL(triggered()), receiver, callback);
+    return new_action;
+}
+QAction* Graphical_UI::newMenuItem(QMenu* menu, const char* title, const char* callback_method_of_this_class, const char* statustip, QKeySequence::StandardKey std_key, QIcon icon){
+    QAction *new_action = newAction(menu, title, statustip, icon);
+    new_action->setShortcuts(std_key);
+    connect(new_action, SIGNAL(triggered()), this, callback_method_of_this_class);
+    return new_action;
+}
+QAction* Graphical_UI::newMenuItem(QMenu* menu, const char* title, const char* callback_method_of_this_class, const char* statustip, const char* key_seq_str, QIcon icon){
+    QAction *new_action = newAction(menu, title, statustip, icon);
+    new_action->setShortcut(QString(key_seq_str));
+    connect(new_action, SIGNAL(triggered()), this, callback_method_of_this_class);
+    return new_action;
+}
+QAction* Graphical_UI::newMenuItem(QMenu* menu, const char* title, QObject* receiver, const char* callback, const char* statustip, bool checked, const char* key_seq_str,QIcon icon){
+    QAction *new_action = newAction(menu, title, statustip, icon);
+    new_action->setShortcut(QString(key_seq_str));
+    new_action->setCheckable(true);
+    new_action->setChecked(checked);
+    connect(new_action, SIGNAL(toggled(bool)), receiver, callback);
+    return new_action;
+}
+
+void Graphical_UI::createLoadMenu() {
+    QMenu* lm = menuBar()->addMenu(tr("&Load"));
+    newMenuItem(lm,
+                "&Open PCD files", 
+                SLOT(openPCDFilesDialog()),
+                "Open one or more pcd files to process",
+                QKeySequence::Open, 
+                QIcon::fromTheme("document-open"));
+    
+    newMenuItem(lm,
+                "Open ROS &bag file",
+                SLOT(openBagFileDialog()),
+                "Open a bag file to process",
+                "Ctrl+B",
+                QIcon::fromTheme("document-open"));
+}
+
+QAction* Graphical_UI::createSaveMenu() {//octomap Menu
+    QMenu* sm = menuBar()->addMenu(tr("&Save"));
+    newMenuItem(sm,
+                "&Save",                                
+                SLOT(quickSaveAll()),
+                "Save all stored point clouds with common coordinate frame to a pcd file",
+                QKeySequence::Save,
+                QIcon::fromTheme("document-save"));
+    
+
+    newMenuItem(sm,
+                "Save &Feature Map...",
+                SLOT(saveFeatures()),
+                "Save all feature positions and descriptions in a common coordinate frame to a yaml or xml file",
+                "Ctrl+F",
+                QIcon::fromTheme("document-save"));
+
+    QAction* oa = newMenuItem(sm, "Save Octomap...",
+                              SLOT(saveOctomap()),
+                              "Save computed OctoMap",
+                              "",
+                              QIcon::fromTheme("document-save-as"));
+
+    newMenuItem(sm, "&Save as Point Cloud ...",
+                SLOT(saveAll()),
+                "Save all stored point clouds with common coordinate frame",
+                QKeySequence::SaveAs,
+                QIcon::fromTheme("document-save-as"));
+
+    newMenuItem(sm, "&Save Point Cloud Node-Wise...", 
+                SLOT(saveIndividual()),
+                "Save stored point clouds in individual files", 
+                "Ctrl+N", 
+                QIcon::fromTheme("document-save-all"));
+
+    newMenuItem(sm, "Save &G2O Graph...",
+                SLOT(saveG2OGraphDialog()),
+                "Save G2O graph (e.g. for use with the g2o viewer or external optimization)",
+                "",
+                QIcon::fromTheme("document-save"));
+                              
+    newMenuItem(sm, "Save Clouds to &Bag...",
+                SLOT(saveBagDialog()),
+                "Save clouds and transforms to bagfile",
+                "Ctrl+Shift+B");
+                
+    newMenuItem(sm, "Save Trajectory &Estimate...",
+                SLOT(saveTrajectoryDialog()),
+                "Save trajectory estimate (and ground truth trajectory if available) for external evaluation.",
+                "Ctrl+E");
+                
+    sm->addSeparator();
+    newMenuItem(sm, "&Send Model",
+                SLOT(sendAll()),
+                "Send out all stored point clouds with corrected transform",
+                "Ctrl+M",
+                QIcon::fromTheme("document-send"));
+
+    sm->addSeparator();
+
+    newMenuItem(sm, "Save &3D as PDF File...",
+                SLOT(saveVectorGraphic()),
+                "Write 3D Scene to a PDF File. Warning: Meant for Pose Graphs not for the clouds or octomaps!",
+                "",
+                QIcon::fromTheme("application-pdf"));
+
+    newMenuItem(sm, "Save Input &Images to Files...",
+                SLOT(saveAllImages()),
+                "Write All images shown in the gui to appropriate files",
+                "",
+                QIcon::fromTheme("image-x-generic"));
+    
+    newMenuItem(sm, "&Bagfile Recording",
+                this,
+                SLOT(bagRecording(bool)),
+                "Start/stop recording of frames to bagfile",
+                false,
+                "",
+                QIcon::fromTheme("media-record"));
+
+    newMenuItem(sm, "Capture Screencast...",
+                this,
+                SLOT(toggleScreencast(bool)),
+                "Dump Screen as Video",
+                !ParameterServer::instance()->get<std::string>("screencast_path_prefix").empty());
+                
+    return oa;
+}
+void Graphical_UI::createProcessingMenu() {
+    QMenu* pm = menuBar()->addMenu(tr("&Processing"));
+    newMenuItem(pm, "&Reset",
+                SLOT(resetCmd()),
+                "Reset the graph, clear all data collected",
+                "Ctrl+R",
+                QIcon::fromTheme("edit-delete"));
+
+    newMenuItem(pm, "&Process",
+                this,
+                SLOT(pause(bool)),
+                "Start/stop processing of frames",
+                !ParameterServer::instance()->get<bool>("start_paused"),
+                " ",
+                QIcon::fromTheme("media-playback-start"));
+
+    newMenuItem(pm, "Capture One& Frame",
+                SLOT(getOneFrameCmd()),
+                "Process one frame only",
+                QKeySequence::InsertParagraphSeparator);
+                
+                              
+    /* Crashes
+    newMenuItem(pm, "&Delete Last Node",
+                SLOT(deleteLastFrameCmd()),
+                "Remove last node from graph",
+                "Backspace",
+                QIcon::fromTheme("edit-undo"));
+                */
+    pm->addSeparator();
+                              
+    newMenuItem(pm, "Clear Cloud Storage",
+                SIGNAL(clearClouds()),
+                "Remove Point Clouds from Memory",
+                "",
+                QIcon::fromTheme("edit-delete"));
+
+    newMenuItem(pm, "Optimize Trajectory &Estimate",
+                SLOT(optimizeGraphTrig()),
+                "Compute optimized pose graph with g2o",
+                "O");
+                
+    pm->addSeparator();
+
+    newMenuItem(pm, "E&xit",
+                SLOT(close()),
+                "Exit the application",
+                "Ctrl+Q",
+                QIcon::fromTheme("application-exit"));//doesn't work for gnome
+}
 
 void Graphical_UI::createMenus() {
-    //these are the menus created here
-    QMenu *dataMenu;
-    QMenu *octoMapMenu;
-    QMenu *actionMenu;
-    QMenu *viewMenu3d;
-    QMenu *viewMenu2d;
-    QMenu *settingsMenu;
-    QMenu *helpMenu;
-
-    //Graph Menu
-    dataMenu = menuBar()->addMenu(tr("&I/O"));
-
-    QAction *openPCDFilesAct = new QAction(tr("&Open PCD files"), this);
-    openPCDFilesAct->setShortcuts(QKeySequence::Open);
-    openPCDFilesAct->setStatusTip(tr("Open one or more pcd files to process"));
-    openPCDFilesAct->setIcon(QIcon::fromTheme("document-open"));//doesn't work for gnome
-    connect(openPCDFilesAct, SIGNAL(triggered()), this, SLOT(openPCDFilesDialog()));
-    dataMenu->addAction(openPCDFilesAct);
-    this->addAction(openPCDFilesAct);
-
-    QAction *openBagFileAct = new QAction(tr("Open ROS &bag file"), this);
-    openBagFileAct->setStatusTip(tr("Open a bag file to process"));
-    openBagFileAct->setShortcut(QString("Ctrl+B"));
-    openBagFileAct->setIcon(QIcon::fromTheme("document-open"));//doesn't work for gnome
-    connect(openBagFileAct, SIGNAL(triggered()), this, SLOT(openBagFileDialog()));
-    dataMenu->addAction(openBagFileAct);
-    this->addAction(openBagFileAct);
 
 
-    QAction *quickSaveAct = new QAction(tr("&Save"), this);
-    quickSaveAct->setShortcuts(QKeySequence::Save);
-    quickSaveAct->setStatusTip(tr("Save all stored point clouds with common coordinate frame to a pcd file"));
-    quickSaveAct->setIcon(QIcon::fromTheme("document-save"));//doesn't work for gnome
-    connect(quickSaveAct, SIGNAL(triggered()), this, SLOT(quickSaveAll()));
-    dataMenu->addAction(quickSaveAct);
-    this->addAction(quickSaveAct);
+    createProcessingMenu();
+    createLoadMenu();
 
-    QAction *saveFeaturesAct = new QAction(tr("Save &Feature Map"), this);
-    saveFeaturesAct->setShortcut(QString("Ctrl+F"));
-    saveFeaturesAct->setStatusTip(tr("Save all feature positions and descriptions in a common coordinate frame to a yaml or xml file"));
-    saveFeaturesAct->setIcon(QIcon::fromTheme("document-save"));//doesn't work for gnome
-    connect(saveFeaturesAct, SIGNAL(triggered()), this, SLOT(saveFeatures()));
-    dataMenu->addAction(saveFeaturesAct);
-    this->addAction(saveFeaturesAct);
+    QAction* octoMapAction =  createSaveMenu();
 
-    QAction *saveOctoAct = new QAction(tr("Save Octomap"), this);
-    saveOctoAct->setStatusTip(tr("Save computed OctoMap"));
-    saveOctoAct->setIcon(QIcon::fromTheme("document-save-as"));//doesn't work for gnome
-    connect(saveOctoAct, SIGNAL(triggered()), this, SLOT(saveOctomap()));
-    dataMenu->addAction(saveOctoAct);
-    this->addAction(saveOctoAct);
+    QMenu *om = menuBar()->addMenu(tr("&OctoMap"));
+    newMenuItem(om, "Point Cloud Occupancy Filter",
+                SLOT(triggerCloudFiltering()),
+                "Remove points from the cloud that fall into unoccupied voxels of the OctoMap");
+                
+    newMenuItem(om, "Octomap Resolution",
+                SLOT(setOctoMapResolution()),
+                "Change the octomap resolution. Clears previously created maps on next update.");
 
-    QAction *saveAct = new QAction(tr("&Save as Point Cloud ..."), this);
-    saveAct->setShortcuts(QKeySequence::SaveAs);
-    saveAct->setStatusTip(tr("Save all stored point clouds with common coordinate frame"));
-    saveAct->setIcon(QIcon::fromTheme("document-save-as"));//doesn't work for gnome
-    connect(saveAct, SIGNAL(triggered()), this, SLOT(saveAll()));
-    dataMenu->addAction(saveAct);
-    this->addAction(saveAct);
+    newMenuItem(om, "&Online OctoMapping",
+                this,
+                SLOT(toggleOnlineVoxelMapping(bool)),
+                "Toggle Online/Offline OctoMapping. Make sure to set a low octomap_resolution and/or high cloud_creation_skip_step for online mapping",
+                ParameterServer::instance()->get<bool>("octomap_online_creation"));
 
-    QAction *saveIndiAct = new QAction(tr("&Save Point Cloud Node-Wise..."), this);
-    saveIndiAct->setShortcut(QString("Ctrl+N"));
-    saveIndiAct->setStatusTip(tr("Save stored point clouds in individual files"));
-    saveAct->setIcon(QIcon::fromTheme("document-save-all"));//doesn't work for gnome
-    connect(saveIndiAct, SIGNAL(triggered()), this, SLOT(saveIndividual()));
-    dataMenu->addAction(saveIndiAct);
-    this->addAction(saveIndiAct);
 
-    QAction *saveG2OGraphAct = new QAction(tr("Save &G2O Graph"), this);
-    saveG2OGraphAct->setStatusTip(tr("Save G2O graph (e.g. for use with the g2o viewer or external optimization)"));
-    saveG2OGraphAct->setIcon(QIcon::fromTheme("document-save"));//doesn't work for gnome
-    connect(saveG2OGraphAct, SIGNAL(triggered()), this, SLOT(saveG2OGraphDialog()));
-    dataMenu->addAction(saveG2OGraphAct);
-    this->addAction(saveG2OGraphAct);
 
-    QAction *saveBagAct = new QAction(tr("Save Clouds to &Bag"), this);
-    saveBagAct->setShortcut(QString("Ctrl+Shift+B"));
-    saveBagAct->setStatusTip(tr("Save clouds and transforms to bagfile"));
-    connect(saveBagAct, SIGNAL(triggered()), this, SLOT(saveBagDialog()));
-    dataMenu->addAction(saveBagAct);
-    this->addAction(saveBagAct);
-
-    QAction *saveTrajectoryAct = new QAction(tr("Save Trajectory &Estimate"), this);
-    saveTrajectoryAct->setShortcut(QString("Ctrl+E"));
-    saveTrajectoryAct->setStatusTip(tr("Save trajectory estimate (and ground truth trajectory if available) for external evaluation."));
-    connect(saveTrajectoryAct, SIGNAL(triggered()), this, SLOT(saveTrajectoryDialog()));
-    dataMenu->addAction(saveTrajectoryAct);
-    this->addAction(saveTrajectoryAct);
-
-    QAction *sendAct = new QAction(tr("&Send Model"), this);
-    sendAct->setShortcut(QString("Ctrl+M"));
-    sendAct->setStatusTip(tr("Send out all stored point clouds with corrected transform"));
-    sendAct->setIcon(QIcon::fromTheme("document-send"));//doesn't work for gnome
-    connect(sendAct, SIGNAL(triggered()), this, SLOT(sendAll()));
-    dataMenu->addAction(sendAct);
-    this->addAction(sendAct);
-
-    dataMenu->addSeparator();
-
-    QAction *toggleLandmarksAct = new QAction(tr("Toggle &Landmark Optimization"), this);
-    toggleLandmarksAct->setShortcut(QString("L"));
-    toggleLandmarksAct->setCheckable(true);
-    toggleLandmarksAct->setChecked(ParameterServer::instance()->get<bool>("optimize_landmarks"));
-    toggleLandmarksAct->setStatusTip(tr("Toggle whether pose graph includes landmark positions"));
-    connect(toggleLandmarksAct, SIGNAL(toggled(bool)), this, SLOT(toggleLandmarkOptimization(bool)));
-    dataMenu->addAction(toggleLandmarksAct);
-    this->addAction(toggleLandmarksAct);
-
-    QAction *toggleMappingAct = new QAction(tr("Toggle &Mapping"), this);
-    toggleMappingAct->setShortcut(QString("M"));
-    toggleMappingAct->setCheckable(true);
-    toggleMappingAct->setChecked(true);
-    toggleMappingAct->setStatusTip(tr("Toggle between SLAM and Localization"));
-    toggleMappingAct->setIcon(QIcon::fromTheme("media-playback-start"));//doesn't work for gnome
-    connect(toggleMappingAct, SIGNAL(toggled(bool)), this, SLOT(toggleMappingPriv(bool)));
-    dataMenu->addAction(toggleMappingAct);
-    this->addAction(toggleMappingAct);
-
-    dataMenu->addSeparator();
-
-    QAction *clearDisplayAct;
-    clearDisplayAct = new QAction(tr("&Clear 3D Display"), this);
-    clearDisplayAct->setStatusTip(tr("Clears 3D viewer cloud data. Point Clouds are still retained, e.g. for mapping purposes."));
-    clearDisplayAct->setIcon(QIcon::fromTheme("edit-delete"));//doesn't work (for gnome
-    connect(clearDisplayAct, SIGNAL(triggered()), glviewer, SLOT(reset()));
-    dataMenu->addAction(clearDisplayAct);
-    this->addAction(clearDisplayAct);
-
-    QAction *clearCloudsAct = new QAction(tr("Clear Cloud Storage"), this);
-    clearCloudsAct->setStatusTip(tr("Remove Point Clouds from Memory"));
-    clearDisplayAct->setIcon(QIcon::fromTheme("edit-delete"));//doesn't work (for gnome
-    connect(clearCloudsAct, SIGNAL(triggered()), this, SIGNAL(clearClouds()));
-    dataMenu->addAction(clearCloudsAct);
-    this->addAction(clearCloudsAct);
-
-    dataMenu->addSeparator();
-
-    QAction *optimizeAct = new QAction(tr("Optimize Trajectory &Estimate"), this);
-    optimizeAct->setShortcut(QString("O"));
-    optimizeAct->setStatusTip(tr("Compute optimized pose graph with g2o"));
-    connect(optimizeAct, SIGNAL(triggered()), this, SLOT(optimizeGraphTrig()));
-    dataMenu->addAction(optimizeAct);
-    this->addAction(optimizeAct);
-
-    dataMenu->addSeparator();
-
-    QAction *exitAct = new QAction(tr("E&xit"), this);
-    exitAct->setShortcut(QString("Ctrl+Q")); //doesn't work: QKeySequence::Quit);
-    exitAct->setStatusTip(tr("Exit the application"));
-    exitAct->setIcon(QIcon::fromTheme("application-exit"));//doesn't work for gnome
-    connect(exitAct, SIGNAL(triggered()), this, SLOT(close()));
-    dataMenu->addAction(exitAct);
-    this->addAction(exitAct);
-
-    octoMapMenu = menuBar()->addMenu(tr("&OctoMap"));
-    octoMapMenu->addAction(saveOctoAct);
 
     /* Separation of computation and saving of octomap not yet Implemented
     QAction *computeOctoAct = new QAction(tr("Compute Octomap"), this);
@@ -760,83 +811,6 @@ void Graphical_UI::createMenus() {
     octoMapMenu->addAction(computeOctoAct);
     this->addAction(computeOctoAct);
     */
-
-
-    QAction *occupancyFilterAct = new QAction(tr("Point Cloud Occupancy Filter"), this);
-    //occupancyFilterAct->setShortcuts(QKeySequence::SaveAs);
-    occupancyFilterAct->setStatusTip(tr("Remove points from the cloud that fall into unoccupied voxels of the OctoMap"));
-    connect(occupancyFilterAct, SIGNAL(triggered()), this, SLOT(triggerCloudFiltering()));
-    octoMapMenu->addAction(occupancyFilterAct);
-    this->addAction(occupancyFilterAct);
-    QAction *setOctoMapResolutionAct = new QAction(tr("Octomap Resolution"), this);
-    //setOctoMapResolutionAct->setShortcuts(QKeySequence::SaveAs);
-    setOctoMapResolutionAct->setStatusTip(tr("Change the octomap resolution. Clears previously created maps on next update."));
-    connect(setOctoMapResolutionAct, SIGNAL(triggered()), this, SLOT(setOctoMapResolution()));
-    octoMapMenu->addAction(setOctoMapResolutionAct);
-    this->addAction(setOctoMapResolutionAct);
-
-    QAction *toggleOnlineVoxelMappingAct = new QAction(tr("&Online OctoMapping"), this);
-    toggleOnlineVoxelMappingAct->setCheckable(true);
-    toggleOnlineVoxelMappingAct->setChecked(ParameterServer::instance()->get<bool>("octomap_online_creation"));
-    toggleOnlineVoxelMappingAct->setStatusTip(tr("Toggle Online/Offline OctoMapping. Make sure to set a low octomap_resolution and/or high cloud_creation_skip_step for online mapping"));
-    connect(toggleOnlineVoxelMappingAct, SIGNAL(toggled(bool)), this, SLOT(toggleOnlineVoxelMapping(bool)));
-    octoMapMenu->addAction(toggleOnlineVoxelMappingAct);
-    this->addAction(toggleOnlineVoxelMappingAct);
-
-
-    //Processing Menu
-    actionMenu = menuBar()->addMenu(tr("&Processing"));
-
-    QAction *newAct;
-    newAct = new QAction(tr("&Reset"), this);
-    newAct->setShortcut(QString("Ctrl+R"));
-    newAct->setStatusTip(tr("Reset the graph, clear all data collected"));
-    newAct->setIcon(QIcon::fromTheme("edit-delete"));//doesn't work (for gnome
-    connect(newAct, SIGNAL(triggered()), this, SLOT(resetCmd()));
-    actionMenu->addAction(newAct);
-    this->addAction(newAct);
-
-    QAction *pauseAct = new QAction(tr("&Process"), this);
-    pauseAct->setShortcut(QString(" "));
-    pauseAct->setCheckable(true);
-    pauseAct->setChecked(!ParameterServer::instance()->get<bool>("start_paused"));
-    pauseAct->setStatusTip(tr("Start/stop processing of frames"));
-    pauseAct->setIcon(QIcon::fromTheme("media-playback-start"));//doesn't work for gnome
-    connect(pauseAct, SIGNAL(toggled(bool)), this, SLOT(pause(bool)));
-    actionMenu->addAction(pauseAct);
-    this->addAction(pauseAct);
-
-    QAction *oneFrameAct = new QAction(tr("Capture One& Frame"), this);
-    oneFrameAct->setShortcuts(QKeySequence::InsertParagraphSeparator);
-    oneFrameAct->setStatusTip(tr("Process one frame only"));
-    connect(oneFrameAct, SIGNAL(triggered()), this, SLOT(getOneFrameCmd()));
-    actionMenu->addAction(oneFrameAct);
-    this->addAction(oneFrameAct);
-
-    QAction *videoStreamAct = new QAction(tr("Capture Screencast"), this);
-    videoStreamAct->setCheckable(true);
-    videoStreamAct->setChecked(!ParameterServer::instance()->get<std::string>("screencast_path_prefix").empty());
-    connect(videoStreamAct, SIGNAL(toggled(bool)), this, SLOT(toggleScreencast(bool)));
-    actionMenu->addAction(videoStreamAct);
-    this->addAction(videoStreamAct);
-
-    QAction *delFrameAct = new QAction(tr("&Delete Last Node"), this);
-    delFrameAct->setShortcut(QString("Backspace"));
-    delFrameAct->setStatusTip(tr("Remove last node from graph"));
-    delFrameAct->setIcon(QIcon::fromTheme("edit-undo"));//doesn't work for gnome
-    connect(delFrameAct, SIGNAL(triggered()), this, SLOT(deleteLastFrameCmd()));
-    actionMenu->addAction(delFrameAct);
-    this->addAction(delFrameAct);
-
-    QAction *bagRecordingAct = new QAction(tr("&Bagfile Recording"), this);
-    bagRecordingAct->setShortcut(QString("R"));
-    bagRecordingAct->setCheckable(true);
-    bagRecordingAct->setChecked(false);
-    bagRecordingAct->setStatusTip(tr("Start/stop recording of frames to bagfile"));
-    bagRecordingAct->setIcon(QIcon::fromTheme("media-record"));//doesn't work for gnome
-    connect(bagRecordingAct, SIGNAL(toggled(bool)), this, SLOT(bagRecording(bool)));
-    actionMenu->addAction(bagRecordingAct);
-    this->addAction(bagRecordingAct);
 
 
 
@@ -849,279 +823,191 @@ void Graphical_UI::createMenus() {
     this->addAction(showErrorAct);
     */
 
-    QAction *pruneAct = new QAction(tr("Set Ma&ximum Edge Error"), this);
-    pruneAct->setShortcut(QString("Ctrl+X"));
-    pruneAct->setStatusTip(tr("Set the Maximum Allowed for Edges"));
-    connect(pruneAct, SIGNAL(triggered()), this, SLOT(pruneEdgesWithHighError()));
-    actionMenu->addAction(pruneAct);
-    this->addAction(pruneAct);
-
-    QAction *psOutputAct = new QAction(tr("&Write PDF File"), this);
-    psOutputAct->setShortcut(QString("W"));
-    psOutputAct->setStatusTip(tr("Write 3D Scene to a PDF File. Warning: Meant for Pose Graphs not for the clouds"));
-    psOutputAct->setIcon(QIcon::fromTheme("application-pdf"));//doesn't work for gnome
-    connect(psOutputAct, SIGNAL(triggered()), this, SLOT(saveVectorGraphic()));
-    actionMenu->addAction(psOutputAct);
-    this->addAction(psOutputAct);
-
-    QAction *saveImages = new QAction(tr("&Write All Images to file."), this);
-    saveImages->setStatusTip(tr("Write All images shown in the gui to appropriate files"));
-    saveImages->setIcon(QIcon::fromTheme("application-pdf"));//doesn't work for gnome
-    connect(saveImages, SIGNAL(triggered()), this, SLOT(saveAllImages()));
-    actionMenu->addAction(saveImages);
-    this->addAction(saveImages);
-    QAction *toggleCloudStorageAct = new QAction(tr("&Store Point Clouds"), this);
-    QList<QKeySequence> tcs_shortcuts;
-    tcs_shortcuts.append(QString("Ctrl+P"));
-    toggleCloudStorageAct->setShortcuts(tcs_shortcuts);
-    toggleCloudStorageAct->setCheckable(true);
-    toggleCloudStorageAct->setChecked(ParameterServer::instance()->get<bool>("store_pointclouds"));
-    toggleCloudStorageAct->setStatusTip(tr("Toggle storing of point clouds (for later sending, map creation)"));
-    toggleCloudStorageAct->setIcon(QIcon::fromTheme("server-database"));//doesn't work for gnome
-    connect(toggleCloudStorageAct, SIGNAL(toggled(bool)), this, SLOT(toggleCloudStorage(bool)));
-    actionMenu->addAction(toggleCloudStorageAct);
-    this->addAction(toggleCloudStorageAct);
-
 
     //View Menus ###############################################################
     //View Menus ###############################################################
 
     if(ParameterServer::instance()->get<bool>("use_glwidget"))
     {
-      viewMenu3d = menuBar()->addMenu(tr("&3D View"));
+      QMenu* v3 = menuBar()->addMenu(tr("&3D View"));
 
+      newMenuItem(v3, "&Clear 3D Display",
+                  glviewer,
+                  SLOT(reset()),
+                  "Clears 3D viewer cloud data. Point Clouds are still retained, e.g. for mapping purposes.",
+                  "",
+                  QIcon::fromTheme("edit-delete"));
+                                  
 
-      /* Crashes the program even if neither 2d nor 3d widget are activated *
-      QAction *toggleFullscreenAct = new QAction(tr("&Fullscreen"), this);
-      //QList<QKeySequence> shortcuts;
-      //shortcuts.append(QString("F"));
-      //toggleFullscreenAct->setShortcuts(shortcuts);
-      toggleFullscreenAct->setCheckable(true);
-      toggleFullscreenAct->setChecked(false);
-      toggleFullscreenAct->setStatusTip(tr("Toggle Fullscreen"));
-      toggleFullscreenAct->setIcon(QIcon::fromTheme("view-fullscreen"));//doesn't work for gnome
-      connect(toggleFullscreenAct, SIGNAL(toggled(bool)), this, SLOT(toggleFullscreen(bool)));
-      viewMenu3d->addAction(toggleFullscreenAct);
-      this->addAction(toggleFullscreenAct);
-      */
-      QAction *toggleGLViewerAct = new QAction(tr("Toggle &3D Display"), this);
-      toggleGLViewerAct->setShortcut(QString("3"));
-      toggleGLViewerAct->setCheckable(true);
-      toggleGLViewerAct->setChecked(true);
-      toggleGLViewerAct->setStatusTip(tr("Turn off the OpenGL Display"));
-      connect(toggleGLViewerAct, SIGNAL(toggled(bool)), glviewer, SLOT(setVisible(bool)));
-      viewMenu3d->addAction(toggleGLViewerAct);
-      this->addAction(toggleGLViewerAct);
+      newMenuItem(v3, "Toggle &3D Display",
+                  glviewer,
+                  SLOT(setVisible(bool)),
+                  "Turn off the OpenGL Display",
+                  true,
+                  "3");
 
-      QAction *toggleTriangulationAct = new QAction(tr("&Toggle Triangulation"), this);
-      toggleTriangulationAct->setShortcut(QString("T"));
-      toggleTriangulationAct->setStatusTip(tr("Switch between surface, wireframe and point cloud"));
-      connect(toggleTriangulationAct, SIGNAL(triggered(bool)), glviewer, SLOT(toggleTriangulation()));
-      viewMenu3d->addAction(toggleTriangulationAct);
-      this->addAction(toggleTriangulationAct);
+      newMenuItem(v3, "&Toggle Triangulation",
+                  glviewer,
+                  SLOT(toggleTriangulation()),
+                  "Switch between surface, wireframe and point cloud",
+                  "T");
+                  
+      newMenuItem(v3, "Follow &Camera",
+                  glviewer,
+                  SLOT(toggleFollowMode(bool)),
+                  "Always use viewpoint of last frame (except zoom)",
+                  true,
+                  "Shift+F");
 
-      QAction *toggleFollowAct = new QAction(tr("Follow &Camera"), this);
-      toggleFollowAct->setShortcut(QString("Shift+F"));
-      toggleFollowAct->setCheckable(true);
-      toggleFollowAct->setChecked(true);
-      toggleFollowAct->setStatusTip(tr("Always use viewpoint of last frame (except zoom)"));
-      connect(toggleFollowAct, SIGNAL(toggled(bool)), glviewer, SLOT(toggleFollowMode(bool)));
-      viewMenu3d->addAction(toggleFollowAct);
-      this->addAction(toggleFollowAct);
+      newMenuItem(v3, "Show Grid",
+                  glviewer,
+                  SLOT(toggleShowGrid(bool)),
+                  "Display XY plane grid",
+                  false);
+      newMenuItem(v3, "Show Pose TFs",
+                  glviewer,
+                  SLOT(toggleShowTFs(bool)),
+                  "Display pose transformations at axes",
+                  false);
+      newMenuItem(v3, "Show Pose IDs",
+                  glviewer,
+                  SLOT(toggleShowIDs(bool)),
+                  "Display pose ids at axes", 
+                  false,
+                  "I");
 
-      QAction *toggleShowGrid = new QAction(tr("Show Grid"), this);
-      toggleShowGrid->setCheckable(true);
-      toggleShowGrid->setChecked(false);
-      toggleShowGrid->setStatusTip(tr("Display XY plane grid"));
-      connect(toggleShowGrid, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowGrid(bool)));
-      viewMenu3d->addAction(toggleShowGrid);
-      this->addAction(toggleShowGrid);
+      newMenuItem(v3, "Show &Poses of Graph",
+                  glviewer,
+                  SLOT(toggleShowPoses(bool)),
+                  "Display poses as axes",
+                  ParameterServer::instance()->get<bool>("show_axis"),
+                  "P");
 
-      QAction *toggleShowTFs = new QAction(tr("Show Pose TFs"), this);
-      toggleShowTFs->setCheckable(true);
-      toggleShowTFs->setChecked(false);
-      toggleShowTFs->setStatusTip(tr("Display pose transformations at axes"));
-      connect(toggleShowTFs, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowTFs(bool)));
-      viewMenu3d->addAction(toggleShowTFs);
-      this->addAction(toggleShowTFs);
+      newMenuItem(v3, "Show &Edges of Graph",
+                  glviewer,
+                  SLOT(toggleShowEdges(bool)),
+                  "Display edges of pose graph as lines",
+                  ParameterServer::instance()->get<bool>("show_axis"),
+                  "E");
 
-      QAction *toggleShowIDsAct = new QAction(tr("Show Pose IDs"), this);
-      toggleShowIDsAct->setShortcut(QString("I"));
-      toggleShowIDsAct->setCheckable(true);
-      toggleShowIDsAct->setChecked(false);
-      toggleShowIDsAct->setStatusTip(tr("Display pose ids at axes"));
-      connect(toggleShowIDsAct, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowIDs(bool)));
-      viewMenu3d->addAction(toggleShowIDsAct);
-      this->addAction(toggleShowIDsAct);
+      newMenuItem(v3, "Stere&o View",
+                  glviewer,
+                  SLOT(toggleStereo(bool)),
+                  "Split screen view with slightly shifted Camera",
+                  false);
+      newMenuItem(v3, "Show &Feature Locations",
+                  glviewer,
+                  SLOT(toggleShowFeatures(bool)),
+                  "Toggle whether feature locations should be rendered",
+                  false);
+      newMenuItem(v3, "Show &Octomap",
+                  glviewer,
+                  SLOT(toggleShowOctoMap(bool)),
+                  "Toggle whether octomap should be displayed",
+                  true,
+                  "Ctrl+Shift+O");
 
-      QAction *toggleShowPosesAct = new QAction(tr("Show &Poses of Graph"), this);
-      toggleShowPosesAct->setShortcut(QString("P"));
-      toggleShowPosesAct->setCheckable(true);
-      toggleShowPosesAct->setChecked(ParameterServer::instance()->get<bool>("show_axis"));
-      toggleShowPosesAct->setStatusTip(tr("Display poses as axes"));
-      connect(toggleShowPosesAct, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowPoses(bool)));
-      viewMenu3d->addAction(toggleShowPosesAct);
-      this->addAction(toggleShowPosesAct);
+      newMenuItem(v3, "Show &Clouds",
+                  glviewer,
+                  SLOT(toggleShowClouds(bool)),
+                  "Toggle whether point clouds should be rendered",
+                  true,
+                  "C");
 
-      QAction *toggleShowEdgesAct = new QAction(tr("Show &Edges of Graph"), this);
-      toggleShowEdgesAct->setShortcut(QString("E"));
-      toggleShowEdgesAct->setCheckable(true);
-      toggleShowEdgesAct->setChecked(ParameterServer::instance()->get<bool>("show_axis"));
-      toggleShowEdgesAct->setStatusTip(tr("Display edges of pose graph as lines"));
-      connect(toggleShowEdgesAct, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowEdges(bool)));
-      viewMenu3d->addAction(toggleShowEdgesAct);
-      this->addAction(toggleShowEdgesAct);
+      newMenuItem(v3, "Toggle Background",
+                  glviewer,
+                  SLOT(toggleBackgroundColor(bool)),
+                  "Toggle whether background should be white or black",
+                  true,
+                  "B");
 
-      QAction *toggleStereoAct = new QAction(tr("Stere&o View"), this);
-      //toggleStereoAct->setShortcut(QString(""));
-      toggleStereoAct->setCheckable(true);
-      toggleStereoAct->setChecked(false);
-      toggleStereoAct->setStatusTip(tr("Split screen view with slightly shifted Camera"));
-      connect(toggleStereoAct, SIGNAL(toggled(bool)), glviewer, SLOT(toggleStereo(bool)));
-      viewMenu3d->addAction(toggleStereoAct);
-      this->addAction(toggleStereoAct);
-
-      QAction *toggleShowFeatures = new QAction(tr("Show &Feature Locations"), this);
-      toggleShowFeatures->setCheckable(true);
-      toggleShowFeatures->setChecked(false);
-      toggleShowFeatures->setStatusTip(tr("Toggle whether feature locations should be rendered"));
-      connect(toggleShowFeatures, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowFeatures(bool)));
-      viewMenu3d->addAction(toggleShowFeatures);
-      this->addAction(toggleShowFeatures);
-
-      QAction *toggleOctoMapDisplay = new QAction(tr("Show &Octomap"), this);
-      toggleOctoMapDisplay->setShortcut(QString("Ctrl+Shift+O"));
-      toggleOctoMapDisplay->setCheckable(true);
-      toggleOctoMapDisplay->setChecked(true);
-      toggleOctoMapDisplay->setStatusTip(tr("Toggle whether octomap should be displayed"));
-      connect(toggleOctoMapDisplay, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowOctoMap(bool)));
-      viewMenu3d->addAction(toggleOctoMapDisplay);
-      this->addAction(toggleOctoMapDisplay);
-
-      QAction *toggleCloudDisplay = new QAction(tr("Show &Clouds"), this);
-      toggleCloudDisplay->setShortcut(QString("C"));
-      toggleCloudDisplay->setCheckable(true);
-      toggleCloudDisplay->setChecked(true);
-      toggleCloudDisplay->setStatusTip(tr("Toggle whether point clouds should be rendered"));
-      connect(toggleCloudDisplay, SIGNAL(toggled(bool)), glviewer, SLOT(toggleShowClouds(bool)));
-      viewMenu3d->addAction(toggleCloudDisplay);
-      this->addAction(toggleCloudDisplay);
-
-      QAction *toggleBGColor = new QAction(tr("Toggle Background"), this);
-      toggleBGColor->setShortcut(QString("B"));
-      toggleBGColor->setCheckable(true);
-      toggleBGColor->setChecked(true);
-      toggleBGColor->setStatusTip(tr("Toggle whether background should be white or black"));
-      connect(toggleBGColor, SIGNAL(toggled(bool)), glviewer, SLOT(toggleBackgroundColor(bool)));
-      viewMenu3d->addAction(toggleBGColor);
-      this->addAction(toggleBGColor);
-
-      QAction *setRotationGridAct = new QAction(tr("Set Rotation &Grid"), this);
-      setRotationGridAct->setShortcut(QString("G"));
-      setRotationGridAct->setStatusTip(tr("Discretize Rotation in Viewer"));
-      connect(setRotationGridAct, SIGNAL(triggered()), this, SLOT(setRotationGrid()));
-      viewMenu3d->addAction(setRotationGridAct);
-      this->addAction(setRotationGridAct);
-
-      QAction *setShiftAct = new QAction(tr("Set Stereo Offset"), this);
-      setShiftAct->setShortcut(QString("<"));
-      setShiftAct->setStatusTip(tr("Set the distance between the virtual cameras for stereo view"));
-      connect(setShiftAct, SIGNAL(triggered()), this, SLOT(setStereoShift()));
-      viewMenu3d->addAction(setShiftAct);
-      this->addAction(setShiftAct);
-
+      newMenuItem(v3, "Set Rotation &Grid",
+                  this,
+                  SLOT(setRotationGrid()),
+                  "Discretize Rotation in Viewer",
+                  "G");
+                  
+      newMenuItem(v3, "Set Stereo Offset",
+                  this,
+                  SLOT(setStereoShift()),
+                  "Set the distance between the virtual cameras for stereo view",
+                  "<");
+                  
     }
 
 
 
     //2D View Menu ###############################################################
-    viewMenu2d = menuBar()->addMenu(tr("&2D View"));
+    QMenu *v2 = menuBar()->addMenu(tr("&2D View"));
 
-    QAction *toggleStreamAct = new QAction(tr("Toggle &2D Stream"), this);
-    toggleStreamAct->setShortcut(QString("2"));
-    toggleStreamAct->setCheckable(true);
-    toggleStreamAct->setChecked(true);
-    toggleStreamAct->setStatusTip(tr("Turn off the Image Stream"));
-    connect(toggleStreamAct, SIGNAL(toggled(bool)), this, SLOT(set2DStream(bool)));
-    viewMenu2d->addAction(toggleStreamAct);
-    this->addAction(toggleStreamAct);
+    newMenuItem(v2, "Toggle &2D Stream",
+                this,
+                SLOT(set2DStream(bool)),
+                "Turn the Image Stream on/off", 
+                true,
+                "2");
 
+    newMenuItem(v2, "Show Visual Image",
+                visual_image_label,
+                SLOT(setVisible(bool)),
+                "Show/Hide visual (color/monochrome) image.", 
+                true);
 
-    QAction *setLabelVisibility1 = new QAction(tr("Show Visual Image"), this);
-    setLabelVisibility1->setStatusTip(tr("Show/Hide visual (color/monochrome) image."));
-    setLabelVisibility1->setCheckable(true);
-    setLabelVisibility1->setChecked(true);
-    connect(setLabelVisibility1, SIGNAL(toggled(bool)), visual_image_label, SLOT(setVisible(bool)));
-    viewMenu2d->addAction(setLabelVisibility1);
-    this->addAction(setLabelVisibility1);
+    newMenuItem(v2, "Show Depth Image",
+                depth_image_label,
+                SLOT(setVisible(bool)),
+                "Show/Hide depth image.",
+                true);
 
-    QAction *setLabelVisibility2 = new QAction(tr("Show Depth Image"), this);
-    setLabelVisibility2->setStatusTip(tr("Show/Hide depth image."));
-    setLabelVisibility2->setCheckable(true);
-    setLabelVisibility2->setChecked(true);
-    connect(setLabelVisibility2, SIGNAL(toggled(bool)), depth_image_label, SLOT(setVisible(bool)));
-    viewMenu2d->addAction(setLabelVisibility2);
-    this->addAction(setLabelVisibility2);
+    newMenuItem(v2, "Show Keypoint Image",
+                feature_image_label,
+                SLOT(setVisible(bool)),
+                "Show/Hide image with keypoints.",
+                false);
 
-    QAction *setLabelVisibility3 = new QAction(tr("Show Keypoint Image"), this);
-    setLabelVisibility3->setStatusTip(tr("Show/Hide image with keypoints."));
-    setLabelVisibility3->setCheckable(true);
-    setLabelVisibility3->setChecked(false);
-    connect(setLabelVisibility3, SIGNAL(toggled(bool)), feature_image_label, SLOT(setVisible(bool)));
-    viewMenu2d->addAction(setLabelVisibility3);
-    this->addAction(setLabelVisibility3);
-
-    QAction *setLabelVisibility4 = new QAction(tr("Show Visual Flow Image"), this);
-    setLabelVisibility4->setStatusTip(tr("Show/Hide image with sparse feature flow (arrows)."));
-    setLabelVisibility4->setCheckable(true);
-    setLabelVisibility4->setChecked(true);
-    connect(setLabelVisibility4, SIGNAL(toggled(bool)), feature_flow_image_label, SLOT(setVisible(bool)));
-    viewMenu2d->addAction(setLabelVisibility4);
-    this->addAction(setLabelVisibility4);
+    newMenuItem(v2, "Show Visual Flow Image",
+                feature_flow_image_label,
+                SLOT(setVisible(bool)),
+                "Show/Hide image with sparse feature flow (arrows).",
+                true);
 
     //Settings Menu
-    settingsMenu = menuBar()->addMenu(tr("&Settings"));
+    QMenu *st = menuBar()->addMenu(tr("&Settings"));
 
-    QAction *reloadAct;
-    reloadAct = new QAction(tr("&Reload Config"), this);
-    reloadAct->setStatusTip(tr("Reload Configuration from Parameter Server."));
-    reloadAct->setIcon(QIcon::fromTheme("reload"));//doesn't work (for gnome
-    connect(reloadAct, SIGNAL(triggered()), this, SLOT(reloadConfig()));
-    settingsMenu->addAction(reloadAct);
-    this->addAction(reloadAct);
+    newMenuItem(st, "&Reload Config",
+                SLOT(reloadConfig()),
+                "Reload Configuration from Parameter Server.",
+                "",
+                QIcon::fromTheme("reload"));
 
-    QAction *optionAct = new QAction(tr("&View Current Settings"), this);
-    optionAct->setShortcut(QString("?"));
-    optionAct->setStatusTip(tr("Display the currently active options"));
-    connect(optionAct, SIGNAL(triggered()), this, SLOT(showOptions()));
-    settingsMenu->addAction(optionAct);
-    this->addAction(optionAct);
-
-    QAction *setAct = new QAction(tr("Set internal &Parameter"), this);
-    setAct->setStatusTip(tr("Change a parameter (This will also change the value on the ROS Parameter server)"));
-    connect(setAct, SIGNAL(triggered()), this, SLOT(setParam()));
-    settingsMenu->addAction(setAct);
-    this->addAction(setAct);
-
-
+    newMenuItem(st, "&View Current Settings",
+                SLOT(showOptions()),
+                "Display the currently active options",
+                "?");
+                
+    newMenuItem(st, "Set internal &Parameter",
+                SLOT(setParam()),
+                "Change a parameter (This will also change the value on the ROS Parameter server)");
+                
+    newMenuItem(st, "Set Ma&ximum Edge Error",
+                SLOT(pruneEdgesWithHighError()),
+                "Set the maximum allowed for edges (reoptimize to see the effect)",
+                "Ctrl+X");
+                
     //Help Menu
-    helpMenu = menuBar()->addMenu(tr("&Help"));
+    QMenu *hm= menuBar()->addMenu(tr("&Help"));
 
-    QAction *helpAct = new QAction(tr("&Usage Help"), this);
-    helpAct->setShortcuts(QKeySequence::HelpContents);
-    helpAct->setStatusTip(tr("Show usage information"));
-    helpAct->setIcon(QIcon::fromTheme("help-contents"));//doesn't work for gnome
-    connect(helpAct, SIGNAL(triggered()), this, SLOT(help()));
-    helpMenu->addAction(helpAct);
-    this->addAction(helpAct);
+    newMenuItem(hm, "&Usage Help",
+                SLOT(help()),
+                "Show usage information",
+                QKeySequence::HelpContents,
+                QIcon::fromTheme("help-contents"));
 
-    QAction *aboutAct = new QAction(tr("&About RGBDSLAM"), this);
-    aboutAct->setShortcut(QString("Ctrl+A"));
-    aboutAct->setStatusTip(tr("Show information about RGBDSLAM"));
-    aboutAct->setIcon(QIcon::fromTheme("help-about"));//doesn't work for gnome
-    connect(aboutAct, SIGNAL(triggered()), this, SLOT(about()));
-    helpMenu->addAction(aboutAct);
-    this->addAction(aboutAct);
+    newMenuItem(hm, "&About RGBDSLAM",
+                SLOT(about()),
+                "Show information about RGBDSLAM",
+                "Ctrl+A",
+                QIcon::fromTheme("help-about"));
 
 }
 
@@ -1238,7 +1124,7 @@ void Graphical_UI::setBusy(int id, const char* message, int val){
 }
 
 void Graphical_UI::saveAllImages() {
-	QString tmp="~";
+    QString tmp="~";
     QString file_basename = QFileDialog::getSaveFileName(this, "Save all images to file", tmp, tr("PNG (*.png)"));
     file_basename.remove(".png", Qt::CaseInsensitive);
 
@@ -1248,10 +1134,10 @@ void Graphical_UI::saveAllImages() {
     QString visual_file =file_basename+"-visual.png";
     QString vector_file =file_basename+"-points.ps";
     std::cout << visual_file.toStdString() << std::endl;
-    depth_image.save(depth_file);
-    feature_image.save(feature_file);
-    feature_flow_image.save(flow_file);
-    visual_image.save(visual_file);
+    depth_image_label->pixmap()->save(depth_file);
+    feature_image_label->pixmap()->save(feature_file);
+    feature_flow_image_label->pixmap()->save(flow_file);
+    visual_image_label->pixmap()->save(visual_file);
 
     //glviewer->drawToPS(vector_file);
     QString message = tr("Saving all images.");

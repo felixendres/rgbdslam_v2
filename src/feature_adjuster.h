@@ -30,22 +30,14 @@ protected:
     const char* detector_name_;
 };
 
+/** A Feature Detector that saves some state.
+ * The copy constructor of */
 class StatefulFeatureDetector : public cv::FeatureDetector {
   public:
     virtual cv::Ptr<StatefulFeatureDetector> clone() const = 0;
 };
 
-/** \brief an adaptively adjusting detector that iteratively detects until the desired number
- * of features are detected.
- *  Beware that this is not thread safe - as the adjustment of parameters breaks the const
- *  of the detection routine...
- *  /TODO Make this const correct and thread safe
- *
- *  sample usage:
- //will create a detector that attempts to find 100 - 110 FAST Keypoints, and will at most run
- //FAST feature detection 10 times until that number of keypoints are found
- Ptr<FeatureDetector> detector(new DynamicAdaptedFeatureDetector(new FastAdjuster(20,true),100, 110, 10));
-
+/** 
  In contrast to the original DynamicAdaptedFeatureDetector, this variant is enhanced for
  processing of video sequences. It is meant to work with the DetectorAdjuster.
  It keeps the DetectorAdjuster alive, so that the final threshold will be retained
@@ -87,9 +79,13 @@ private:
 
 
 
+
+
+
 /*
  * Adapts a detector to partition the source image into a grid and detect
- * points in each cell.
+ * points in each cell. Considers the overlap between cells required for
+ * not losing keypoints
  */
 class VideoGridAdaptedFeatureDetector : public StatefulFeatureDetector
 {

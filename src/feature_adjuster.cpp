@@ -85,7 +85,7 @@ void DetectorAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypo
     }
     else if(strcmp(detector_name_, "AORB") == 0){
       //Default params except last
-      detector = new AorbFeatureDetector(10000, 1.2, 8, 31, 0, 2, 0, 31, static_cast<int>(thresh_));
+      detector = new AorbFeatureDetector(10000, 1.2, 8, 15, 0, 2, 0, 31, static_cast<int>(thresh_));
       //detector->set("fastThreshold", static_cast<int>(thresh_));//Not threadsafe (parallelized grid)
     }
     else {
@@ -212,7 +212,7 @@ VideoGridAdaptedFeatureDetector::VideoGridAdaptedFeatureDetector( const cv::Ptr<
 {
   detectors.push_back(_detector);//Use original one
   while(detectors.size() < gridRows*gridCols){
-    detectors.push_back(_detector->clone());//clone, so any state is not shared
+    detectors.push_back(_detector->clone());//clone, so the state is not shared
   }
 }
 
@@ -243,13 +243,38 @@ void keepStrongest( int N, vector<KeyPoint>& keypoints )
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///Helper function for detectImpl below
+static void aggregateKeypointsPerGridCell(std::vector<std::vector<cv::KeyPoint> >& sub_keypoint_vectors, //will be modified to global coordinates
+                                          std::vector<cv::KeyPoint>& keypoints_out, //output
+                                          cv::Size gridSize, 
+                                          cv::Size imageSize, 
+                                          int edgeThreshold) 
+{
+    for(int i = 0; i < gridSize.height; ++i)
+    {
+        int rowstart = std::max((i*imageSize.height)/gridSize.height - edgeThreshold, 0);
+        for( int j = 0; j < gridSize.width; ++j )
+        {
+            int colstart = std::max((j*imageSize.width)/gridSize.width - edgeThreshold, 0);
+
+            auto& cell_keypoints = sub_keypoint_vectors[j+i*gridSize.width];
+            auto it = cell_keypoints.begin(), end = cell_keypoints.end();
+            for( ; it != end; ++it )
+            {
+                it->pt.x += colstart;
+                it->pt.y += rowstart;
+            }
+            keypoints_out.insert(keypoints_out.end(), cell_keypoints.begin(), cell_keypoints.end());
+        }
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void VideoGridAdaptedFeatureDetector::detectImpl( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask ) const
 {
     std::vector<std::vector<cv::KeyPoint> > sub_keypoint_vectors(gridCols*gridRows);
     keypoints.reserve(maxTotalKeypoints);
     int maxPerCell = maxTotalKeypoints / (gridRows * gridCols);
-    //First loop: Detection
 #pragma omp parallel for
     for( int i = 0; i < gridRows; ++i )
     {
@@ -264,41 +289,16 @@ void VideoGridAdaptedFeatureDetector::detectImpl( const cv::Mat& image, std::vec
             cv::Range col_range(colstart, colend);
             cv::Mat sub_image = image(row_range, col_range);
             cv::Mat sub_mask;
-            if( !mask.empty() )
+            if( !mask.empty()){
                 sub_mask = mask(row_range, col_range);
+            }
 
             std::vector<cv::KeyPoint>& sub_keypoints = sub_keypoint_vectors[j+i*gridCols];
-            //std::cout << "detection on subimage " << i << ", " << j << "\n";
             detectors[j+i*gridCols]->detect( sub_image, sub_keypoints, sub_mask );
             keepStrongest( maxPerCell, sub_keypoints );
         }
     }
-
-    //Second loop: Aggregation
-    for( int i = 0; i < gridRows; ++i )
-    {
-        int rowstart = std::max((i*image.rows)/gridRows - edgeThreshold, 0);
-        int rowend   = std::min(image.rows, ((i+1)*image.rows)/gridRows + edgeThreshold);
-        cv::Range row_range(rowstart, rowend);
-        for( int j = 0; j < gridCols; ++j )
-        {
-            int colstart = std::max((j*image.cols)/gridCols - edgeThreshold, 0);
-            int colend   = std::min(image.cols, ((j+1)*image.cols)/gridCols + edgeThreshold);
-            cv::Range col_range(colstart, colend);
-
-            std::vector<cv::KeyPoint>& sub_keypoints = sub_keypoint_vectors[j+i*gridCols];
-            std::vector<cv::KeyPoint>::iterator it = sub_keypoints.begin(),
-                                                end = sub_keypoints.end();
-            for( ; it != end; ++it )
-            {
-                it->pt.x += col_range.start;
-                it->pt.y += row_range.start;
-            }
-            {
-              keypoints.insert( keypoints.end(), sub_keypoints.begin(), sub_keypoints.end() );
-            }
-        }
-    }
+    aggregateKeypointsPerGridCell(sub_keypoint_vectors, keypoints, cv::Size(gridCols, gridRows), image.size(), edgeThreshold);
 }
 
 cv::Ptr<StatefulFeatureDetector> VideoGridAdaptedFeatureDetector::clone() const 

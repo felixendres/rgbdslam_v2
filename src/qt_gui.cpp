@@ -70,6 +70,7 @@ void Graphical_UI::setup(){
                 "    <li><i>Ctrl + left button:</i> rotate view around x/z.</li>"
                 "    <li><i>Shift + left button:</i> Translate view.</li>"
                 "    <li><i>Wheel:</i> zoom view.</li>"
+                "    <li><i>Ctrl + Wheel:</i> change 3D point size.</li>"
                 "    <li><i>Double click (on background):</i> reset camera position to latest pose.</li>"
                 "    <li><i>Ctrl + Double click (on background):</i> reset camera position to first pose (only works if follow mode is off).</li>"
                 "    <li><i>Double click on object:</i> set pivot to clicked point (only works if follow mode is off).</li>"
@@ -176,8 +177,9 @@ void Graphical_UI::setup(){
 
 void Graphical_UI::setLabelToImage(QLabel* label, QImage image){
   if(label->isVisible()){
-    //label->setMaximumSize(QSize(image.size().width(), image.size().height()));
-    label->setMinimumSize(QSize(image.size().width()/2, image.size().height()/2));
+    label->setMaximumHeight(image.size().height());
+    label->setMinimumHeight(image.size().height()/2);
+    //label->setMinimumSize(QSize(image.size().width()/2, image.size().height()/2));
     label->setAlignment(Qt::AlignCenter);
     label->setPixmap(QPixmap::fromImage(image));
     label->repaint();

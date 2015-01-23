@@ -114,7 +114,7 @@ void ParameterServer::defaultConfig() {
   addOption("allow_features_without_depth",  static_cast<bool> (false),                 "Keep matches without depth (currently has no benefit)");
 
   //Backend
-  addOption("pose_relative_to",              std::string("largest_loop"),               "This option allows to choose which frame(s) should be set fixed during optimization: first, previous, inaffected, largest_loop. The latter sets all frames as fixed to which no transformation has been found.");
+  addOption("pose_relative_to",              std::string("first"),                      "This option allows to choose which frame(s) should be set fixed during optimization: first, previous, inaffected, largest_loop. The latter sets all frames as fixed to which no transformation has been found.");
   addOption("optimizer_iterations",          static_cast<double> (0.01),                "Maximum of iterations. If between 0 and 1, optimizer stops after improvement is less than the given fraction (default: 1%).");
   addOption("optimizer_skip_step",           static_cast<int> (1),                      "Optimize every n-th frame. Set negative for offline operation ");
   addOption("optimize_landmarks",            static_cast<bool> (false),                 "Consider the features as landmarks in optimization. Otherwise optimize camera pose graph only");

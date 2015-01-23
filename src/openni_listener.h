@@ -134,8 +134,32 @@ class OpenNIListener : public QObject {
     void pcdCallback(const sensor_msgs::ImageConstPtr visual_img_msg, pointcloud_type::Ptr point_cloud);
 
   protected:
+    //!Setup subscriber callbacks according to the topic parameters
+    void setupSubscribers();
+    //!Loads a bagfile and processes every rgb-d frame pair 
     void loadBag(std::string filename);
+    //!Setup the ROS Subscribers for loadbag
+    void loadBagFakeSubscriberSetup(const std::string& visua_tpc,
+                                    const std::string& depth_tpc,
+                                    const std::string& points_tpc,
+                                    const std::string& cinfo_tpc,
+                                    const std::string& odom_tpc,
+                                    const std::string& tf_tpc);
+    //!processing the bagfile for loadBag
+    void processBagfile(std::string filename,
+                        const std::string& visua_tpc,
+                        const std::string& depth_tpc,
+                        const std::string& points_tpc,
+                        const std::string& cinfo_tpc,
+                        const std::string& odom_tpc,
+                        const std::string& tf_tpc);
+
+    //!delay after processing and trigger scientific evaluation 
+    void waitAndEvaluate(const std::string& filename);
+
+    //!Perform scientific evaluations and write according logs
     void evaluation(std::string filename);
+
     //! Create a QImage from one image. 
     ///The QImage stores its data in the rgba_buffers_ indexed by idx (reused/overwritten each call)
     QImage cvMat2QImage(const cv::Mat& image, unsigned int idx); 

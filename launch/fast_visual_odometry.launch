@@ -21,6 +21,7 @@
     <param name="config/feature_detector_type"         value="ORB"/><!-- FAST can guarantee a certain range of keypoints using an adjuster-->
     <param name="config/detector_grid_resolution"      value="3"/><!-- detect on a 2x2 grid -->
     <param name="config/max_keypoints"                 value="600"/><!-- Extract no more than this many keypoints -->
+    <param name="config/max_matches"                   value="300"/><!-- Keep the best n matches (important for ORB to set lower than max_keypoints) -->
 
     <param name="config/min_sampled_candidates"        value="0"/><!-- Frame-to-frame comparisons to random frames (big loop closures) -->
     <param name="config/predecessor_candidates"        value="3"/><!-- Frame-to-frame comparisons to sequential frames-->

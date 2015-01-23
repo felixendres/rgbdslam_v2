@@ -77,7 +77,7 @@ void addTFMessageDirectlyToTransformer(tf::tfMessageConstPtr msg, tf::Transforme
       tf::transformStampedMsgToTF(msg->transforms[i], stTrans);
 
       transformer->setTransform(stTrans);
-      ROS_INFO("Set transform from %s to %s with timestamp %20.10f", 
+      ROS_DEBUG("Set transform from %s to %s with timestamp %20.10f", 
                msg->transforms[i].header.frame_id.c_str(), 
                msg->transforms[i].child_frame_id.c_str(), 
                stTrans.stamp_.toSec());
@@ -148,7 +148,7 @@ OpenNIListener::OpenNIListener(GraphManager* graph_mgr)
         cloud_sub_ = new pc_sub_type (nh, cloud_tpc, q);  
         kinect_sync_ = new message_filters::Synchronizer<KinectSyncPolicy>(KinectSyncPolicy(q),  *visua_sub_, *depth_sub_, *cloud_sub_),
         kinect_sync_->registerCallback(boost::bind(&OpenNIListener::kinectCallback, this, _1, _2, _3));
-        ROS_INFO_STREAM("Listening to " << visua_tpc << ", " << depth_tpc << " and " << cloud_tpc);
+        ROS_INFO_STREAM_NAMED("OpenNIListener", "Listening to " << visua_tpc << ", " << depth_tpc << " and " << cloud_tpc);
     } 
     //No cloud, but visual image and depth
     else if(!visua_tpc.empty() && !depth_tpc.empty() && !cinfo_tpc.empty() && cloud_tpc.empty())
@@ -158,7 +158,7 @@ OpenNIListener::OpenNIListener(GraphManager* graph_mgr)
         cinfo_sub_ = new cinfo_sub_type(nh, cinfo_tpc, q);
         no_cloud_sync_ = new message_filters::Synchronizer<NoCloudSyncPolicy>(NoCloudSyncPolicy(q),  *visua_sub_, *depth_sub_, *cinfo_sub_);
         no_cloud_sync_->registerCallback(boost::bind(&OpenNIListener::noCloudCallback, this, _1, _2, _3));
-        ROS_INFO_STREAM("Listening to " << visua_tpc << " and " << depth_tpc);
+        ROS_INFO_STREAM_NAMED("OpenNIListener", "Listening to " << visua_tpc << " and " << depth_tpc);
     } 
 
     //All information from stereo                                               
@@ -168,11 +168,11 @@ OpenNIListener::OpenNIListener(GraphManager* graph_mgr)
       cloud_sub_ = new pc_sub_type(nh, widec_tpc, q);
       stereo_sync_ = new message_filters::Synchronizer<StereoSyncPolicy>(StereoSyncPolicy(q), *visua_sub_, *cloud_sub_);
       stereo_sync_->registerCallback(boost::bind(&OpenNIListener::stereoCallback, this, _1, _2));
-      ROS_INFO_STREAM("Listening to " << widev_tpc << " and " << widec_tpc );
+      ROS_INFO_STREAM_NAMED("OpenNIListener", "Listening to " << widev_tpc << " and " << widec_tpc );
     } 
     if(ps->get<bool>("use_robot_odom")){
     	odom_sub_= new odom_sub_type(nh, ps->get<std::string>("odometry_tpc"), 3);
-      ROS_INFO_STREAM("Listening to odometry on " << ps->get<std::string>("odometry_tpc"));
+      ROS_INFO_STREAM_NAMED("OpenNIListener", "Listening to odometry on " << ps->get<std::string>("odometry_tpc"));
     	odom_sub_->registerCallback(boost::bind(&OpenNIListener::odomCallback,this,_1));
     }
   } 
@@ -213,7 +213,7 @@ void OpenNIListener::loadBag(std::string filename)
     cam_info_sub_ = new BagSubscriber<sensor_msgs::CameraInfo>();
     no_cloud_sync_ = new message_filters::Synchronizer<NoCloudSyncPolicy>(NoCloudSyncPolicy(q),  *rgb_img_sub_, *depth_img_sub_, *cam_info_sub_);
     no_cloud_sync_->registerCallback(boost::bind(&OpenNIListener::noCloudCallback, this, _1, _2, _3));
-    ROS_INFO_STREAM("Listening to " << visua_tpc << ", " << depth_tpc << " and " << cinfo_tpc);
+    ROS_INFO_STREAM_NAMED("OpenNIListener", "Listening to " << visua_tpc << ", " << depth_tpc << " and " << cinfo_tpc);
   } 
   else if(!visua_tpc.empty() && !depth_tpc.empty() && !points_tpc.empty())
   {   
@@ -223,7 +223,7 @@ void OpenNIListener::loadBag(std::string filename)
     pc_sub_ = new BagSubscriber<sensor_msgs::PointCloud2>();
     kinect_sync_ = new message_filters::Synchronizer<KinectSyncPolicy>(KinectSyncPolicy(q),  *rgb_img_sub_, *depth_img_sub_, *pc_sub_);
     kinect_sync_->registerCallback(boost::bind(&OpenNIListener::kinectCallback, this, _1, _2, _3));
-    ROS_INFO_STREAM("Listening to " << visua_tpc << ", " << depth_tpc << " and " << points_tpc);
+    ROS_INFO_STREAM_NAMED("OpenNIListener", "Listening to " << visua_tpc << ", " << depth_tpc << " and " << points_tpc);
   } 
   else {
     ROS_ERROR("Missing required information: Topic names.");
@@ -237,7 +237,7 @@ void OpenNIListener::loadBag(std::string filename)
   ps->set<bool>("optimize_landmarks", false);
 
 
-  ROS_INFO("Loading Bagfile %s", filename.c_str());
+  ROS_INFO_NAMED("OpenNIListener", "Loading Bagfile %s", filename.c_str());
   Q_EMIT iamBusy(4, "Loading Bagfile", 0);
   { //bag will be destructed after this block (hopefully frees memory for the optimizer)
     rosbag::Bag bag;
@@ -248,7 +248,7 @@ void OpenNIListener::loadBag(std::string filename)
       ros::shutdown();
       return;
     }
-    ROS_INFO("Opened Bagfile %s", filename.c_str());
+    ROS_INFO_NAMED("OpenNIListener", "Opened Bagfile %s", filename.c_str());
 
     // Image topics to load for bagfiles
     std::vector<std::string> topics;
@@ -261,7 +261,7 @@ void OpenNIListener::loadBag(std::string filename)
     }
     topics.push_back(tf_tpc);
     if(ps->get<bool>("use_robot_odom")){
-      ROS_INFO_STREAM("Using odometry on topic " << odom_tpc);
+      ROS_INFO_STREAM_NAMED("OpenNIListener", "Using odometry on topic " << odom_tpc);
       topics.push_back(odom_tpc);
     }
 
@@ -275,17 +275,19 @@ void OpenNIListener::loadBag(std::string filename)
     std::deque<nav_msgs::OdometryConstPtr> odometries;
     //ros::Time last_tf=ros::Time(0);
     ros::Time last_tf=ros::TIME_MIN;
+    bool tf_available = false;
     int counter = 0;
     BOOST_FOREACH(rosbag::MessageInstance const m, view)
     {
       Q_EMIT progress(4, "Processing Bagfile", counter++);
       do{ 
-        usleep(150);
+        usleep(10);
         if(!ros::ok()) return;
       } while(pause_);
+      ROS_INFO_NAMED("OpenNIListener", "Processing %s of type %s with timestamp %f", m.getTopic().c_str(), m.getDataType().c_str(), m.getTime().toSec());
 
       if (m.getTopic() == odom_tpc || ("/" + m.getTopic() == odom_tpc)) {
-        ROS_INFO("Processing %s of type %s with timestamp %f", m.getTopic().c_str(), m.getDataType().c_str(), m.getTime().toSec());
+        ROS_INFO_NAMED("OpenNIListener", "Processing %s of type %s with timestamp %f", m.getTopic().c_str(), m.getDataType().c_str(), m.getTime().toSec());
         nav_msgs::OdometryConstPtr odommsg = m.instantiate<nav_msgs::Odometry>();
         if (odommsg) odometries.push_back(odommsg);
       }
@@ -295,7 +297,6 @@ void OpenNIListener::loadBag(std::string filename)
         if (rgb_img) vis_images.push_back(rgb_img);
         ROS_DEBUG("Found Message of %s", visua_tpc.c_str());
       }
-      
       else if (m.getTopic() == depth_tpc || ("/" + m.getTopic() == depth_tpc))
       {
         sensor_msgs::Image::ConstPtr depth_img = m.instantiate<sensor_msgs::Image>();
@@ -320,6 +321,7 @@ void OpenNIListener::loadBag(std::string filename)
       else if (m.getTopic() == tf_tpc|| ("/" + m.getTopic() == tf_tpc)){
         tf::tfMessage::ConstPtr tf_msg = m.instantiate<tf::tfMessage>();
         if (tf_msg) {
+          tf_available = true;
           addTFMessageDirectlyToTransformer(tf_msg, tflistener_);
           last_tf = tf_msg->transforms[0].header.stamp;
           last_tf -= ros::Duration(0.1);
@@ -329,20 +331,24 @@ void OpenNIListener::loadBag(std::string filename)
         last_tf = m.getTime();
         last_tf -= ros::Duration(0.1);
       }
+      //last_tf = m.getTime();//FIXME: No TF -> no processing
       while(!odometries.empty() && odometries.front()->header.stamp < last_tf){
-          ROS_INFO("Sending Odometry message");
+          ROS_INFO_NAMED("OpenNIListener", "Sending Odometry message");
           odomCallback(odometries.front());
           odometries.pop_front();
       }
       while(!vis_images.empty() && vis_images.front()->header.stamp < last_tf){
+          ROS_INFO_NAMED("OpenNIListener", "Forwarding buffered visual message from time %12f", vis_images.front()->header.stamp.toSec());
           rgb_img_sub_->newMessage(vis_images.front());
           vis_images.pop_front();
       }
       while(!dep_images.empty() && dep_images.front()->header.stamp < last_tf){
+          ROS_INFO_NAMED("OpenNIListener", "Forwarding buffered depth message from time %12f", dep_images.front()->header.stamp.toSec());
           depth_img_sub_->newMessage(dep_images.front());
           dep_images.pop_front();
       }
       while(!cam_infos.empty() && cam_infos.front()->header.stamp < last_tf){
+          ROS_INFO_NAMED("OpenNIListener", "Forwarding buffered cam info message from time %12f", cam_infos.front()->header.stamp.toSec());
           cam_info_sub_->newMessage(cam_infos.front());
           cam_infos.pop_front();
       }
@@ -380,56 +386,57 @@ void OpenNIListener::loadBag(std::string filename)
 
 void OpenNIListener::evaluation(std::string filename)
 {
+    graph_mgr_->optimizeGraph(-1, true);//Non threaded call to make last "online" optimization (using "inaffected" strategy)
     graph_mgr_->setOptimizerVerbose(true);
     graph_mgr_->saveTrajectory(QString(filename.c_str()) + "iteration_" + QString::number(0));
     ROS_WARN_NAMED("eval", "Finished with optimization iteration %i.", 0);
 
     //INITIAL POSE GRAPH OPTIMIZATION
     ParameterServer::instance()->set<std::string>("pose_relative_to", std::string("first"));
-    graph_mgr_->optimizeGraph(-100, true, QString(filename.c_str()));//Non threaded call
+    graph_mgr_->optimizeGraph(-100, true);//Non threaded call
     graph_mgr_->saveTrajectory(QString(filename.c_str()) + "iteration_" + QString::number(1));
     ROS_WARN_NAMED("eval", "Finished with optimization iteration %i.", 1);
 
     if(graph_mgr_->pruneEdgesWithErrorAbove(5) > 0){//Mahalanobis Distance
-      graph_mgr_->optimizeGraph(-100, true, QString(filename.c_str()));//Non threaded call
+      graph_mgr_->optimizeGraph(-100, true);//Non threaded call
     } else {//if nothing has changed through pruning, only do one optimization iteration to get the same log output
-      graph_mgr_->optimizeGraph(1, true, QString(filename.c_str()));//Non threaded call
+      graph_mgr_->optimizeGraph(1, true);//Non threaded call
     }
     graph_mgr_->saveTrajectory(QString(filename.c_str()) + "iteration_" + QString::number(2));
     ROS_WARN_NAMED("eval", "Finished with optimization iteration %i.", 2);
 
     if(graph_mgr_->pruneEdgesWithErrorAbove(1) > 0){//Mahalanobis Distance
-      graph_mgr_->optimizeGraph(-100, true, QString(filename.c_str()));//Non threaded call
+      graph_mgr_->optimizeGraph(-100, true);//Non threaded call
     } else {//if nothing has changed through pruning, only do one optimization iteration to get the same log output
-      graph_mgr_->optimizeGraph(1, true, QString(filename.c_str()));//Non threaded call
+      graph_mgr_->optimizeGraph(1, true);//Non threaded call
     }
     graph_mgr_->saveTrajectory(QString(filename.c_str()) + "iteration_" + QString::number(3));
     ROS_WARN_NAMED("eval", "Finished with optimization iteration %i.", 3);
 
     if(graph_mgr_->pruneEdgesWithErrorAbove(0.25) > 0){//Mahalanobis Distance
-      graph_mgr_->optimizeGraph(-100, true, QString(filename.c_str()));//Non threaded call
+      graph_mgr_->optimizeGraph(-100, true);//Non threaded call
     } else {//if nothing has changed through pruning, only do one optimization iteration to get the same log output
-      graph_mgr_->optimizeGraph(1, true, QString(filename.c_str()));//Non threaded call
+      graph_mgr_->optimizeGraph(1, true);//Non threaded call
     }
     graph_mgr_->saveTrajectory(QString(filename.c_str()) + "iteration_" + QString::number(4));
     ROS_WARN_NAMED("eval", "Finished with optimization iteration %i.", 4);
 
     if(ParameterServer::instance()->get<bool>("optimize_landmarks")){ //LANDMARK OPTIMIZATION
       ParameterServer::instance()->set<bool>("optimize_landmarks", true);
-      graph_mgr_->optimizeGraph(-100, true, QString(filename.c_str())+"_landmark_optimized_");//Non threaded call
+      graph_mgr_->optimizeGraph(-100, true);//Non threaded call
       graph_mgr_->saveTrajectory(QString(filename.c_str()) + "iteration_" + QString::number(3));
       ROS_WARN_NAMED("eval", "Finished with optimization iteration %i.", 3);
     }
 /* EmpiricalCovariances evaluation
     graph_mgr_->setEmpiricalCovariances();
-    graph_mgr_->optimizeGraph(-100, true, QString(filename.c_str()));//Non threaded call
+    graph_mgr_->optimizeGraph(-100, true);//Non threaded call
 
     graph_mgr_->saveTrajectory(QString(filename.c_str()) + "iteration_empiricalCov");
     graph_mgr_->saveG2OGraph(QString(filename.c_str()) + "empiricalCov.g2o");
     ROS_WARN_NAMED("eval", "Finished with optimization iteration empiricalCov.");
 
     graph_mgr_->setEmpiricalCovariances();
-    graph_mgr_->optimizeGraph(-100, true, QString(filename.c_str()));//Non threaded call
+    graph_mgr_->optimizeGraph(-100, true);//Non threaded call
 
     graph_mgr_->saveTrajectory(QString(filename.c_str()) + "iteration_empiricalCov2");
     graph_mgr_->saveG2OGraph(QString(filename.c_str()) + "empiricalCov2.g2o");
@@ -445,9 +452,9 @@ void OpenNIListener::evaluation(std::string filename)
     */
     /*
     if(graph_mgr_->pruneEdgesWithErrorAbove(1) > 0){//Mahalanobis Distance
-      graph_mgr_->optimizeGraph(-100, true, QString(filename.c_str()));//Non threaded call
+      graph_mgr_->optimizeGraph(-100, true);//Non threaded call
     } else {//if nothing has changed through pruning, only do one optimization iteration to get the same log output
-      graph_mgr_->optimizeGraph(1, true, QString(filename.c_str()));//Non threaded call
+      graph_mgr_->optimizeGraph(1, true);//Non threaded call
     }
     graph_mgr_->saveTrajectory(QString(filename.c_str()) + "iteration_" + QString::number(4));
     ROS_WARN_NAMED("eval", "Finished with optimization iteration %i.", 4);
@@ -487,7 +494,7 @@ void OpenNIListener::pcdCallback(const sensor_msgs::ImageConstPtr visual_img_msg
                                  pointcloud_type::Ptr pcl_cloud)
 {
     ScopedTimer s(__FUNCTION__);
-    ROS_INFO("Received data from pcd file reader");
+    ROS_INFO_NAMED("OpenNIListener", "Received data from pcd file reader");
     ROS_WARN_ONCE_NAMED("eval", "First RGBD-Data Received");
 
     //pointcloud_type::Ptr pcl_cloud(new pointcloud_type());//will belong to node
@@ -509,12 +516,12 @@ void OpenNIListener::stereoCallback(const sensor_msgs::ImageConstPtr& visual_img
                                     const sensor_msgs::PointCloud2ConstPtr& point_cloud)
 {
     ScopedTimer s(__FUNCTION__);
-    ROS_INFO("Received data from stereo cam");
+    ROS_INFO_NAMED("OpenNIListener", "Received data from stereo cam");
     ROS_WARN_ONCE_NAMED("eval", "First RGBD-Data Received");
     ParameterServer* ps = ParameterServer::instance();
     if(++data_id_ < ps->get<int>("skip_first_n_frames") 
        || data_id_ % ps->get<int>("data_skip_step") != 0){ 
-      ROS_INFO_THROTTLE(1, "Skipping Frame %i because of data_skip_step setting (this msg is only shown once a sec)", data_id_);
+      ROS_INFO_THROTTLE_NAMED(1, "OpenNIListener", "Skipping Frame %i because of data_skip_step setting (this msg is only shown once a sec)", data_id_);
       if(ps->get<bool>("use_gui")){//Show the image, even if not using it
         cv::Mat visual_img =  cv_bridge::toCvCopy(visual_img_msg)->image;
         Q_EMIT newVisualImage(cvMat2QImage(visual_img, 0)); //visual_idx=0
@@ -543,7 +550,7 @@ void OpenNIListener::stereoCallback(const sensor_msgs::ImageConstPtr& visual_img
        // todo: make the names dynamic
        bag.write("/wide_stereo/points2", ros::Time::now(), point_cloud);
        bag.write("/wide_stereo/left/image_mono", ros::Time::now(), visual_img_msg);
-       ROS_INFO_STREAM("Wrote to bagfile " << bag.getFileName());
+       ROS_INFO_STREAM_NAMED("OpenNIListener", "Wrote to bagfile " << bag.getFileName());
        bagfile_mutex.unlock();
        if(pause_) return;
     }
@@ -567,7 +574,7 @@ void OpenNIListener::noCloudCallback (const sensor_msgs::ImageConstPtr& visual_i
      || data_id_ % ps->get<int>("data_skip_step") != 0)
   { 
   // If only a subset of frames are used, skip computations but visualize if gui is running
-    ROS_INFO_THROTTLE(1, "Skipping Frame %i because of data_skip_step setting (this msg is only shown once a sec)", data_id_);
+    ROS_INFO_THROTTLE_NAMED(1, "OpenNIListener", "Skipping Frame %i because of data_skip_step setting (this msg is only shown once a sec)", data_id_);
     if(ps->get<bool>("use_gui")){//Show the image, even if not using it
       //cv::Mat depth_float_img = cv_bridge::toCvCopy(depth_img_msg)->image;
       cv::Mat visual_img =  cv_bridge::toCvCopy(visual_img_msg)->image;
@@ -594,7 +601,7 @@ void OpenNIListener::noCloudCallback (const sensor_msgs::ImageConstPtr& visual_i
   cv::Mat visual_img;
   if(image_encoding_ == "bayer_grbg8"){
     cv_bridge::toCvShare(visual_img_msg);
-    ROS_INFO("Converting from Bayer to RGB");
+    ROS_INFO_NAMED("OpenNIListener", "Converting from Bayer to RGB");
     cv::cvtColor(cv_bridge::toCvCopy(visual_img_msg)->image, visual_img, CV_BayerGR2RGB, 3);
   } else{
     ROS_DEBUG_STREAM("Encoding: " << visual_img_msg->encoding);
@@ -622,7 +629,7 @@ void OpenNIListener::noCloudCallback (const sensor_msgs::ImageConstPtr& visual_i
      // todo: make the names dynamic
      bag.write("/camera/rgb/image_mono", ros::Time::now(), visual_img_msg);
      bag.write("/camera/depth/image", ros::Time::now(), depth_img_msg);
-     ROS_INFO_STREAM("Wrote to bagfile " << bag.getFileName());
+     ROS_INFO_STREAM_NAMED("OpenNIListener", "Wrote to bagfile " << bag.getFileName());
      bagfile_mutex.unlock();
   }
 
@@ -651,7 +658,7 @@ void OpenNIListener::kinectCallback (const sensor_msgs::ImageConstPtr& visual_im
      || data_id_ % ps->get<int>("data_skip_step") != 0)
   { 
   // If only a subset of frames are used, skip computations but visualize if gui is running
-    ROS_INFO_THROTTLE(1, "Skipping Frame %i because of data_skip_step setting (this msg is only shown once a sec)", data_id_);
+    ROS_INFO_THROTTLE_NAMED(1, "OpenNIListener", "Skipping Frame %i because of data_skip_step setting (this msg is only shown once a sec)", data_id_);
     if(ps->get<bool>("use_gui")){//Show the image, even if not using it
       //cv::Mat depth_float_img = cv_bridge::toCvCopy(depth_img_msg)->image;
       cv::Mat visual_img =  cv_bridge::toCvCopy(visual_img_msg)->image;
@@ -692,7 +699,7 @@ void OpenNIListener::kinectCallback (const sensor_msgs::ImageConstPtr& visual_im
      bag.write("/camera/rgb/points", ros::Time::now(), point_cloud);
      bag.write("/camera/rgb/image_mono", ros::Time::now(), visual_img_msg);
      bag.write("/camera/depth/image", ros::Time::now(), depth_img_msg);
-     ROS_INFO_STREAM("Wrote to bagfile " << bag.getFileName());
+     ROS_INFO_STREAM_NAMED("OpenNIListener", "Wrote to bagfile " << bag.getFileName());
      bagfile_mutex.unlock();
   }
 
@@ -795,7 +802,7 @@ void OpenNIListener::processNode(Node* new_node)
 
   ///ODOMETRY
   if(has_been_added && !ps->get<std::string>("odom_frame_name").empty()){
-    ROS_INFO("Verifying Odometry Information");
+    ROS_INFO_NAMED("OpenNIListener", "Verifying Odometry Information");
     ros::Time latest_odom_time;
     std::string odom_frame  = ps->get<std::string>("odom_frame_name");
     std::string base_frame  = ps->get<std::string>("base_frame_name");
@@ -847,9 +854,9 @@ void OpenNIListener::toggleBagRecording(){
     strftime (buffer,80,"kinect_%Y-%m-%d-%H-%M-%S.bag",timeinfo);
 
     bag.open(buffer, rosbag::bagmode::Write);
-    ROS_INFO_STREAM("Opened bagfile " << bag.getFileName());
+    ROS_INFO_STREAM_NAMED("OpenNIListener", "Opened bagfile " << bag.getFileName());
   } else {
-    ROS_INFO_STREAM("Closing bagfile " << bag.getFileName());
+    ROS_INFO_STREAM_NAMED("OpenNIListener", "Closing bagfile " << bag.getFileName());
     bag.close();
   }
   bagfile_mutex.unlock();
@@ -857,7 +864,7 @@ void OpenNIListener::toggleBagRecording(){
 
 void OpenNIListener::togglePause(){
   pause_ = !pause_;
-  ROS_INFO("Pause toggled to: %s", pause_? "true":"false");
+  ROS_INFO_NAMED("OpenNIListener", "Pause toggled to: %s", pause_? "true":"false");
   if(pause_) Q_EMIT setGUIStatus("Processing Thread Stopped");
   else Q_EMIT setGUIStatus("Processing Thread Running");
 }
@@ -1063,25 +1070,16 @@ bool readOneFile(const QString& qfilename, sensor_msgs::PointCloud2& cloud)
       ROS_ERROR ("Couldn't read file %s", qPrintable(qfilename));
       return false;
     } 
-    //FIXME
-      cloud.width = 640;
-      cloud.height = 480;
-    /*FIXME convert to sensor_msgs::PointCloud2
-#ifdef HEMACLOUDS
-    pointcloud_type tmp_pc(cloud);
-//#pragma omp parallel for
-    for(size_t i = 0; i < cloud.size(); i++)
-    {
-      float x = cloud.at(i).x;
-      if(x==x){//not nan
-        cloud.at(i).x = -cloud.at(i).y;
-        cloud.at(i).y = -cloud.at(i).z;
-        cloud.at(i).z = x;
-        //cloud.at(i).segment = nearest_segment(tmp_pc, i);
+    //Hackish fix for bad dimensions
+    if(cloud.width == 1 || cloud.height == 1){
+      if(cloud.width * cloud.height == 640*480){
+        cloud.width = 640;
+        cloud.height = 480;
+      } else {
+        ROS_ERROR("Cloud has \"flat\" dimensions: %d x %d", cloud.width, cloud.height);
+        return false;
       }
     }
-#endif
-*/
     return true;
 }
 
@@ -1092,14 +1090,21 @@ bool readOneFile(const QString& qfilename, pointcloud_type::Ptr cloud){
     ROS_ERROR ("Couldn't read file %s", qPrintable(qfilename));
     return false;
   } 
-  //FIXME
-  std::cout << "Frame Id: " << cloud->header.frame_id << " Stamp: " << cloud->header.stamp << std::endl;
+  //Hackish fix for missing header
+  ROS_DEBUG_STREAM("Frame Id: " << cloud->header.frame_id << " Stamp: " << cloud->header.stamp);
   if( cloud->header.frame_id.empty()){
     myHeader header(index++, ros::Time::now(),  "/pcd_file_frame");
     cloud->header = header;
   }
-  cloud->width = 640;
-  cloud->height = 480;
+  if(cloud->width == 1 || cloud->height == 1){
+    if(cloud->height * cloud->width == 640*480) { //Hackish Fix for usual case
+      cloud->width = 640;
+      cloud->height = 480;
+    } else {
+      ROS_ERROR("Cloud has \"flat\" dimensions: %d x %d", cloud->width, cloud->height);
+      return false;
+    }
+  }
 #ifdef HEMACLOUDS
   //pointcloud_type tmp_pc(*cloud);
 #pragma omp parallel for
@@ -1128,6 +1133,7 @@ void OpenNIListener::loadPCDFilesAsync(QStringList file_list)
   bool prior_state = pause_;
   pause_ = false;
 
+  Q_EMIT iamBusy(3, "Loading PCD files", file_list.size());
   for (int i = 0; i < file_list.size(); i++)
   {
     Q_EMIT progress(3, "Loading PCD files", i);
@@ -1137,7 +1143,7 @@ void OpenNIListener::loadPCDFilesAsync(QStringList file_list)
         if(!ros::ok()) return;
       } while(pause_);
 
-      ROS_INFO("Processing file %s", qPrintable(file_list.at(i))); 
+      ROS_INFO_NAMED("OpenNIListener", "Processing file %s", qPrintable(file_list.at(i))); 
       //Create shared pointers to data structures
       sensor_msgs::Image::Ptr sm_img(new sensor_msgs::Image());
       sensor_msgs::PointCloud2::Ptr currentROSCloud(new sensor_msgs::PointCloud2());

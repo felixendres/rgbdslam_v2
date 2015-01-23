@@ -115,7 +115,8 @@ Node::Node(const cv::Mat& visual,
   base2points_(tf::Transform::getIdentity(), depth_header.stamp, ParameterServer::instance()->get<std::string>("base_frame_name"), depth_header.frame_id),
   ground_truth_transform_(tf::Transform::getIdentity(), depth_header.stamp, ParameterServer::instance()->get<std::string>("ground_truth_frame_name"), ParameterServer::instance()->get<std::string>("base_frame_name")),
   odom_transform_(tf::Transform::getIdentity(), depth_header.stamp, "missing_odometry", depth_header.frame_id),
-  initial_node_matches_(0)
+  initial_node_matches_(0),
+  cam_info_(*cam_info)
 {
   ScopedTimer s("Node Constructor");
   ParameterServer* ps = ParameterServer::instance();
@@ -261,7 +262,8 @@ Node::Node(const cv::Mat visual,
   base2points_(tf::Transform::getIdentity(), header_.stamp,ParameterServer::instance()->get<std::string>("base_frame_name"), header_.frame_id),
   ground_truth_transform_(tf::Transform::getIdentity(), header_.stamp, ParameterServer::instance()->get<std::string>("ground_truth_frame_name"), ParameterServer::instance()->get<std::string>("base_frame_name")),
   odom_transform_(tf::Transform::getIdentity(), header_.stamp, "missing_odometry", header_.frame_id),
-  initial_node_matches_(0){
+  initial_node_matches_(0)
+{
   //cv::namedWindow("matches");
   ParameterServer* ps = ParameterServer::instance();
 
@@ -1527,7 +1529,7 @@ void pairwiseObservationLikelihood(const Node* newer_node, const Node* older_nod
         #pragma omp section
         {
           unsigned int inlier_pts = 0, outlier_pts = 0, occluded_pts = 0, all_pts = 0;
-          observationLikelihood(mr.final_trafo, newer_node->pc_col, older_node->pc_col, likelihood, confidence, inlier_pts, outlier_pts, occluded_pts, all_pts) ;
+          observationLikelihood(mr.final_trafo, newer_node->pc_col, older_node->pc_col, older_node->getCamInfo(), likelihood, confidence, inlier_pts, outlier_pts, occluded_pts, all_pts) ;
           ROS_INFO("Observation Likelihood: %d projected to %d: good_point_ratio: %d/%d: %g, occluded points: %d", newer_node->id_, older_node->id_, inlier_pts, inlier_pts+outlier_pts, ((float)inlier_pts)/(inlier_pts+outlier_pts), occluded_pts);
           //rejectionSignificance(mr.final_trafo, newer_node->pc_col, older_node->pc_col);
           inlier_points += inlier_pts;
@@ -1539,7 +1541,7 @@ void pairwiseObservationLikelihood(const Node* newer_node, const Node* older_nod
         #pragma omp section
         {
           unsigned int inlier_pts = 0, outlier_pts = 0, occluded_pts = 0, all_pts = 0;
-          observationLikelihood(mr.final_trafo.inverse(), older_node->pc_col, newer_node->pc_col, likelihood, confidence, inlier_pts, outlier_pts, occluded_pts, all_pts) ;
+          observationLikelihood(mr.final_trafo.inverse(), older_node->pc_col, newer_node->pc_col, newer_node->getCamInfo(), likelihood, confidence, inlier_pts, outlier_pts, occluded_pts, all_pts) ;
           ROS_INFO("Observation Likelihood: %d projected to %d: good_point_ratio: %d/%d: %g, occluded points: %d", older_node->id_, newer_node->id_, inlier_pts, inlier_pts+outlier_pts, ((float)inlier_pts)/(inlier_pts+outlier_pts), occluded_pts);
           //rejectionSignificance(mr.final_trafo, newer_node->pc_col, older_node->pc_col);
           inlier_points += inlier_pts;

@@ -1143,7 +1143,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
         computeInliersAndError(*initial_matches, transformation, 
                                this->feature_locations_3d_, //this->feature_depth_stats_, 
                                earlier_node->feature_locations_3d_, //earlier_node->feature_depth_stats_, 
-                               refined_matches.size(), //break if no chance to reach this amount of inliers
+                               std::max(min_inlier_threshold, static_cast<unsigned int>(refined_matches.size())), //break if no chance to reach this amount of inliers
                                inlier, inlier_error, max_dist_m*max_dist_m); 
         
         if(inlier.size() < min_inlier_threshold || inlier_error > max_dist_m){

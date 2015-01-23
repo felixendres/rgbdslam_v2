@@ -116,7 +116,6 @@ OpenNIListener::OpenNIListener(GraphManager* graph_mgr)
   stereo_sync_(NULL), kinect_sync_(NULL), no_cloud_sync_(NULL),
   visua_sub_(NULL), depth_sub_(NULL), cloud_sub_(NULL),
   depth_mono8_img_(cv::Mat()),
-  save_bag_file(false),
   pause_(ParameterServer::instance()->get<bool>("start_paused")),
   getOneFrame_(false),
   first_frame_(true),
@@ -240,9 +239,9 @@ void OpenNIListener::loadBag(std::string filename)
   ROS_INFO_NAMED("OpenNIListener", "Loading Bagfile %s", filename.c_str());
   Q_EMIT iamBusy(4, "Loading Bagfile", 0);
   { //bag will be destructed after this block (hopefully frees memory for the optimizer)
-    rosbag::Bag bag;
+    rosbag::Bag input_bag;
     try{
-      bag.open(filename, rosbag::bagmode::Read);
+      input_bag.open(filename, rosbag::bagmode::Read);
     } catch(rosbag::BagIOException ex) {
       ROS_FATAL("Opening Bagfile %s failed: %s Quitting!", filename.c_str(), ex.what());
       ros::shutdown();
@@ -265,7 +264,7 @@ void OpenNIListener::loadBag(std::string filename)
       topics.push_back(odom_tpc);
     }
 
-    rosbag::View view(bag, rosbag::TopicQuery(topics));
+    rosbag::View view(input_bag, rosbag::TopicQuery(topics));
     Q_EMIT iamBusy(4, "Processing Bagfile", view.size());
     // Simulate sending of the messages in the bagfile
     std::deque<sensor_msgs::Image::ConstPtr> vis_images;
@@ -359,7 +358,7 @@ void OpenNIListener::loadBag(std::string filename)
 
     }
     ROS_WARN_NAMED("eval", "Finished processing of Bagfile");
-    bag.close();
+    input_bag.close();
   }
   Q_EMIT progress(4, "Processing Bagfile", 1e6);
   do{ 
@@ -378,7 +377,6 @@ void OpenNIListener::loadBag(std::string filename)
   //automatically save the result in a bagfile.
   //FIXME: The above assumption might not hold. Another parameter "save_bagfilename?"
   if(!ParameterServer::instance()->get<bool>("use_gui")){
-    //graph_mgr_->saveBagfile((filename + "-reconstruction.bag").c_str());
     Q_EMIT bagFinished();
     usleep(10);//10usec to allow all threads to finish (don't know how much is required)
   }
@@ -473,7 +471,7 @@ void OpenNIListener::evaluation(std::string filename)
   std::cerr << "Evaluation Done\n";
 }
 
-void calculateDepthMask(cv::Mat_<uchar>& depth_img, const pointcloud_type::Ptr point_cloud)
+static void calculateDepthMask(cv::Mat_<uchar>& depth_img, const pointcloud_type::Ptr point_cloud)
 {
     //calculate depthMask
     float value;
@@ -546,14 +544,6 @@ void OpenNIListener::stereoCallback(const sensor_msgs::ImageConstPtr& visual_img
       return;
     }
 
-    if (bagfile_mutex.tryLock() && save_bag_file){
-       // todo: make the names dynamic
-       bag.write("/wide_stereo/points2", ros::Time::now(), point_cloud);
-       bag.write("/wide_stereo/left/image_mono", ros::Time::now(), visual_img_msg);
-       ROS_INFO_STREAM_NAMED("OpenNIListener", "Wrote to bagfile " << bag.getFileName());
-       bagfile_mutex.unlock();
-       if(pause_) return;
-    }
     cameraCallback(visual_img, pc_col, depth_img);
 }
 
@@ -625,13 +615,6 @@ void OpenNIListener::noCloudCallback (const sensor_msgs::ImageConstPtr& visual_i
   if(asyncFrameDrop(depth_img_msg->header.stamp, visual_img_msg->header.stamp)) 
     return;
 
-  if (bagfile_mutex.tryLock() && save_bag_file){
-     // todo: make the names dynamic
-     bag.write("/camera/rgb/image_mono", ros::Time::now(), visual_img_msg);
-     bag.write("/camera/depth/image", ros::Time::now(), depth_img_msg);
-     ROS_INFO_STREAM_NAMED("OpenNIListener", "Wrote to bagfile " << bag.getFileName());
-     bagfile_mutex.unlock();
-  }
 
   if(pause_ && !getOneFrame_){ 
     if(ps->get<bool>("use_gui")){
@@ -694,14 +677,6 @@ void OpenNIListener::kinectCallback (const sensor_msgs::ImageConstPtr& visual_im
   if(asyncFrameDrop(depth_img_msg->header.stamp, visual_img_msg->header.stamp)) 
     return;
 
-  if (bagfile_mutex.tryLock() && save_bag_file){
-     // todo: make the names dynamic
-     bag.write("/camera/rgb/points", ros::Time::now(), point_cloud);
-     bag.write("/camera/rgb/image_mono", ros::Time::now(), visual_img_msg);
-     bag.write("/camera/depth/image", ros::Time::now(), depth_img_msg);
-     ROS_INFO_STREAM_NAMED("OpenNIListener", "Wrote to bagfile " << bag.getFileName());
-     bagfile_mutex.unlock();
-  }
 
   if(pause_ && !getOneFrame_){ 
     if(ps->get<bool>("use_gui")){
@@ -749,7 +724,7 @@ void OpenNIListener::noCloudCameraCallback(cv::Mat visual_img,
 {
   if(getOneFrame_) { //if getOneFrame_ is set, unset it and skip check for  pause
       getOneFrame_ = false;
-  } else if(pause_ && !save_bag_file) { //Visualization and nothing else
+  } else if(pause_) { //Visualization and nothing else
     return; 
   }
   ScopedTimer s(__FUNCTION__);
@@ -838,39 +813,17 @@ void OpenNIListener::processNode(Node* new_node)
 }
 
 
-void OpenNIListener::toggleBagRecording(){
-  bagfile_mutex.lock();
-  save_bag_file = !save_bag_file;
-  // save bag
-  if (save_bag_file)
-  {
-    time_t rawtime; 
-    struct tm * timeinfo;
-    char buffer [80];
-
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );
-    // create a nice name
-    strftime (buffer,80,"kinect_%Y-%m-%d-%H-%M-%S.bag",timeinfo);
-
-    bag.open(buffer, rosbag::bagmode::Write);
-    ROS_INFO_STREAM_NAMED("OpenNIListener", "Opened bagfile " << bag.getFileName());
-  } else {
-    ROS_INFO_STREAM_NAMED("OpenNIListener", "Closing bagfile " << bag.getFileName());
-    bag.close();
-  }
-  bagfile_mutex.unlock();
-}
-
 void OpenNIListener::togglePause(){
   pause_ = !pause_;
   ROS_INFO_NAMED("OpenNIListener", "Pause toggled to: %s", pause_? "true":"false");
-  if(pause_) Q_EMIT setGUIStatus("Processing Thread Stopped");
+  if(pause_) Q_EMIT setGUIStatus("Processing Thread Paused");
   else Q_EMIT setGUIStatus("Processing Thread Running");
 }
+
 void OpenNIListener::getOneFrame(){
   getOneFrame_=true;
 }
+
 /// Create a QImage from image. The QImage stores its data in the rgba_buffers_ indexed by idx (reused/overwritten each call)
 QImage OpenNIListener::cvMat2QImage(const cv::Mat& channel1, const cv::Mat& channel2, const cv::Mat& channel3, unsigned int idx){
   if(rgba_buffers_.size() <= idx){

@@ -100,7 +100,6 @@ class OpenNIListener : public QObject {
   public Q_SLOTS:
     ///Switch between processing or ignoring new incoming data
     void togglePause();
-    void toggleBagRecording();
     ///Process a single incomming frame. Useful in pause-mode for getting one snapshot at a time
     void getOneFrame();
     void loadPCDFiles(QStringList);
@@ -193,16 +192,10 @@ class OpenNIListener : public QObject {
     cv::Mat visualization_img_;
     std::vector<cv::Mat> rgba_buffers_;
     
-    rosbag::Bag bag;
-    bool save_bag_file;
-    
-    //ros::Publisher pc_pub; 
-    /*unsigned int callback_counter_;*/
     bool pause_;
     bool getOneFrame_;
     bool first_frame_;
     QFuture<void> future_;
-    QMutex bagfile_mutex;
     tf::TransformListener* tflistener_; //!this being a pointer saves the include (using the above forward declaration)
     tf::TransformBroadcaster tf_br_;
     ros::Publisher tf_pub_;

@@ -61,8 +61,6 @@ Q_SIGNALS:
     void reset(); 
     ///User selected to start or resume processing
     void togglePause();
-    ///User selected to start or resume bag recording
-    void toggleBagRecording();
     ///User wants the next frame to be processed
     void getOneFrame();
     ///User wants the last node to be removed from the graph
@@ -117,7 +115,6 @@ private Q_SLOTS:
     void quickSaveAll();
     void saveFeatures();
     void pause(bool);
-    void bagRecording(bool);
     void about();
     void help();
     void setInfo(QString);
@@ -157,6 +154,8 @@ private:
     QAction* newAction(QMenu* menu, const char* title, const char* statustip, QIcon icon);
     void setLabelToImage(QLabel* which_label, QImage new_image);
     void setup();
+    void setupStatusbar();
+    void initTexts();
     //!Menus and Menu elements are defined here
     void createMenus();
     //create "save" menu, return saveOctomap to also put in octoMapMenu

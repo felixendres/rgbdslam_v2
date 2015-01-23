@@ -46,7 +46,19 @@ Graphical_UI::Graphical_UI(QString title) : filename("quicksave.pcd"), glviewer(
   setWindowTitle(title);
 }
 
-void Graphical_UI::setup(){
+///Apply consistent format for image labels
+static void formatImageLabel(QLabel* label){
+    label->setWordWrap(true);//for infotext in rightmost label
+    label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
+    label->setMinimumSize(4,100);
+    label->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Expanding);
+
+    if(ParameterServer::instance()->get<bool>("scalable_2d_display")) {
+      label->setScaledContents(true);
+    }
+}
+
+void Graphical_UI::initTexts(){
     infoText = new QString(tr(
                 "<p><b>RGBDSLAMv2</b> uses visual features to identify corresponding 3D locations "
                 "in RGB-D data. The correspondences are used to reconstruct the camera motion. "
@@ -74,83 +86,61 @@ void Graphical_UI::setup(){
                 "    <li><i>Double click (on background):</i> reset camera position to latest pose.</li>"
                 "    <li><i>Ctrl + Double click (on background):</i> reset camera position to first pose (only works if follow mode is off).</li>"
                 "    <li><i>Double click on object:</i> set pivot to clicked point (only works if follow mode is off).</li>"
-                "<ul></p>")); feature_flow_image_label = new QLabel(*mouseHelpText);
+                "<ul></p>")); 
+}
+
+void Graphical_UI::setup(){
+    initTexts();    
 
     ParameterServer* ps = ParameterServer::instance();
-    // create widgets for image and map display
-    feature_flow_image_label->setWordWrap(true);
-    feature_flow_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
-    feature_flow_image_label->setMinimumSize(4,100);
-    feature_flow_image_label->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Expanding);
-    if(ps->get<bool>("scalable_2d_display")) {
-      feature_flow_image_label->setScaledContents(true);
-    }
 
-    std::string visual_topic = ParameterServer::instance()->get<std::string>("topic_image_mono");
+    // create widgets for image and map display
+    std::string visual_topic = ps->get<std::string>("topic_image_mono");
     QString vl("Waiting for visual image on topic<br/><i>\""); vl += visual_topic.c_str(); vl += "\"</i>";
     visual_image_label = new QLabel(vl);
-    visual_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
-    visual_image_label->setAlignment(Qt::AlignCenter);
-    visual_image_label->setMinimumSize(4,100);
-    visual_image_label->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Expanding);
-    if(ps->get<bool>("scalable_2d_display")) {
-      visual_image_label->setScaledContents(true);
-    }
+    formatImageLabel(visual_image_label);
 
-    std::string depth_topic = ParameterServer::instance()->get<std::string>("topic_image_depth");
+    std::string depth_topic = ps->get<std::string>("topic_image_depth");
     QString dl("Waiting for depth image on topic<br/><i>\""); dl += depth_topic.c_str(); 
     dl += "\"</i><br/>";
 
     depth_image_label = new QLabel(dl);
-    depth_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
-    depth_image_label->setAlignment(Qt::AlignCenter);
-    depth_image_label->setMinimumSize(4,100);
-    depth_image_label->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Expanding);
-    if(ParameterServer::instance()->get<bool>("scalable_2d_display")) {
-      depth_image_label->setScaledContents(true);
-    }
-
+    formatImageLabel(depth_image_label);
 
     feature_image_label = new QLabel(tr("<i>Waiting for feature image...</i>"));
-    feature_image_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
-    feature_image_label->setAlignment(Qt::AlignCenter);
-    feature_image_label->setVisible(false);
-    feature_image_label->setMinimumSize(4,100);
-    feature_image_label->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Expanding);
-    if(ps->get<bool>("scalable_2d_display")) {
-      feature_image_label->setScaledContents(true);
-    }
-    //transform_label = new QLabel(tr("<i>Waiting for transformation matrix...</i>"));
-    //transform_label->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
-    //transform_label->setAlignment(Qt::AlignCenter);
-    if(ps->get<bool>("use_glwidget")) glviewer = new GLViewer(this);//displays the cloud in 3d
+    formatImageLabel(feature_image_label);
+    
+    feature_flow_image_label = new QLabel(*mouseHelpText);
+    formatImageLabel(feature_flow_image_label);
 
-    //QFont typewriter_font;
-    //typewriter_font.setStyleHint(QFont::TypeWriter);
-    //transform_label->setFont(typewriter_font);
+    QSplitter* hsplitter = new QSplitter(Qt::Horizontal);
+    hsplitter->addWidget(visual_image_label);
+    hsplitter->addWidget(depth_image_label);
+    hsplitter->addWidget(feature_image_label);
+    hsplitter->addWidget(feature_flow_image_label);
 
     // setup the layout:
     // use a splitter as main widget
     vsplitter = new QSplitter(Qt::Vertical);
     setCentralWidget(vsplitter);
+
     // add glviewer as top item to splitter
-    if(ParameterServer::instance()->get<bool>("use_glwidget")) vsplitter->addWidget(glviewer);
-    // arrange image labels in horizontal layout
-    //QHBoxLayout* h_layout = new QHBoxLayout;
-    QSplitter* hsplitter = new QSplitter(Qt::Horizontal);
-    //h_layout->setSpacing(0);
-    //h_layout->setContentsMargins(0, 0, 0, 0);
-    hsplitter->addWidget(visual_image_label);
-    hsplitter->addWidget(depth_image_label);
-    hsplitter->addWidget(feature_image_label);
-    hsplitter->addWidget(feature_flow_image_label);
-    //QWidget* bottom_widget = new QWidget;
-    //bottom_widget->setLayout(h_layout);
-    // add them to the splitter
+    if(ps->get<bool>("use_glwidget")) {
+      glviewer = new GLViewer(this);//displays the cloud in 3d
+      vsplitter->addWidget(glviewer);
+    }
+
     vsplitter->addWidget(hsplitter);
 
     createMenus();
 
+    setupStatusbar();
+
+    setMinimumSize(600, 290);
+    resize(1000, 700);
+}
+
+void Graphical_UI::setupStatusbar(){
     tmpLabel = new QLabel();
     statusBar()->insertWidget(0,tmpLabel, 0);
     QString message = tr("Ready for RGB-D SLAM");
@@ -159,6 +149,7 @@ void Graphical_UI::setup(){
     infoLabel2->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
     infoLabel2->setAlignment(Qt::AlignRight);
     statusBar()->addPermanentWidget(infoLabel2, 0);
+
     if(ParameterServer::instance()->get<bool>("start_paused")){
       infoLabel = new QLabel(tr("<i>Press Enter or Space to Start</i>"));
     } else {
@@ -168,8 +159,6 @@ void Graphical_UI::setup(){
     infoLabel->setAlignment(Qt::AlignRight);
     statusBar()->addPermanentWidget(infoLabel, 0);
 
-    setMinimumSize(790, 290);
-    resize(1000, 700);
 }
 
 
@@ -319,11 +308,13 @@ void Graphical_UI::showEdgeErrors() {
     QString message = tr("Triggering Edge Printing");
     statusBar()->showMessage(message);
 }
+
 void Graphical_UI::optimizeGraphTrig() {
     Q_EMIT optimizeGraph();
     QString message = tr("Triggering Optimizer");
     statusBar()->showMessage(message);
 }
+
 void Graphical_UI::saveVectorGraphic() {
     QMessageBox::warning(this, tr("Don't render to pdf while point clouds are shown"), tr("This is meant for rendereing the pose graph. Rendering clouds to pdf will generate huge files!"));
     QString myfilename = QFileDialog::getSaveFileName(this, "Save Current 3D Display to Vector Graphic", "pose_graph.pdf", tr("All Files (*.*)"));
@@ -372,13 +363,11 @@ void Graphical_UI::saveBagDialog() {
     Q_EMIT saveBagfile(filename);
     QString message = tr("Writing Whole Model to Bagfile");
     statusBar()->showMessage(message);
-    //infoLabel->setText(message);
 }
 void Graphical_UI::sendAll() {
     Q_EMIT sendAllClouds();
     QString message = tr("Sending Whole Model");
     statusBar()->showMessage(message);
-    //infoLabel->setText(message);
 }
 
 void Graphical_UI::setRotationGrid() {
@@ -490,38 +479,23 @@ void Graphical_UI::sendFinished() {
     
     QString message = tr("Finished Sending");
     statusBar()->showMessage(message);
-    //infoLabel->setText(message);
 }
 
 void Graphical_UI::getOneFrameCmd() {
     Q_EMIT getOneFrame();
     QString message = tr("Getting a single frame");
     statusBar()->showMessage(message);
-    //infoLabel->setText(message);
 }
 void Graphical_UI::deleteLastFrameCmd() {
     Q_EMIT deleteLastFrame();
     QString message = tr("Deleting the last node from the graph");
     statusBar()->showMessage(message);
-    //infoLabel->setText(message);
 }
 
 void Graphical_UI::toggleMappingPriv(bool mapping_on) {
     Q_EMIT toggleMapping(mapping_on);
 }
 
-void Graphical_UI::bagRecording(bool pause_on) {
-    Q_EMIT toggleBagRecording();
-    if(pause_on) {
-        QString message = tr("Recording Bagfile.");
-        statusBar()->showMessage(message);
-        //infoLabel->setText(message);
-    } else {
-        QString message = tr("Stopped Recording.");
-        statusBar()->showMessage(message);
-        //infoLabel->setText(message);
-    }
-}
 void Graphical_UI::triggerCloudFiltering() {
   Q_EMIT occupancyFilterClouds();
 }
@@ -543,11 +517,9 @@ void Graphical_UI::pause(bool pause_on) {
     if(pause_on) {
         QString message = tr("Processing.");
         statusBar()->showMessage(message);
-        //infoLabel->setText(message);
     } else {
         QString message = tr("Stopped processing.");
         statusBar()->showMessage(message);
-        //infoLabel->setText(message);
     }
 }
 
@@ -712,14 +684,6 @@ QAction* Graphical_UI::createSaveMenu() {//octomap Menu
                 "",
                 QIcon::fromTheme("image-x-generic"));
     
-    newMenuItem(sm, "&Bagfile Recording",
-                this,
-                SLOT(bagRecording(bool)),
-                "Start/stop recording of frames to bagfile",
-                false,
-                "",
-                QIcon::fromTheme("media-record"));
-
     newMenuItem(sm, "Capture Screencast...",
                 this,
                 SLOT(toggleScreencast(bool)),

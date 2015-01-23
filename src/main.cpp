@@ -41,7 +41,6 @@ void ui_connections(QObject* ui, GraphManager* graph_mgr, OpenNIListener* listen
   QObject::connect(ui, SIGNAL(reset()), graph_mgr, SLOT(reset()), ctype);
   QObject::connect(ui, SIGNAL(optimizeGraph()), graph_mgr, SLOT(optimizeGraph()), ctype);
   QObject::connect(ui, SIGNAL(togglePause()), listener, SLOT(togglePause()), ctype);
-  QObject::connect(ui, SIGNAL(toggleBagRecording()), listener, SLOT(toggleBagRecording()), ctype);
   QObject::connect(ui, SIGNAL(getOneFrame()), listener, SLOT(getOneFrame()), ctype);
   QObject::connect(ui, SIGNAL(deleteLastFrame()), graph_mgr, SLOT(deleteLastFrame()), ctype);
   QObject::connect(ui, SIGNAL(sendAllClouds()), graph_mgr, SLOT(sendAllClouds()), ctype);

@@ -116,7 +116,7 @@ class GraphManager : public QObject {
       void reducePointCloud(pointcloud_type const * pc);
       ///Calls optimizeGraphImpl either in fore- or background depending on parameter concurrent_optimization
       ///Returns chi2
-      double optimizeGraph(double iter = -1, bool nonthreaded=false, QString filebasename=QString());
+      double optimizeGraph(double iter = -1, bool nonthreaded=false);
       void printEdgeErrors(QString);
       ///Actually only discounts the edges drastically
       ///Returns the number of edges that have been discounted

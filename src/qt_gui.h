@@ -145,10 +145,24 @@ private Q_SLOTS:
     void setOctoMapResolution();
     void triggerCloudFiltering();
 private:
+    //Helper to add a new checkable item to a menu. Assumes callback is method of this class
+    QAction* newMenuItem(QMenu* menu, const char* title, QObject* receiver, const char* callback, const char* statustip, bool checked, const char* key_seq = "" ,QIcon icon = QIcon());
+    //Helper to add a new item to a menu. Assumes callback is method of this class
+    QAction* newMenuItem(QMenu* menu, const char* title, const char* callback_method_of_this_class, const char* statustip,               const char* key_seq = "", QIcon icon = QIcon());
+    //Helper to add a new item to a menu. Assumes callback is method of this class
+    QAction* newMenuItem(QMenu* menu, const char* title, const char* callback_method_of_this_class, const char* statustip, QKeySequence::StandardKey key_seq,      QIcon icon = QIcon());
+    //Helper to add a new item to a menu. 
+    QAction* newMenuItem(QMenu* menu, const char* title, QObject* receiver, const char* callback,   const char* statustip,               const char* key_seq = "", QIcon icon = QIcon());
+    //Helper for newMenuItem
+    QAction* newAction(QMenu* menu, const char* title, const char* statustip, QIcon icon);
+    void setLabelToImage(QLabel* which_label, QImage new_image);
     void setup();
     //!Menus and Menu elements are defined here
     void createMenus();
-
+    //create "save" menu, return saveOctomap to also put in octoMapMenu
+    QAction* createSaveMenu();
+    void createProcessingMenu();
+    void createLoadMenu();
     //QString *menuHelpText;
     QString *mouseHelpText;
     QString *infoText;
@@ -168,10 +182,6 @@ private:
     GLViewer* glviewer;
     bool pause_on;
     QMap<int, QProgressBar*> progressbars;
-    QImage depth_image;
-    QImage visual_image;
-    QImage feature_image;
-    QImage feature_flow_image;
 };
 
 #endif

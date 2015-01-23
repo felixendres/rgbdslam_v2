@@ -115,7 +115,8 @@ Node::Node(const cv::Mat& visual,
   base2points_(tf::Transform::getIdentity(), depth_header.stamp, ParameterServer::instance()->get<std::string>("base_frame_name"), depth_header.frame_id),
   ground_truth_transform_(tf::Transform::getIdentity(), depth_header.stamp, ParameterServer::instance()->get<std::string>("ground_truth_frame_name"), ParameterServer::instance()->get<std::string>("base_frame_name")),
   odom_transform_(tf::Transform::getIdentity(), depth_header.stamp, "missing_odometry", depth_header.frame_id),
-  initial_node_matches_(0)
+  initial_node_matches_(0),
+  cam_info_(*cam_info)
 {
   ScopedTimer s("Node Constructor");
   ParameterServer* ps = ParameterServer::instance();
@@ -261,7 +262,8 @@ Node::Node(const cv::Mat visual,
   base2points_(tf::Transform::getIdentity(), header_.stamp,ParameterServer::instance()->get<std::string>("base_frame_name"), header_.frame_id),
   ground_truth_transform_(tf::Transform::getIdentity(), header_.stamp, ParameterServer::instance()->get<std::string>("ground_truth_frame_name"), ParameterServer::instance()->get<std::string>("base_frame_name")),
   odom_transform_(tf::Transform::getIdentity(), header_.stamp, "missing_odometry", header_.frame_id),
-  initial_node_matches_(0){
+  initial_node_matches_(0)
+{
   //cv::namedWindow("matches");
   ParameterServer* ps = ParameterServer::instance();
 
@@ -559,10 +561,9 @@ unsigned int Node::featureMatching(const Node* other, std::vector<cv::DMatch>* m
         ScopedTimer s("My bruteforce Search", false, true);
         uint64_t* query_value =  reinterpret_cast<uint64_t*>(this->feature_descriptors_.data);
         uint64_t* search_array = reinterpret_cast<uint64_t*>(other->feature_descriptors_.data);
-        for(unsigned int i = 0; i < this->feature_locations_2d_.size(); ++i){
+        for(unsigned int i = 0; i < this->feature_locations_2d_.size(); ++i, query_value += 4){//ORB feature = 32*8bit = 4*64bit
           int result_index = -1;
           int hd = bruteForceSearchORB(query_value, search_array, other->feature_locations_2d_.size(), result_index);
-          query_value += 4;//ORB feature = 32*8bit = 4*64bit
           if(hd >= 128) continue;//not more than half of the bits matching: Random
           cv::DMatch match(i, result_index, hd /256.0 + (float)rand()/(1000.0*RAND_MAX));
           matches->push_back(match);
@@ -1000,18 +1001,11 @@ void Node::computeInliersAndError(const std::vector<cv::DMatch> & all_matches,
     mean_error += mahal_dist;
 //#pragma omp critical
     inliers.push_back(m); //include inlier
-    /* Too ineffective (seldom happens and then mostly skips the last 5 iterations)
-    //if remaining items < yet to find items
-    if(static_cast<int>(all_matches_size - i) < (static_cast<int>(min_inliers) - static_cast<int>(inliers.size()))) {
-        ROS_INFO("Can't reach to min inliers (%lu) in iteration %d. Found %lu of %lu. Leaving %d to be found in %lu steps", min_inliers, i, inliers.size(), all_matches_size, (static_cast<int>(min_inliers) - static_cast<int>(inliers.size())), all_matches_size -i);
-        break;
-    }
-    */
   }
 
 
   if (inliers.size()<3){ //at least the samples should be inliers
-    ROS_WARN_COND(inliers.size() > 3, "No inliers at all in %d matches!", (int)all_matches.size()); // only warn if this checks for all initial matches
+    ROS_DEBUG("No inliers at all in %d matches!", (int)all_matches.size()); // only warn if this checks for all initial matches
     return_mean_error = 1e9;
   } else {
     mean_error /= inliers.size();
@@ -1149,7 +1143,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
         computeInliersAndError(*initial_matches, transformation, 
                                this->feature_locations_3d_, //this->feature_depth_stats_, 
                                earlier_node->feature_locations_3d_, //earlier_node->feature_depth_stats_, 
-                               refined_matches.size(), //break if no chance to reach this amount of inliers
+                               std::max(min_inlier_threshold, static_cast<unsigned int>(refined_matches.size())), //break if no chance to reach this amount of inliers
                                inlier, inlier_error, max_dist_m*max_dist_m); 
         
         if(inlier.size() < min_inlier_threshold || inlier_error > max_dist_m){
@@ -1527,7 +1521,7 @@ void pairwiseObservationLikelihood(const Node* newer_node, const Node* older_nod
         #pragma omp section
         {
           unsigned int inlier_pts = 0, outlier_pts = 0, occluded_pts = 0, all_pts = 0;
-          observationLikelihood(mr.final_trafo, newer_node->pc_col, older_node->pc_col, likelihood, confidence, inlier_pts, outlier_pts, occluded_pts, all_pts) ;
+          observationLikelihood(mr.final_trafo, newer_node->pc_col, older_node->pc_col, older_node->getCamInfo(), likelihood, confidence, inlier_pts, outlier_pts, occluded_pts, all_pts) ;
           ROS_INFO("Observation Likelihood: %d projected to %d: good_point_ratio: %d/%d: %g, occluded points: %d", newer_node->id_, older_node->id_, inlier_pts, inlier_pts+outlier_pts, ((float)inlier_pts)/(inlier_pts+outlier_pts), occluded_pts);
           //rejectionSignificance(mr.final_trafo, newer_node->pc_col, older_node->pc_col);
           inlier_points += inlier_pts;
@@ -1539,7 +1533,7 @@ void pairwiseObservationLikelihood(const Node* newer_node, const Node* older_nod
         #pragma omp section
         {
           unsigned int inlier_pts = 0, outlier_pts = 0, occluded_pts = 0, all_pts = 0;
-          observationLikelihood(mr.final_trafo.inverse(), older_node->pc_col, newer_node->pc_col, likelihood, confidence, inlier_pts, outlier_pts, occluded_pts, all_pts) ;
+          observationLikelihood(mr.final_trafo.inverse(), older_node->pc_col, newer_node->pc_col, newer_node->getCamInfo(), likelihood, confidence, inlier_pts, outlier_pts, occluded_pts, all_pts) ;
           ROS_INFO("Observation Likelihood: %d projected to %d: good_point_ratio: %d/%d: %g, occluded points: %d", older_node->id_, newer_node->id_, inlier_pts, inlier_pts+outlier_pts, ((float)inlier_pts)/(inlier_pts+outlier_pts), occluded_pts);
           //rejectionSignificance(mr.final_trafo, newer_node->pc_col, older_node->pc_col);
           inlier_points += inlier_pts;

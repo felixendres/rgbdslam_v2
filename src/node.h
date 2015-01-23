@@ -194,6 +194,8 @@ public:
                  const cv::flann::SearchParams& params) const;
 
   myHeader header_;
+  const sensor_msgs::CameraInfo& getCamInfo() const {return cam_info_;}
+
 protected:
   const cv::flann::Index* getFlannIndex() const;
   static QMutex gicp_mutex;
@@ -203,6 +205,7 @@ protected:
   tf::StampedTransform ground_truth_transform_;//!<contains the transformation from the mocap system
   tf::StampedTransform odom_transform_;        //!<contains the transformation from the wheel encoders/joint states
   int initial_node_matches_;
+  sensor_msgs::CameraInfo cam_info_; 
   //void computeKeypointDepthStats(const cv::Mat& depth_img, const std::vector<cv::KeyPoint> keypoints);
 
 #ifdef USE_SIFT_GPU

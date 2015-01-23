@@ -897,7 +897,7 @@ bool GraphManager::addEdgeToG2O(const LoadedEdge3D& edge,
     return true;
 }
 
-double GraphManager::optimizeGraph(double break_criterion, bool nonthreaded, QString filebasename){
+double GraphManager::optimizeGraph(double break_criterion, bool nonthreaded){
   if(ParameterServer::instance()->get<bool>("concurrent_optimization") && !nonthreaded) {
     ROS_DEBUG("Optimization done in Thread");
     QtConcurrent::run(this, &GraphManager::optimizeGraphImpl, break_criterion); 
@@ -951,6 +951,11 @@ double GraphManager::optimizeGraphImpl(double break_criterion)
   else //Got the lock
   {
     optimizer_mutex_.lock();
+    if(optimizer_->vertices().size() == 0){
+      ROS_ERROR("Attempted Graph Optimization on an empty graph!");
+      return -1.0;
+    }
+
     fixationOfVertices(ps->get<std::string>("pose_relative_to"), 
                        optimizer_, graph_, camera_vertices, earliest_loop_closure_node_); 
 

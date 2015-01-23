@@ -561,10 +561,9 @@ unsigned int Node::featureMatching(const Node* other, std::vector<cv::DMatch>* m
         ScopedTimer s("My bruteforce Search", false, true);
         uint64_t* query_value =  reinterpret_cast<uint64_t*>(this->feature_descriptors_.data);
         uint64_t* search_array = reinterpret_cast<uint64_t*>(other->feature_descriptors_.data);
-        for(unsigned int i = 0; i < this->feature_locations_2d_.size(); ++i){
+        for(unsigned int i = 0; i < this->feature_locations_2d_.size(); ++i, query_value += 4){//ORB feature = 32*8bit = 4*64bit
           int result_index = -1;
           int hd = bruteForceSearchORB(query_value, search_array, other->feature_locations_2d_.size(), result_index);
-          query_value += 4;//ORB feature = 32*8bit = 4*64bit
           if(hd >= 128) continue;//not more than half of the bits matching: Random
           cv::DMatch match(i, result_index, hd /256.0 + (float)rand()/(1000.0*RAND_MAX));
           matches->push_back(match);
@@ -1002,18 +1001,11 @@ void Node::computeInliersAndError(const std::vector<cv::DMatch> & all_matches,
     mean_error += mahal_dist;
 //#pragma omp critical
     inliers.push_back(m); //include inlier
-    /* Too ineffective (seldom happens and then mostly skips the last 5 iterations)
-    //if remaining items < yet to find items
-    if(static_cast<int>(all_matches_size - i) < (static_cast<int>(min_inliers) - static_cast<int>(inliers.size()))) {
-        ROS_INFO("Can't reach to min inliers (%lu) in iteration %d. Found %lu of %lu. Leaving %d to be found in %lu steps", min_inliers, i, inliers.size(), all_matches_size, (static_cast<int>(min_inliers) - static_cast<int>(inliers.size())), all_matches_size -i);
-        break;
-    }
-    */
   }
 
 
   if (inliers.size()<3){ //at least the samples should be inliers
-    ROS_WARN_COND(inliers.size() > 3, "No inliers at all in %d matches!", (int)all_matches.size()); // only warn if this checks for all initial matches
+    ROS_DEBUG("No inliers at all in %d matches!", (int)all_matches.size()); // only warn if this checks for all initial matches
     return_mean_error = 1e9;
   } else {
     mean_error /= inliers.size();

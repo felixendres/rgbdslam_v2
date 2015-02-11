@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.4.6)
 #########################################################
 ### USER CONFIG #########################################
 #########################################################
-set(USE_SIFT_GPU        1) 
+set(USE_SIFT_GPU        0) 
 set(ENV{SIFT_GPU_MODE}	2) #CUDA = 1, GLSL = 2
 set(ENV{SIFT_GPU_CUDA_PATH}	/usr/local/cuda)	
 set(USE_GICP_BIN		0)
@@ -18,7 +18,8 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #SET(CMAKE_CXX_FLAGS "-O3 -fPIC -std=c++0x")
 #For annotated profiling with perf: 
-SET(CMAKE_CXX_FLAGS "-ggdb -O3 -fPIC -std=c++0x")
+#SET(CMAKE_CXX_FLAGS "-ggdb -O3 -fPIC -std=c++0x")
+SET(CMAKE_CXX_FLAGS "-ggdb -O3 -fPIC")
 
 IF (${USE_GL2PS})
   add_definitions(-DGL2PS)

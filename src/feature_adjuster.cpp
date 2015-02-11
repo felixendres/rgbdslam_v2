@@ -200,7 +200,7 @@ VideoGridAdaptedFeatureDetector::VideoGridAdaptedFeatureDetector( const cv::Ptr<
 
 bool VideoGridAdaptedFeatureDetector::empty() const
 {
-    for(auto detector : detectors){
+    for(std::vector<cv::Ptr<StatefulFeatureDetector> >::const_iterator detector = detectors.begin(); detector != detectors.end(); ++detector){
       if(detector->empty()) return true;
     }
     return false;

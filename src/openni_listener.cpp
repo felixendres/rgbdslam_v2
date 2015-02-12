@@ -269,8 +269,8 @@ void OpenNIListener::loadBag(std::string filename)
         if (tf_msg) {
           //if(tf_msg->transforms[0].header.frame_id == "/kinect") continue;//avoid destroying tf tree if odom is used
           //prevents missing callerid warning
-          boost::shared_ptr<std::map<std::string, std::string> > msg_header_map = tf_msg->__connection_header;
-          (*msg_header_map)["callerid"] = "rgbdslam";
+          // boost::shared_ptr<std::map<std::string, std::string> > msg_header_map = tf_msg->__connection_header;
+          // (*msg_header_map)["callerid"] = "rgbdslam";
           tf_pub_.publish(tf_msg);
           ROS_DEBUG("Found Message of %s", tf_tpc.c_str());
           last_tf = tf_msg->transforms[0].header.stamp;

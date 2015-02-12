@@ -48,7 +48,8 @@
   <build_depend>geometry_msgs</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>octomap</build_depend>
-  <build_depend>visualization_msgs</build_depend>
+  <build_depend>visualization_msgs</build_depend> 
+  <build_depend>cmake_modules</build_depend>
   <run_depend>pcl_conversions</run_depend>
   <run_depend>pcl_ros</run_depend>
   <run_depend>roscpp</run_depend>
@@ -56,7 +57,9 @@
   <run_depend>sensor_msgs</run_depend>
   <run_depend>octomap</run_depend>
   <run_depend>visualization_msgs</run_depend>
+  <run_depend>cmake_modules</run_depend>
   <!-- own stuff -->
+
   <build_depend>libpcl-all-dev</build_depend>
   <build_depend>tf</build_depend>
   <build_depend>libg2o</build_depend>

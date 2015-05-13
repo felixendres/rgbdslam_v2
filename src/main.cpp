@@ -41,7 +41,6 @@ void ui_connections(QObject* ui, GraphManager* graph_mgr, OpenNIListener* listen
   QObject::connect(ui, SIGNAL(reset()), graph_mgr, SLOT(reset()), ctype);
   QObject::connect(ui, SIGNAL(optimizeGraph()), graph_mgr, SLOT(optimizeGraph()), ctype);
   QObject::connect(ui, SIGNAL(togglePause()), listener, SLOT(togglePause()), ctype);
-  QObject::connect(ui, SIGNAL(toggleBagRecording()), listener, SLOT(toggleBagRecording()), ctype);
   QObject::connect(ui, SIGNAL(getOneFrame()), listener, SLOT(getOneFrame()), ctype);
   QObject::connect(ui, SIGNAL(deleteLastFrame()), graph_mgr, SLOT(deleteLastFrame()), ctype);
   QObject::connect(ui, SIGNAL(sendAllClouds()), graph_mgr, SLOT(sendAllClouds()), ctype);
@@ -59,6 +58,7 @@ void gui_connections(Graphical_UI* gui, GraphManager* graph_mgr, OpenNIListener*
 {
     QObject::connect(listener,  SIGNAL(newVisualImage(QImage)), gui, SLOT(setVisualImage(QImage)));
     QObject::connect(listener,  SIGNAL(newFeatureFlowImage(QImage)), gui, SLOT(setFeatureFlowImage(QImage)));
+    QObject::connect(listener,  SIGNAL(newFeatureImage(QImage)), gui, SLOT(setFeatureImage(QImage)));
     QObject::connect(listener,  SIGNAL(newDepthImage(QImage)), gui, SLOT(setDepthImage(QImage)));
     QObject::connect(graph_mgr, SIGNAL(sendFinished()), gui, SLOT(sendFinished()));
     QObject::connect(graph_mgr, SIGNAL(iamBusy(int, const char*, int)), gui, SLOT(showBusy(int, const char*, int)));

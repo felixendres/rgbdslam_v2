@@ -51,8 +51,6 @@ Q_SIGNALS:
     void togglePause();
     ///User selected to do SLAM or Localization only
     void toggleMapping(bool);
-    ///User selected to start or resume bag recording
-    void toggleBagRecording();
     ///User wants the next frame to be processed
     void getOneFrame();
     ///User wants the last node to be removed from the graph
@@ -79,7 +77,6 @@ public Q_SLOTS:
 
 private:
     void pause(bool);
-    void bagRecording(bool);
     void toggleCloudStorage(bool);
 private:
     bool pause_on;

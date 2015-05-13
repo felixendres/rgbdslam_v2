@@ -1,8 +1,10 @@
-# RGBDSLAM<i>v2</i> ```beta version```
-... is a state-of-the-art SLAM system for RGB-D cameras, e.g., the Microsoft Kinect.
-You can use it to create highly accurate 3D point clouds or OctoMaps. 
+# RGBDSLAM<i>v2</i> 
+... is a state-of-the-art SLAM system for RGB-D cameras, e.g., the Microsoft
+Kinect or the Asus Xtion Pro Live.  You can use it to create 3D point clouds or
+OctoMaps. 
 
-RGBDSLAMv2 is based on the ROS project, OpenCV, PCL, OctoMap, SiftGPU and more - thanks!
+RGBDSLAMv2 is based on the open source projects, ROS, OpenCV, OpenGL, PCL,
+OctoMap, SiftGPU, g2o, and more - Thanks!
 
 A journal article with a system description and performance evaluation 
 can be found in the following publication:
@@ -24,16 +26,16 @@ Additional information can be found here:<br/>
 - Problems may occur when using a version of the PCL library different from the ROS hydro version.
 
 # Installation ################################################################
-The installation of RGBDSLAMv2 for ROS hydro should be straigh.
+The installation of RGBDSLAMv2 for ROS hydro should be straightforward.
 A copy-pastable walkthrough can be found below
 
 1. Put RGBDSLAMv2 in a catkin workspace: See [the catkin tutorial](http://wiki.ros.org/catkin/Tutorials/create_a_workspace) 
   for details. Use git to clone this repository into your workspace's "src/" directory. Or download RGBDSLAMv2 as an [archive](http://codeload.github.com/felixendres/rgbdslam_v2/zip/hydro) and extract it to "src/".
 
-3. Use rosdep (i.e. "rosdep install rgbdslam") to install missing 
+2. Use rosdep (i.e. "rosdep install rgbdslam") to install missing 
   dependencies. For details see http://wiki.ros.org/ROS/Tutorials/rosdep
 
-4. To build RGBDSLAMv2 go to your catkine workspace and execute "catkin_make". 
+3. To build RGBDSLAMv2 go to your catkine workspace and execute "catkin_make". 
    If you get an error about the missing siftgpu library, execute "catkin_make" again.
 
 
@@ -94,7 +96,7 @@ in the GUI Menu Settings->View Current Settings.
 
 The various use-case launch-files might not work correctly yet, as they are not
 regularly tested. You should get them running if you fiddle with the topics
-("rostopic list" and "rosnode info" will help you.  "rqt_graph" is great too).
+("rostopic list" and "rosnode info" will help you. "rqt_graph" is great too).
 
 
 
@@ -110,6 +112,7 @@ the octomap directly. In the GUI this can be done by selecting "Save Octomap"
 from the "Data" Menu. Online octomapping is possible, but not recommended.
 
 <img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_fr2desk_octomap.jpg" width="600" alt="OctoMap created from the RGB-D Benchmark sequence fr2/desk">
+
 ## Usage with GUI #################################################################
 
 To start RGBDSLAMv2 launch, e.g.,

@@ -59,12 +59,18 @@
 
 //#include "g2o/types/slam3d/camera_parameters.h"
 #include "g2o/types/slam3d/parameter_camera.h"
+#include "g2o/types/slam2d/vertex_se2.h"
 
 #include "g2o/core/hyper_dijkstra.h"
 #include "g2o/core/robust_kernel_impl.h"
 
+namespace tf {
+class TransformListener;
+}
 
 //typedef g2o::HyperGraph::VertexSet::iterator Vset_it;
+///Type to iterate over graph map
+typedef std::map<int, Node* >::iterator graph_it;
 typedef std::set<g2o::HyperGraph::Edge*> EdgeSet;
 typedef g2o::HyperGraph::EdgeSet::iterator EdgeSet_it;
 typedef std::map<int, Node* >::iterator graph_it;
@@ -110,7 +116,7 @@ class GraphManager : public QObject {
       void reducePointCloud(pointcloud_type const * pc);
       ///Calls optimizeGraphImpl either in fore- or background depending on parameter concurrent_optimization
       ///Returns chi2
-      double optimizeGraph(double iter = -1, bool nonthreaded=false, QString filebasename=QString());
+      double optimizeGraph(double iter = -1, bool nonthreaded=false);
       void printEdgeErrors(QString);
       ///Actually only discounts the edges drastically
       ///Returns the number of edges that have been discounted
@@ -154,6 +160,9 @@ class GraphManager : public QObject {
     /// \callergraph
     bool addNode(Node* newNode); 
 
+    //! Check if all nodes include the odometry. If not, add a new edge.
+    /// \callergraph
+    void addOdometry(ros::Time timestamp, tf::TransformListener* listener);
     //! Try to compute transformations to previous nodes
     /// getPotentialEdgeTargetsWithDijkstra is used to select
     /// previous nodes to match against, then the comparison
@@ -165,8 +174,15 @@ class GraphManager : public QObject {
     /// Adds the first node
     void firstNode(Node* new_node);
 
+    ///Pose vertices (in camera coordinate system)
     g2o::HyperGraph::VertexSet camera_vertices;
+    ///"Regular" edges from camera to camera as found form feature correspondeces
     g2o::HyperGraph::EdgeSet cam_cam_edges_;
+    ///Contains those motions that represent absence of information. 
+    ///Only there to prevent the graph from becoming unconnected.
+    //g2o::HyperGraph::EdgeSet dummy_edges_; 
+    ///Edges added by addOdometryEdgeToG2O(...)
+    g2o::HyperGraph::EdgeSet odometry_edges_;
     g2o::HyperGraph::EdgeSet current_match_edges_;
 
 #ifdef DO_FEATURE_OPTIMIZATION
@@ -175,7 +191,12 @@ class GraphManager : public QObject {
 #endif
 
     ///Draw the features's motions onto the canvas
-    void drawFeatureFlow(cv::Mat& canvas, 
+    void drawFeatureFlow(cv::Mat& canvas,
+                         cv::Scalar line_color = cv::Scalar(255,0,0,0), 
+                         cv::Scalar circle_color = cv::Scalar(0,0,255,0)); 
+
+    //Juergen: overloading function to draw features in different image
+    void drawFeatureFlow(cv::Mat& canvas_flow, cv::Mat& canvas_features,
                          cv::Scalar line_color = cv::Scalar(255,0,0,0), 
                          cv::Scalar circle_color = cv::Scalar(0,0,255,0)); 
 
@@ -250,13 +271,16 @@ protected:
     int *descriptor_to_node;
 #endif
     
+    ///Adds an visual-feature-correspondence edge to the optimizer
     bool addEdgeToG2O(const LoadedEdge3D& edge, Node* n1, Node* n2, bool good_edge, bool set_estimate, QMatrix4x4& motion_estimate);
+    ///Adds an odometry edge to the optimizer
+    bool addOdometryEdgeToG2O(const LoadedEdge3D& edge, Node* n1, Node* n2, QMatrix4x4& motion_estimate);
 
     //Delete a camera frame. Be careful, this might split the graph!
     void deleteCameraFrame(int id);
 
     ///Broadcast given transform
-    void broadcastTransform(const tf::StampedTransform& computed_motion) const;
+    void broadcastTransform(const tf::StampedTransform& computed_motion);
 
     ///Broadcast cached transform
     void broadcastLatestTransform(const ros::TimerEvent& event) const;
@@ -278,14 +302,14 @@ protected:
      return graph_[node_id]->vertex_id_;
     }
     //! Return pointer to a list of the optimizers graph poses on the heap(!)
-    QList<QMatrix4x4>* getAllPosesAsMatrixList();
+    QList<QMatrix4x4>* getAllPosesAsMatrixList() const;
     //! Return pointer to a list of the optimizers graph edges on the heap(!)
     QList<QPair<int, int> >* getGraphEdges(); 
 
     // MEMBER VARIABLES
     QList<QPair<int, int> > current_edges_;
     //QMutex current_edges_lock_;
-    QList<QMatrix4x4> current_poses_;
+    //QList<QMatrix4x4> current_poses_;
 
     //void mergeAllClouds(pointcloud_type & merge);
     double geodesicDiscount(g2o::HyperDijkstra& hypdij, const MatchingResult& mr);
@@ -298,6 +322,7 @@ protected:
     ros::Publisher ransac_marker_pub_;
     ros::Publisher whole_cloud_pub_;
     ros::Publisher batch_cloud_pub_;
+    ros::Publisher online_cloud_pub_;
     
     //!Used to start the broadcasting of the pose estimate regularly
     ros::Timer timer_;
@@ -342,6 +367,7 @@ protected:
     void saveOctomapImpl(QString filename);
     void renderToOctomap(Node* node);
     void pointCloud2MeshFile(QString filename, pointcloud_type full_cloud);
+    void savePlyFile(QString filename, pointcloud_normal_type& full_cloud);
 
     //RVIZ visualization stuff (also in graph_mgr_io.cpp)
     ///Send markers to visualize the graph edges (cam transforms) in rviz (if somebody subscribed)
@@ -355,6 +381,12 @@ protected:
     
     g2o::RobustKernelHuber robust_kernel_;
     //g2o::RobustKernelDCS robust_kernel_;
+    g2o::SparseOptimizer::Vertex* calibration_vertex_;
+    //g2o::SparseOptimizer::Vertex* odom_calibration_vertex_;
+
+
+    //Odometry variables needed
+    unsigned int last_odom_time_;
 
 };
 

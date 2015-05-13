@@ -61,8 +61,6 @@ Q_SIGNALS:
     void reset(); 
     ///User selected to start or resume processing
     void togglePause();
-    ///User selected to start or resume bag recording
-    void toggleBagRecording();
     ///User wants the next frame to be processed
     void getOneFrame();
     ///User wants the last node to be removed from the graph
@@ -92,12 +90,15 @@ Q_SIGNALS:
 public Q_SLOTS:
     void setVisualImage(QImage);
     void setFeatureFlowImage(QImage);
+    void setFeatureImage(QImage);
     void setDepthImage(QImage);
     void sendFinished(); ///< Call to display, that sending finished
     void showOptions();
     void showBusy(int id, const char* message, int max);
     void setBusy(int id, const char* message, int val);
     void set2DStream(bool is_on);
+    //save depth color feature and correspondences image
+    void saveAllImages();
 
 private Q_SLOTS:
     void saveVectorGraphic();
@@ -114,7 +115,6 @@ private Q_SLOTS:
     void quickSaveAll();
     void saveFeatures();
     void pause(bool);
-    void bagRecording(bool);
     void about();
     void help();
     void setInfo(QString);
@@ -142,10 +142,26 @@ private Q_SLOTS:
     void setOctoMapResolution();
     void triggerCloudFiltering();
 private:
+    //Helper to add a new checkable item to a menu. Assumes callback is method of this class
+    QAction* newMenuItem(QMenu* menu, const char* title, QObject* receiver, const char* callback, const char* statustip, bool checked, const char* key_seq = "" ,QIcon icon = QIcon());
+    //Helper to add a new item to a menu. Assumes callback is method of this class
+    QAction* newMenuItem(QMenu* menu, const char* title, const char* callback_method_of_this_class, const char* statustip,               const char* key_seq = "", QIcon icon = QIcon());
+    //Helper to add a new item to a menu. Assumes callback is method of this class
+    QAction* newMenuItem(QMenu* menu, const char* title, const char* callback_method_of_this_class, const char* statustip, QKeySequence::StandardKey key_seq,      QIcon icon = QIcon());
+    //Helper to add a new item to a menu. 
+    QAction* newMenuItem(QMenu* menu, const char* title, QObject* receiver, const char* callback,   const char* statustip,               const char* key_seq = "", QIcon icon = QIcon());
+    //Helper for newMenuItem
+    QAction* newAction(QMenu* menu, const char* title, const char* statustip, QIcon icon);
+    void setLabelToImage(QLabel* which_label, QImage new_image);
     void setup();
+    void setupStatusbar();
+    void initTexts();
     //!Menus and Menu elements are defined here
     void createMenus();
-
+    //create "save" menu, return saveOctomap to also put in octoMapMenu
+    QAction* createSaveMenu();
+    void createProcessingMenu();
+    void createLoadMenu();
     //QString *menuHelpText;
     QString *mouseHelpText;
     QString *infoText;
@@ -157,6 +173,7 @@ private:
     QLabel *visual_image_label;
     QLabel *feature_flow_image_label;
     QLabel *depth_image_label;
+    QLabel *feature_image_label;
     QLabel *stats_image_label;
     //QLabel *transform_label;
     QGridLayout* gridlayout;

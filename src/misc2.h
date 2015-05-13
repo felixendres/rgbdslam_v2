@@ -29,8 +29,9 @@ inline double depth_std_dev(double depth)
 //Functions without dependencies
 inline double depth_covariance(double depth)
 {
-  double stddev = depth_std_dev(depth);
-  return stddev * stddev;
+  static double stddev = depth_std_dev(depth);
+  static double cov = stddev * stddev;
+  return cov;
 }
 
 inline Eigen::Matrix3d point_information_matrix(double distance)
@@ -43,5 +44,23 @@ inline Eigen::Matrix3d point_information_matrix(double distance)
   inf_mat(2,2) = 1.0/depth_covariance(distance);
 
   return inf_mat;
+}
+
+inline void backProject(const float& fxinv, const float& fyinv,
+                        const float& cx, const float& cy,
+                        const float& u,  const float& v, const float& z,
+                        float& out_x,  float& out_y, float& out_z)
+{
+    //If depth is distance, not distance projected onto optical axis:
+  /*
+    float tmpx = (u-cx) * fxinv;
+    float tmpy = (v-cy) * fyinv;
+    out_z = z / std::sqrt(tmpx*tmpx + tmpy*tmpy + 1 ) ;
+    out_x = tmpx * out_z;
+    out_y = tmpy * out_z;
+  */
+  out_x = (u - cx) * z * fxinv;
+  out_y = (v - cy) * z * fyinv;
+  out_z = z;
 }
 #endif

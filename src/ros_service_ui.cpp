@@ -38,19 +38,6 @@ void RosUi::sendFinished() {
 }
 
 
-void RosUi::bagRecording(bool _record_on) {
-    if(this->record_on == _record_on){
-        return;
-    }
-    this->record_on = _record_on;
-    Q_EMIT toggleBagRecording();
-    if(_record_on) {
-        ROS_INFO("Recording Bagfile.");
-    } else {
-        ROS_INFO("Stopped Recording.");
-    }
-}
-
 void RosUi::pause(bool _pause_on) {
     if(this->pause_on == _pause_on){
         return;
@@ -92,7 +79,6 @@ bool RosUi::services_b(rgbdslam::rgbdslam_ros_ui_b::Request  &req,
 {
   ROS_INFO_STREAM("Got Service Request. Command: " << req.command << ". Value: " << ( req.value ? "True" : "False"));
   if     (req.command == "pause"            ){ pause(req.value); }
-  else if(req.command == "record"           ){ bagRecording(req.value); }
   else if(req.command == "mapping"          ){ Q_EMIT toggleMapping(req.value); }
   else if(req.command == "store_pointclouds"){ toggleCloudStorage(req.value); }
     else{

@@ -16,6 +16,7 @@
 
 
 #include "node.h"
+#include "features.h"
 #include "transformation_estimation_euclidean.h"
 #include "transformation_estimation.h"
 #include <cmath>
@@ -48,6 +49,7 @@
 
 //#include <iostream>
 #include "misc.h"
+#include "misc2.h"
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/impl/voxel_grid.hpp>
 #include <opencv/highgui.h>
@@ -102,14 +104,19 @@ Node::Node(const cv::Mat& visual,
            myHeader depth_header,
            cv::Ptr<cv::FeatureDetector> detector,
            cv::Ptr<cv::DescriptorExtractor> extractor) :
-  id_(-1), seq_id_(-1), vertex_id_(-1), valid_tf_estimate_(true), matchable_(true),
+  id_(-1), seq_id_(-1), vertex_id_(-1), valid_tf_estimate_(true),
+  timestamp_(depth_header.stamp),
+  has_odometry_edge_(false),
+  odometry_set_(false),
+  matchable_(true),
   pc_col(new pointcloud_type()),
   flannIndex(NULL),
   header_(depth_header),
   base2points_(tf::Transform::getIdentity(), depth_header.stamp, ParameterServer::instance()->get<std::string>("base_frame_name"), depth_header.frame_id),
   ground_truth_transform_(tf::Transform::getIdentity(), depth_header.stamp, ParameterServer::instance()->get<std::string>("ground_truth_frame_name"), ParameterServer::instance()->get<std::string>("base_frame_name")),
   odom_transform_(tf::Transform::getIdentity(), depth_header.stamp, "missing_odometry", depth_header.frame_id),
-  initial_node_matches_(0)
+  initial_node_matches_(0),
+  cam_info_(*cam_info)
 {
   ScopedTimer s("Node Constructor");
   ParameterServer* ps = ParameterServer::instance();
@@ -246,13 +253,17 @@ Node::Node(const cv::Mat visual,
            pointcloud_type::Ptr point_cloud,
            const cv::Mat detection_mask) : 
   id_(-1), seq_id_(-1), vertex_id_(-1), valid_tf_estimate_(true), matchable_(true),
+  timestamp_(point_cloud->header.stamp),
+  has_odometry_edge_(false),
+  odometry_set_(false),
   pc_col(point_cloud),
   flannIndex(NULL),
   header_(point_cloud->header),
   base2points_(tf::Transform::getIdentity(), header_.stamp,ParameterServer::instance()->get<std::string>("base_frame_name"), header_.frame_id),
   ground_truth_transform_(tf::Transform::getIdentity(), header_.stamp, ParameterServer::instance()->get<std::string>("ground_truth_frame_name"), ParameterServer::instance()->get<std::string>("base_frame_name")),
   odom_transform_(tf::Transform::getIdentity(), header_.stamp, "missing_odometry", header_.frame_id),
-  initial_node_matches_(0){
+  initial_node_matches_(0)
+{
   //cv::namedWindow("matches");
   ParameterServer* ps = ParameterServer::instance();
 
@@ -361,6 +372,7 @@ Node::~Node() {
 
 void Node::setOdomTransform(tf::StampedTransform gt){
     odom_transform_ = gt;
+    odometry_set_=true;
 }
 void Node::setGroundTruthTransform(tf::StampedTransform gt){
     ground_truth_transform_ = gt;
@@ -489,11 +501,30 @@ const cv::flann::Index* Node::getFlannIndex() const {
     flannIndex = new cv::flann::Index(feature_descriptors_, cv::flann::KDTreeIndexParams(4));
     ROS_DEBUG("Built flannIndex (address %p) for Node %i", flannIndex, this->id_);
   }
+  else if (flannIndex == NULL
+      && ParameterServer::instance()->get<std::string> ("matcher_type") == "FLANN" 
+      && ParameterServer::instance()->get<std::string> ("feature_extractor_type") == "ORB")
+  {
+    flannIndex = new cv::flann::Index(feature_descriptors_, cv::flann::LshIndexParams(10, 10, 2));
+  }
+
   return flannIndex;
 }
 
+//Throw away the worst matches based on their distance - which is the nn_ratio set in featureMatching(...)
+static void keepStrongestMatches(int n, std::vector<cv::DMatch>* matches)
+{
+  if(matches->size() > n)
+  {
+    //m1 better than m2?
+    auto lambda = [](const cv::DMatch& m1, const cv::DMatch& m2) { return m1.distance < m2.distance; };
 
-  
+    std::vector<cv::DMatch>::iterator nth = matches->begin() + n;
+    std::nth_element(matches->begin(), nth, matches->end(), lambda);
+    matches->erase(nth, matches->end());
+  }
+}
+
 
 //TODO: This function seems to be resistant to parallelization probably due to knnSearch
 unsigned int Node::featureMatching(const Node* other, std::vector<cv::DMatch>* matches) const 
@@ -522,61 +553,66 @@ unsigned int Node::featureMatching(const Node* other, std::vector<cv::DMatch>* m
   else
 #endif
   //using BruteForceMatcher for ORB features
-  if (ps->get<std::string> ("matcher_type") == "BRUTEFORCE" || 
-      ps->get<std::string> ("feature_extractor_type") == "ORB")
+  if (ps->get<std::string> ("matcher_type") != "BRUTEFORCE_OPENCV" && ps->get<std::string> ("feature_extractor_type") == "ORB")
   {
+    ROS_INFO_COND(ps->get<std::string>("matcher_type") == "FLANN", "You specified FLANN with ORB, this is SLOW! Using BRUTEFORCE instead.");
     cv::Ptr<cv::DescriptorMatcher> matcher;
-    std::string brute_force_type("BruteForce"); //L2 per default
     if(ps->get<std::string> ("feature_extractor_type") == "ORB"){
-      brute_force_type.append("-HammingLUT");
+        ScopedTimer s("My bruteforce Search", false, true);
+        uint64_t* query_value =  reinterpret_cast<uint64_t*>(this->feature_descriptors_.data);
+        uint64_t* search_array = reinterpret_cast<uint64_t*>(other->feature_descriptors_.data);
+        for(unsigned int i = 0; i < this->feature_locations_2d_.size(); ++i, query_value += 4){//ORB feature = 32*8bit = 4*64bit
+          int result_index = -1;
+          int hd = bruteForceSearchORB(query_value, search_array, other->feature_locations_2d_.size(), result_index);
+          if(hd >= 128) continue;//not more than half of the bits matching: Random
+          cv::DMatch match(i, result_index, hd /256.0 + (float)rand()/(1000.0*RAND_MAX));
+          matches->push_back(match);
+        }
     }
-    matcher = cv::DescriptorMatcher::create(brute_force_type);
-    std::vector< std::vector<cv::DMatch> > bruteForceMatches;
-    matcher->knnMatch(feature_descriptors_, other->feature_descriptors_, bruteForceMatches, k);
-    double max_dist_ratio_fac = ps->get<double>("nn_distance_ratio");
-    //if ((int)bruteForceMatches.size() < min_kp) max_dist_ratio_fac = 1.0; //if necessary use possibly bad descriptors
-    srand((long)std::clock());
-    std::set<int> train_indices;
-    matches->reserve(bruteForceMatches.size());
-    for(unsigned int i = 0; i < bruteForceMatches.size(); i++) {
-        cv::DMatch m1 = bruteForceMatches[i][0];
-        cv::DMatch m2 = bruteForceMatches[i][1];
-        float dist_ratio_fac = m1.distance / m2.distance;
-        if (dist_ratio_fac < max_dist_ratio_fac) {//this check seems crucial to matching quality
-            int train_idx = m1.trainIdx;
-            if(train_indices.count(train_idx) > 0)
-              continue; //FIXME: Keep better
-              
-            train_indices.insert(train_idx);
-            sum_distances += m1.distance;
-            m1.distance = dist_ratio_fac + (float)rand()/(1000.0*RAND_MAX); //add a small random offset to the distance, since later the dmatches are inserted to a set, which omits duplicates and the duplicates are found via the less-than function, which works on the distance. Therefore we need to avoid equal distances, which happens very often for ORB
-            matches->push_back(m1);
-        } 
+    //else//any bruteforce
+    if (ps->get<std::string> ("matcher_type") == "BRUTEFORCE_OPENCV" && ps->get<std::string> ("feature_extractor_type") == "ORB")
+    {
+      ScopedTimer s("OpenCV bruteforce Search", false, true);
+      std::string brute_force_type("BruteForce-HammingLUT"); //L2 per default
+      matcher = cv::DescriptorMatcher::create(brute_force_type);
+      std::vector< std::vector<cv::DMatch> > bruteForceMatches;
+      matcher->knnMatch(feature_descriptors_, other->feature_descriptors_, bruteForceMatches, k);
+      double max_dist_ratio_fac = ps->get<double>("nn_distance_ratio");
+      //if ((int)bruteForceMatches.size() < min_kp) max_dist_ratio_fac = 1.0; //if necessary use possibly bad descriptors
+      srand((long)std::clock());
+      std::set<int> train_indices;
+      matches->clear();
+      matches->reserve(bruteForceMatches.size());
+      for(unsigned int i = 0; i < bruteForceMatches.size(); i++) {
+          cv::DMatch m1 = bruteForceMatches[i][0];
+          cv::DMatch m2 = bruteForceMatches[i][1];
+          float dist_ratio_fac = m1.distance / m2.distance;
+          if (dist_ratio_fac < max_dist_ratio_fac) {//this check seems crucial to matching quality
+              int train_idx = m1.trainIdx;
+              if(train_indices.count(train_idx) > 0)
+                continue; //FIXME: Keep better
+                
+              train_indices.insert(train_idx);
+              sum_distances += m1.distance;
+              m1.distance = dist_ratio_fac + (float)rand()/(1000.0*RAND_MAX); //add a small random offset to the distance, since later the dmatches are inserted to a set, which omits duplicates and the duplicates are found via the less-than function, which works on the distance. Therefore we need to avoid equal distances, which happens very often for ORB
+              matches->push_back(m1);
+          } 
 
+      }
     }
     //matcher->match(feature_descriptors_, other->feature_descriptors_, *matches);
   } 
-  else if (ps->get<std::string>("matcher_type") == "FLANN" && 
-           ps->get<std::string>("feature_extractor_type") != "ORB")
+  else if (ps->get<std::string>("matcher_type") == "FLANN") // && ps->get<std::string>("feature_extractor_type") != "ORB")
   {
-    if (other->getFlannIndex() == NULL) {//FIXME This shouldn't be required anymore
-        ROS_FATAL("Node %i in featureMatching: flann Index of Node %i was not initialized", this->id_, other->id_);
-        return -1;
-    }
-    int start_feature = 0;
-    int sufficient_matches = ps->get<int>("sufficient_matches");
-    int num_segments = feature_descriptors_.rows / (sufficient_matches+100.0); //compute number of segments
-    if(sufficient_matches <= 0 || num_segments <= 0){
-      num_segments=1;
-      sufficient_matches = std::numeric_limits<int>::max();
-    }
-    int num_features = feature_descriptors_.rows / num_segments;                               //compute features per chunk
-    for(int seg = 1; start_feature < feature_descriptors_.rows && seg <= num_segments;  seg++){ //search for matches chunkwise
+    ScopedTimer s("OpenCV FLANN Search", false, true);
+    int start_feature = 0; //feature_descriptors_.rows - std::min(2*ps->get<int>("max_matches"), feature_descriptors_.rows);//FIXME: search only for best keypoints (in SIFTGPU they are at the back)
+    int num_features = feature_descriptors_.rows;                               //compute features per chunk
+    { //old block of (removed) search for matches chunkwise
       // compare
       // http://opencv-cocoa.googlecode.com/svn/trunk/samples/c/find_obj.cpp
-      cv::Mat indices(num_features, k, CV_32S);
-      cv::Mat dists(num_features, k, CV_32F);
-      cv::Mat relevantDescriptors = feature_descriptors_.rowRange(start_feature, start_feature+num_features);
+      cv::Mat indices(num_features-start_feature, k, CV_32S);
+      cv::Mat dists(num_features-start_feature, k, CV_32F);
+      cv::Mat relevantDescriptors = feature_descriptors_.rowRange(start_feature, num_features);
 
       // get the best two neighbors
       {
@@ -591,27 +627,23 @@ unsigned int Node::featureMatching(const Node* other, std::vector<cv::DMatch>* m
         other->knnSearch(relevantDescriptors, indices, dists, k, cv::flann::SearchParams(16));
       }
 
-
-      int* indices_ptr = indices.ptr<int> (0);
-      float* dists_ptr = dists.ptr<float> (0);
-
       cv::DMatch match;
       double avg_ratio = 0.0;
       double max_dist_ratio_fac = ps->get<double>("nn_distance_ratio");
       std::set<int> train_indices;
+      matches->clear();
       matches->reserve(indices.rows);
       for(int i = 0; i < indices.rows; ++i) {
-        ScopedTimer s("Feature Selection");
-        float dist_ratio_fac =  static_cast<float>(dists_ptr[2 * i]) / static_cast<float>(dists_ptr[2 * i + 1]);
+        float dist_ratio_fac =  dists.at<float>(2*i) / dists.at<float>(2*i + 1);
         avg_ratio += dist_ratio_fac;
         //if (indices.rows < min_kp) dist_ratio_fac = 1.0; //if necessary use possibly bad descriptors
         if (max_dist_ratio_fac > dist_ratio_fac) {
-          int train_idx = indices_ptr[2 * i];
+          int train_idx = indices.at<int>(2 * i);
           if(train_indices.count(train_idx) > 0)
             continue; //FIXME: Keep better
             
           train_indices.insert(train_idx);
-          match.queryIdx = i;
+          match.queryIdx = i+start_feature;
           match.trainIdx = train_idx;
           match.distance = dist_ratio_fac; //dists_ptr[2 * i];
           sum_distances += match.distance;
@@ -622,18 +654,10 @@ unsigned int Node::featureMatching(const Node* other, std::vector<cv::DMatch>* m
         }
       }
       
-      ROS_INFO("Feature Matches between Nodes %3d (%4d features) and %3d (%4d features) in segment %d/%d (features %d to %d of first node):\t%4d. Percentage: %f%%, Avg NN Ratio: %f",
-                this->id_, (int)this->feature_locations_2d_.size(), other->id_, (int)other->feature_locations_2d_.size(), seg, num_segments, start_feature, start_feature+num_features, 
-                (int)matches->size(), (100.0*matches->size())/((float)start_feature+num_features), avg_ratio / (start_feature+num_features));
-      if((int)matches->size() > sufficient_matches){
-        ROS_INFO("Enough matches. Skipping remaining segments");
-        break;
-      }
-      if((int)matches->size()*num_segments/(float)seg < 0.5*ps->get<int>("min_matches")){
-        ROS_INFO("Predicted not enough feature matches, aborting matching process");
-        break;
-      }
-      start_feature += num_features;
+      ROS_INFO("Feature Matches between Nodes %3d (%4d features) and %3d (%4d features) (features %d to %d of first node):\t%4d. Percentage: %f%%, Avg NN Ratio: %f",
+                this->id_, (int)this->feature_locations_2d_.size(), other->id_, (int)other->feature_locations_2d_.size(), start_feature, num_features, 
+                (int)matches->size(), (100.0*matches->size())/((float)num_features-start_feature), avg_ratio / (num_features-start_feature));
+
     }//for
   }
   else {
@@ -641,6 +665,8 @@ unsigned int Node::featureMatching(const Node* other, std::vector<cv::DMatch>* m
                        "matcher_type ("           << ps->get<std::string>("matcher_type") << ") and " <<
                        "feature_extractor_type (" << ps->get<std::string>("feature_extractor_type") << ") chosen.");
   }
+
+  keepStrongestMatches(ps->get<int>("max_matches"), matches);
 
   ROS_DEBUG_NAMED("statistics", "count_matrix(%3d, %3d) =  %4d;",
                   this->id_+1, other->id_+1, (int)matches->size());
@@ -673,12 +699,12 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
   ParameterServer* ps = ParameterServer::instance();
   double depth_scaling = ps->get<double>("depth_scaling_factor");
   size_t max_keyp = ps->get<int>("max_keypoints");
-  float x,y;//temp point, 
+  float x,y, z;//temp point, 
   //principal point and focal lengths:
-  float fx = 1./ (ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : cam_info->K[0]); //(cloud->width >> 1) - 0.5f;
-  float fy = 1./ (ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : cam_info->K[4]); //(cloud->width >> 1) - 0.5f;
-  float cx = ps->get<double>("depth_camera_cx") > 0 ? ps->get<double>("depth_camera_cx") : cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
-  float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") : cam_info->K[5]; //(cloud->width >> 1) - 0.5f;
+  float fxinv = 1./ (ps->get<double>("depth_camera_fx") != 0 ? ps->get<double>("depth_camera_fx") : cam_info->K[0]); //(cloud->width >> 1) - 0.5f;
+  float fyinv = 1./ (ps->get<double>("depth_camera_fy") != 0 ? ps->get<double>("depth_camera_fy") : cam_info->K[4]); //(cloud->width >> 1) - 0.5f;
+  float cx = ps->get<double>("depth_camera_cx") != 0 ? ps->get<double>("depth_camera_cx") : cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
+  float cy = ps->get<double>("depth_camera_cy") != 0 ? ps->get<double>("depth_camera_cy") : cam_info->K[5]; //(cloud->width >> 1) - 0.5f;
   cv::Point2f p2d;
 
   if(feature_locations_3d.size()){
@@ -709,11 +735,10 @@ void Node::projectTo3DSiftGPU(std::vector<cv::KeyPoint>& feature_locations_2d,
     }
     else
     {
-      x = (p2d.x - cx) * Z * fx;
-      y = (p2d.y - cy) * Z * fy;
+      backProject(fxinv, fyinv, cx, cy, p2d.x, p2d.y, Z, x, y, z);
     }
 
-    feature_locations_3d.push_back(Eigen::Vector4f(x,y, Z, 1.0));
+    feature_locations_3d.push_back(Eigen::Vector4f(x,y, z, 1.0));
     featuresUsed.push_back(index);  //save id for constructing the descriptor matrix
     i++; //Only increment if no element is removed from vector
     if(feature_locations_3d.size() >= max_keyp) break;
@@ -829,6 +854,7 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
   ScopedTimer s(__FUNCTION__);
 
   size_t max_keyp = ParameterServer::instance()->get<int>("max_keypoints");
+  double maximum_depth = ParameterServer::instance()->get<double>("maximum_depth");
   cv::Point2f p2d;
 
   if(feature_locations_3d.size()){
@@ -849,7 +875,7 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
     point_type p3d = point_cloud->at((int) p2d.x,(int) p2d.y);
 
     // Check for invalid measurements
-    if ( isnan(p3d.x) || isnan(p3d.y) || isnan(p3d.z))
+    if ( (p3d.z > maximum_depth) || isnan(p3d.x) || isnan(p3d.y) || isnan(p3d.z))
     {
       ROS_DEBUG_NAMED(__FILE__, "Feature %d has been extracted at NaN depth. Omitting", i);
       feature_locations_2d.erase(feature_locations_2d.begin()+i);
@@ -877,17 +903,17 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
   double depth_scaling = ps->get<double>("depth_scaling_factor");
   size_t max_keyp = ps->get<int>("max_keypoints");
   double maximum_depth = ps->get<double>("maximum_depth");
-  float x,y;//temp point, 
+  float x,y,z;//temp point, 
   //principal point and focal lengths:
-  float fx = 1./ (ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : cam_info->K[0]); //(cloud->width >> 1) - 0.5f;
-  float fy = 1./ (ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : cam_info->K[4]); //(cloud->width >> 1) - 0.5f;
-  float cx = ps->get<double>("depth_camera_cx") > 0 ? ps->get<double>("depth_camera_cx") : cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
-  float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") : cam_info->K[5]; //(cloud->width >> 1) - 0.5f;
+  float fxinv = 1./ (ps->get<double>("depth_camera_fx") != 0 ? ps->get<double>("depth_camera_fx") : cam_info->K[0]); //(cloud->width >> 1) - 0.5f;
+  float fyinv = 1./ (ps->get<double>("depth_camera_fy") != 0 ? ps->get<double>("depth_camera_fy") : cam_info->K[4]); //(cloud->width >> 1) - 0.5f;
+  float cx = ps->get<double>("depth_camera_cx") != 0 ? ps->get<double>("depth_camera_cx") : cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
+  float cy = ps->get<double>("depth_camera_cy") != 0 ? ps->get<double>("depth_camera_cy") : cam_info->K[5]; //(cloud->width >> 1) - 0.5f;
   /*
   float cx = 325.1;//cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
   float cy = 249.7;//cam_info->K[5]; //(cloud->height >> 1) - 0.5f;
-  float fx = 1.0/521.0;//1.0f / cam_info->K[0]; 
-  float fy = 1.0/521.0;//1.0f / cam_info->K[4]; 
+  float fxinv = 1.0/521.0;//1.0f / cam_info->K[0]; 
+  float fyinv = 1.0/521.0;//1.0f / cam_info->K[4]; 
   */
   cv::Point2f p2d;
 
@@ -921,10 +947,9 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
       feature_locations_2d.erase(feature_locations_2d.begin()+i);
       continue;
     }
-    x = (p2d.x - cx) * Z * fx;
-    y = (p2d.y - cy) * Z * fy;
+    backProject(fxinv, fyinv, cx, cy, p2d.x, p2d.y, Z, x, y, z);
 
-    feature_locations_3d.push_back(Eigen::Vector4f(x,y, Z, 1.0));
+    feature_locations_3d.push_back(Eigen::Vector4f(x, y, z, 1.0));
     i++; //Only increment if no element is removed from vector
     if(feature_locations_3d.size() >= max_keyp) break;
   }
@@ -976,18 +1001,11 @@ void Node::computeInliersAndError(const std::vector<cv::DMatch> & all_matches,
     mean_error += mahal_dist;
 //#pragma omp critical
     inliers.push_back(m); //include inlier
-    /* Too ineffective (seldom happens and then mostly skips the last 5 iterations)
-    //if remaining items < yet to find items
-    if(static_cast<int>(all_matches_size - i) < (static_cast<int>(min_inliers) - static_cast<int>(inliers.size()))) {
-        ROS_INFO("Can't reach to min inliers (%lu) in iteration %d. Found %lu of %lu. Leaving %d to be found in %lu steps", min_inliers, i, inliers.size(), all_matches_size, (static_cast<int>(min_inliers) - static_cast<int>(inliers.size())), all_matches_size -i);
-        break;
-    }
-    */
   }
 
 
   if (inliers.size()<3){ //at least the samples should be inliers
-    ROS_WARN_COND(inliers.size() > 3, "No inliers at all in %d matches!", (int)all_matches.size()); // only warn if this checks for all initial matches
+    ROS_DEBUG("No inliers at all in %d matches!", (int)all_matches.size()); // only warn if this checks for all initial matches
     return_mean_error = 1e9;
   } else {
     mean_error /= inliers.size();
@@ -1125,7 +1143,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
         computeInliersAndError(*initial_matches, transformation, 
                                this->feature_locations_3d_, //this->feature_depth_stats_, 
                                earlier_node->feature_locations_3d_, //earlier_node->feature_depth_stats_, 
-                               refined_matches.size(), //break if no chance to reach this amount of inliers
+                               std::max(min_inlier_threshold, static_cast<unsigned int>(refined_matches.size())), //break if no chance to reach this amount of inliers
                                inlier, inlier_error, max_dist_m*max_dist_m); 
         
         if(inlier.size() < min_inlier_threshold || inlier_error > max_dist_m){
@@ -1420,6 +1438,7 @@ void Node::clearFeatureInformation(){
 }
 void Node::addPointCloud(pointcloud_type::Ptr new_pc){
   pc_col = new_pc;
+  header_=pc_col->header;
 }
 void Node::reducePointCloud(double vfs){
   if(vfs > 0.0){
@@ -1502,7 +1521,7 @@ void pairwiseObservationLikelihood(const Node* newer_node, const Node* older_nod
         #pragma omp section
         {
           unsigned int inlier_pts = 0, outlier_pts = 0, occluded_pts = 0, all_pts = 0;
-          observationLikelihood(mr.final_trafo, newer_node->pc_col, older_node->pc_col, likelihood, confidence, inlier_pts, outlier_pts, occluded_pts, all_pts) ;
+          observationLikelihood(mr.final_trafo, newer_node->pc_col, older_node->pc_col, older_node->getCamInfo(), likelihood, confidence, inlier_pts, outlier_pts, occluded_pts, all_pts) ;
           ROS_INFO("Observation Likelihood: %d projected to %d: good_point_ratio: %d/%d: %g, occluded points: %d", newer_node->id_, older_node->id_, inlier_pts, inlier_pts+outlier_pts, ((float)inlier_pts)/(inlier_pts+outlier_pts), occluded_pts);
           //rejectionSignificance(mr.final_trafo, newer_node->pc_col, older_node->pc_col);
           inlier_points += inlier_pts;
@@ -1514,7 +1533,7 @@ void pairwiseObservationLikelihood(const Node* newer_node, const Node* older_nod
         #pragma omp section
         {
           unsigned int inlier_pts = 0, outlier_pts = 0, occluded_pts = 0, all_pts = 0;
-          observationLikelihood(mr.final_trafo.inverse(), older_node->pc_col, newer_node->pc_col, likelihood, confidence, inlier_pts, outlier_pts, occluded_pts, all_pts) ;
+          observationLikelihood(mr.final_trafo.inverse(), older_node->pc_col, newer_node->pc_col, newer_node->getCamInfo(), likelihood, confidence, inlier_pts, outlier_pts, occluded_pts, all_pts) ;
           ROS_INFO("Observation Likelihood: %d projected to %d: good_point_ratio: %d/%d: %g, occluded points: %d", older_node->id_, newer_node->id_, inlier_pts, inlier_pts+outlier_pts, ((float)inlier_pts)/(inlier_pts+outlier_pts), occluded_pts);
           //rejectionSignificance(mr.final_trafo, newer_node->pc_col, older_node->pc_col);
           inlier_points += inlier_pts;
@@ -1552,7 +1571,8 @@ void Node::knnSearch(cv::Mat& query,
                      int knn, 
                      const cv::flann::SearchParams& params) const
 {
-  this->flannIndex->knnSearch(query, indices, dists, knn, params);
+  this->getFlannIndex();//make sure it is constructed (cannot use it directly b/c of constness
+  flannIndex->knnSearch(query, indices, dists, knn, params);
 }
 
 void copy_filter_cloud (const Eigen::Vector3f& center, float radius, const Node* old_node, Node* clone)

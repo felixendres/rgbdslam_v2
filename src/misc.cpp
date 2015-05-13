@@ -50,6 +50,25 @@
 #include <numeric>
 
 #include "feature_adjuster.h"
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/CameraInfo.h>
+
+
+static void getCameraIntrinsics(float& fx, float& fy, float& cx, float& cy, const sensor_msgs::CameraInfo& cam_info) 
+{
+  ParameterServer* ps = ParameterServer::instance();
+  fx = ps->get<double>("depth_camera_fx") != 0 ? ps->get<double>("depth_camera_fx") : cam_info.K[0];
+  fy = ps->get<double>("depth_camera_fy") != 0 ? ps->get<double>("depth_camera_fy") : cam_info.K[4];
+  cx = ps->get<double>("depth_camera_cx") != 0 ? ps->get<double>("depth_camera_cx") : cam_info.K[2];
+  cy = ps->get<double>("depth_camera_cy") != 0 ? ps->get<double>("depth_camera_cy") : cam_info.K[5];
+}
+static void getCameraIntrinsicsInverseFocalLength(float& fxinv, float& fyinv, float& cx, float& cy, const sensor_msgs::CameraInfo& cam_info) 
+{
+  getCameraIntrinsics(fxinv, fyinv, cx, cy, cam_info);
+  fxinv = 1./ fxinv;
+  fyinv = 1./ fyinv;
+}
+
 
 void printQMatrix4x4(const char* name, const QMatrix4x4& m){
     ROS_DEBUG("QMatrix %s:", name);
@@ -252,9 +271,9 @@ void mat2components(const Eigen::Matrix4f& t, double& roll, double& pitch, doubl
 }
 
 void trafoSize(const Eigen::Isometry3d& t, double& angle, double& dist){
-    angle = acos((t.rotation().trace() -1)/2 ) *180.0 / M_PI;
-    dist = t.translation().norm();
-    ROS_INFO("Rotation:% 4.2f, Distance: % 4.3fm", angle, dist);
+  angle = acos((t.rotation().trace() -1)/2 ) *180.0 / M_PI;
+  dist = t.translation().norm();
+  ROS_INFO("Rotation:% 4.2f, Distance: % 4.3fm", angle, dist);
 }
 
 bool isBigTrafo(const Eigen::Isometry3d& t){
@@ -293,7 +312,7 @@ bool isSmallTrafo(const Eigen::Isometry3d& t, double seconds){
 
     ParameterServer* ps =  ParameterServer::instance();
     return (dist / seconds < ps->get<double>("max_translation_meter") &&
-            angle_around_axis / seconds < ps->get<int>("max_rotation_degree"));
+            angle_around_axis / seconds < ps->get<double>("max_rotation_degree"));
 }
 
 bool isSmallTrafo(const g2o::SE3Quat& t, double seconds){
@@ -310,7 +329,7 @@ bool isSmallTrafo(const g2o::SE3Quat& t, double seconds){
     ParameterServer* ps =  ParameterServer::instance();
     //Too big fails too
     return (dist / seconds < ps->get<double>("max_translation_meter") &&
-            angle_around_axis / seconds < ps->get<int>("max_rotation_degree"));
+            angle_around_axis / seconds < ps->get<double>("max_rotation_degree"));
 }
 
 bool isBigTrafo(const g2o::SE3Quat& t){
@@ -430,9 +449,6 @@ bool asyncFrameDrop(ros::Time depth, ros::Time rgb)
 }
 
 
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/CameraInfo.h>
-
 ///\cond
 /** Union for easy "conversion" of rgba data */
 typedef union
@@ -457,28 +473,20 @@ pointcloud_type* createXYZRGBPointCloud (const cv::Mat& depth_img,
   pointcloud_type* cloud (new pointcloud_type() );
   cloud->is_dense         = false; //single point of view, 2d rasterized NaN where no depth value was found
 
+  float fxinv, fyinv, cx, cy;
+  getCameraIntrinsicsInverseFocalLength(fxinv, fyinv, cx, cy, *cam_info);
   ParameterServer* ps = ParameterServer::instance();
-  float fx = 1./ (ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : cam_info->K[0]); //(cloud->width >> 1) - 0.5f;
-  float fy = 1./ (ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : cam_info->K[4]); //(cloud->width >> 1) - 0.5f;
-  float cx = ps->get<double>("depth_camera_cx") > 0 ? ps->get<double>("depth_camera_cx") : cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
-  float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") : cam_info->K[5]; //(cloud->width >> 1) - 0.5f;
-  int data_skip_step = ParameterServer::instance()->get<int>("cloud_creation_skip_step");
+  int data_skip_step = ps->get<int>("cloud_creation_skip_step");
   if(depth_img.rows % data_skip_step != 0 || depth_img.cols % data_skip_step != 0){
     ROS_WARN("The parameter cloud_creation_skip_step is not a divisor of the depth image dimensions. This will most likely crash the program!");
   }
   cloud->height = ceil(depth_img.rows / static_cast<float>(data_skip_step));
   cloud->width = ceil(depth_img.cols / static_cast<float>(data_skip_step));
-  //cx = cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
-  //cy = cam_info->K[5]; //(cloud->height >> 1) - 0.5f;
-  //fx = 1.0f / cam_info->K[0]; 
-  //fy = 1.0f / cam_info->K[4]; 
   int pixel_data_size = 3;
-  //Assume BGR
-  //char red_idx = 2, green_idx = 1, blue_idx = 0;
   //Assume RGB
   char red_idx = 0, green_idx = 1, blue_idx = 2;
   if(rgb_img.type() == CV_8UC1) pixel_data_size = 1;
-  else if(ParameterServer::instance()->get<bool>("encoding_bgr")) { red_idx = 2; blue_idx = 0; }
+  else if(ps->get<bool>("encoding_bgr")) { red_idx = 2; blue_idx = 0; }
 
   unsigned int color_row_step, color_pix_step, depth_pix_step, depth_row_step;
   color_pix_step = pixel_data_size * (rgb_img.cols / cloud->width);
@@ -492,11 +500,12 @@ pointcloud_type* createXYZRGBPointCloud (const cv::Mat& depth_img,
 
   // depth_img already has the desired dimensions, but rgb_img may be higher res.
   int color_idx = 0 * color_pix_step - 0 * color_row_step, depth_idx = 0; //FIXME: Hack for hard-coded calibration of color to depth
-  double depth_scaling = ParameterServer::instance()->get<double>("depth_scaling_factor");
-  float max_depth = ParameterServer::instance()->get<double>("maximum_depth");
-  float min_depth = ParameterServer::instance()->get<double>("minimum_depth");
+  double depth_scaling = ps->get<double>("depth_scaling_factor");
+  float max_depth = ps->get<double>("maximum_depth");
+  float min_depth = ps->get<double>("minimum_depth");
   if(max_depth < 0.0) max_depth = std::numeric_limits<float>::infinity();
 
+  //Main Looop
   pointcloud_type::iterator pt_iter = cloud->begin();
   for (int v = 0; v < (int)rgb_img.rows; v += data_skip_step, color_idx += color_row_step, depth_idx += depth_row_step)
   {
@@ -516,15 +525,13 @@ pointcloud_type* createXYZRGBPointCloud (const cv::Mat& depth_img,
       // Check for invalid measurements
       if (!(Z >= min_depth)) //Should also be trigger on NaN//std::isnan (Z))
       {
-        pt.x = (u - cx) * 1.0 * fx; //FIXME: better solution as to act as at 1meter?
-        pt.y = (v - cy) * 1.0 * fy;
+        pt.x = (u - cx) * 1.0 * fxinv; //FIXME: better solution as to act as at 1meter?
+        pt.y = (v - cy) * 1.0 * fyinv;
         pt.z = std::numeric_limits<float>::quiet_NaN();
       }
       else // Fill in XYZ
       {
-        pt.x = (u - cx) * Z * fx;
-        pt.y = (v - cy) * Z * fy;
-        pt.z = Z;
+        backProject(fxinv, fyinv, cx, cy, u, v, Z, pt.x, pt.y, pt.z);
       }
       // Fill in color
       RGBValue color;
@@ -560,17 +567,13 @@ pointcloud_type* createXYZRGBPointCloud (const sensor_msgs::ImageConstPtr& depth
   //cloud->header.frame_id  = rgb_msg->header.frame_id;
   cloud->is_dense         = false; //single point of view, 2d rasterized NaN where no depth value was found
 
+  float fxinv, fyinv, cx, cy;
+  getCameraIntrinsicsInverseFocalLength(fxinv, fyinv, cx, cy, *cam_info);
   ParameterServer* ps = ParameterServer::instance();
-  float fx = ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : cam_info->K[0]; //(cloud->width >> 1) - 0.5f;
-  float fy = ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : cam_info->K[4]; //(cloud->width >> 1) - 0.5f;
-  float cx = ps->get<double>("depth_camera_cx") > 0 ? ps->get<double>("depth_camera_cx") : cam_info->K[2]; //(cloud->width >> 1) - 0.5f;
-  float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") : cam_info->K[5]; //(cloud->width >> 1) - 0.5f;
   int data_skip_step = ps->get<int>("cloud_creation_skip_step");
   cloud->height = depth_msg->height / data_skip_step;
   cloud->width = depth_msg->width / data_skip_step;
   //Reciprocal to use multiplication in loop, not slower division
-  fx = 1.0f / fx;//1.0f / cam_info->K[0]; 
-  fy = 1.0f / fy;//1.0f / cam_info->K[4]; 
   int pixel_data_size = 3;
   char red_idx = 0, green_idx = 1, blue_idx = 2;
   if(rgb_msg->encoding.compare("mono8") == 0) pixel_data_size = 1;
@@ -590,8 +593,8 @@ pointcloud_type* createXYZRGBPointCloud (const sensor_msgs::ImageConstPtr& depth
 
   // depth_msg already has the desired dimensions, but rgb_msg may be higher res.
   int color_idx = 0, depth_idx = 0;
-  double depth_scaling = ParameterServer::instance()->get<double>("depth_scaling_factor");
-  float max_depth = ParameterServer::instance()->get<double>("maximum_depth");
+  double depth_scaling = ps->get<double>("depth_scaling_factor");
+  float max_depth = ps->get<double>("maximum_depth");
   if(max_depth < 0.0) max_depth = std::numeric_limits<float>::infinity();
 
   const float* depth_buffer = reinterpret_cast<const float*>(&depth_msg->data[0]);
@@ -606,15 +609,11 @@ pointcloud_type* createXYZRGBPointCloud (const sensor_msgs::ImageConstPtr& depth
       // Check for invalid measurements
       if (!(Z <= max_depth)) //Should also be trigger on NaN//std::isnan (Z))
       {
-        pt.x = (u - cx) * 1.0 * fx; //FIXME: better solution as to act as at 1meter?
-        pt.y = (v - cy) * 1.0 * fy;
         pt.z = std::numeric_limits<float>::quiet_NaN();
       }
       else // Fill in XYZ
       {
-        pt.x = (u - cx) * Z * fx;
-        pt.y = (v - cy) * Z * fy;
-        pt.z = Z;
+        backProject(fxinv, fyinv, cx, cy, u, v, Z, pt.x, pt.y, pt.z);
       }
       // Fill in color
       RGBValue color;
@@ -714,25 +713,13 @@ double errorFunction2(const Eigen::Vector4f& x1,
   bool nan1 = isnan(x1(2));
   bool nan2 = isnan(x2(2));
   if(nan1||nan2){
-    //FIXME: Handle Features with NaN, by reporting the reprojection error
+    //TODO: Handle Features with NaN, by reporting the reprojection error
     return std::numeric_limits<double>::max();
   }
   Eigen::Vector4d x_1 = x1.cast<double>();
   Eigen::Vector4d x_2 = x2.cast<double>();
 
   Eigen::Matrix4d tf_12 = transformation;
-  /* NaNs filtered before
-  if(nan1) x_1(2) = 1.0; //FIXME: Bad Hack 
-  if(nan2) x_2(2) = 1.0; //FIXME: Bad Hack 
-  if(nan1 && !nan2){ //If x_1 is nan, but not x_2, switch them, so the "good one" is transformed to the frame of the other
-    x_1 = x2.cast<double>();
-    x_2 = x1.cast<double>();
-    x_2(2) = 1.0; //FIXME: Bad Hack 
-    tf_12 = transformation.inverse().eval();
-    nan1 = false;
-    nan2 = true;
-  }*/
-
   Eigen::Vector3d mu_1 = x_1.head<3>();
   Eigen::Vector3d mu_2 = x_2.head<3>();
   Eigen::Vector3d mu_1_in_frame_2 = (tf_12 * x_1).head<3>(); // μ₁⁽²⁾  = T₁₂ μ₁⁽¹⁾  
@@ -752,31 +739,29 @@ double errorFunction2(const Eigen::Vector4f& x1,
 
   //Point 1
   Eigen::Matrix3d cov1 = Eigen::Matrix3d::Zero();
-  cov1(0,0) = 1 * raster_cov_x * mu_1(2); //how big is 1px std dev in meter, depends on depth
-  cov1(1,1) = 1 * raster_cov_y * mu_1(2); //how big is 1px std dev in meter, depends on depth
-  if(nan1) cov1(2,2) = 1e9; //stddev for unknown: should be within 100m
-  else     cov1(2,2) = depth_covariance(mu_1(2));
+  cov1(0,0) = raster_cov_x * mu_1(2); //how big is 1px std dev in meter, depends on depth
+  cov1(1,1) = raster_cov_y * mu_1(2); //how big is 1px std dev in meter, depends on depth
+  cov1(2,2) = depth_covariance(mu_1(2));
 
   //Point2
   Eigen::Matrix3d cov2 = Eigen::Matrix3d::Zero();
-  cov2(0,0) = 1 * raster_cov_x* mu_2(2); //how big is 1px std dev in meter, depends on depth
-  cov2(1,1) = 1 * raster_cov_y* mu_2(2); //how big is 1px std dev in meter, depends on depth
-  if(nan2) cov2(2,2) = 1e9; //stddev for unknown: should be within 100m
-  else     cov2(2,2) = depth_covariance(mu_2(2));
+  cov2(0,0) = raster_cov_x* mu_2(2); //how big is 1px std dev in meter, depends on depth
+  cov2(1,1) = raster_cov_y* mu_2(2); //how big is 1px std dev in meter, depends on depth
+  cov2(2,2) = depth_covariance(mu_2(2));
 
   Eigen::Matrix3d cov1_in_frame_2 = rotation_mat.transpose() * cov1 * rotation_mat;//Works since the cov is diagonal => Eig-Vec-Matrix is Identity
 
   // Δμ⁽²⁾ =  μ₁⁽²⁾ - μ₂⁽²⁾
   Eigen::Vector3d delta_mu_in_frame_2 = mu_1_in_frame_2 - mu_2;
   if(isnan(delta_mu_in_frame_2(2))){
-    ROS_WARN("Unexpected NaN");
-    delta_mu_in_frame_2(2) = 0.0;//FIXME: Hack: set depth error to 0 if NaN 
+    ROS_ERROR("Unexpected NaN");
+    return std::numeric_limits<double>::max();
   }
   // Σc = (Σ₁ + Σ₂)
   Eigen::Matrix3d cov_mat_sum_in_frame_2 = cov1_in_frame_2 + cov2;     
   //ΔμT Σc⁻¹Δμ  
   //double sqrd_mahalanobis_distance = delta_mu_in_frame_2.transpose() * cov_mat_sum_in_frame_2.inverse() * delta_mu_in_frame_2;
-  double sqrd_mahalanobis_distance = delta_mu_in_frame_2.transpose() *cov_mat_sum_in_frame_2.ldlt().solve(delta_mu_in_frame_2);
+  double sqrd_mahalanobis_distance = delta_mu_in_frame_2.transpose() *cov_mat_sum_in_frame_2.llt().solve(delta_mu_in_frame_2);
   
   if(!(sqrd_mahalanobis_distance >= 0.0))
   {
@@ -826,9 +811,11 @@ double cdf(double x, double mu, double sigma)
 {
 	return 0.5 * (1 + erf((x - mu) / (sigma * SQRT_2)));
 }
+
 void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new to old
                              pointcloud_type::Ptr new_pc,
                              pointcloud_type::Ptr old_pc,
+                             const sensor_msgs::CameraInfo& old_cam_info,
                              double& likelihood, 
                              double& confidence,
                              unsigned int& inliers,
@@ -839,7 +826,7 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
   ScopedTimer s(__FUNCTION__);
  
   int skip_step = ParameterServer::instance()->get<int>("emm__skip_step");
-  bool mark_outliers = ParameterServer::instance()->get<bool>("emm__mark_outliers");
+  const bool mark_outliers = ParameterServer::instance()->get<bool>("emm__mark_outliers");
   double observability_threshold = ParameterServer::instance()->get<double>("observability_threshold");
   inliers = outliers = occluded = all = 0;
   if(skip_step < 0 || observability_threshold <= 0.0){
@@ -855,29 +842,35 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
     inliers = all = 1;
     return;
   }
+  if(old_pc->width != new_pc->width){
+    ROS_ERROR("Differing cloud dimensions: %d vs %d width. Skipping observationLikelihood.", old_pc->width, new_pc->width);
+    return;
+  }
+
   pointcloud_type new_pc_transformed;
-  //ROS_INFO_STREAM("Transforming with\n" << proposed_transformation);
   pcl::transformPointCloud(*new_pc, new_pc_transformed, proposed_transformation);
 
   //Camera Calibration FIXME: Get actual values from cameraInfo (need to store in node?)
   ParameterServer* ps = ParameterServer::instance();
-  float cx = ps->get<double>("depth_camera_cx") > 0 ? ps->get<double>("depth_camera_cx") /* (640.0/old_pc->width)  */: old_pc->width /2 - 0.5;
-  float cy = ps->get<double>("depth_camera_cy") > 0 ? ps->get<double>("depth_camera_cy") /* (480.0/old_pc->height) */: old_pc->height/2 - 0.5;
-  float fx = ps->get<double>("depth_camera_fx") > 0 ? ps->get<double>("depth_camera_fx") : 525; 
-  float fy = ps->get<double>("depth_camera_fy") > 0 ? ps->get<double>("depth_camera_fy") : 525;
-  int cloud_creation_skip_step = ps->get<int>("cloud_creation_skip_step");
-  if(ps->get<std::string>("topic_points").empty()){
+  float fx, fy, cx, cy;
+  getCameraIntrinsics(fx, fy, cx, cy, old_cam_info);
+  int cloud_creation_skip_step = 1; 
+  if(ps->get<std::string>("topic_points").empty()){//downsampled cloud?
+    cloud_creation_skip_step = ps->get<int>("cloud_creation_skip_step");
     fx = fx / cloud_creation_skip_step;
     fy = fy / cloud_creation_skip_step;
     cx = cx / cloud_creation_skip_step;
     cy = cy / cloud_creation_skip_step;
   }
 
-  double sumloglikelihood = 0.0;
-  double observation_count = 0.0;
-
+  double sumloglikelihood = 0.0, observation_count = 0.0;
   unsigned int bad_points = 0, good_points = 0, occluded_points = 0;
-#pragma omp parallel for reduction(+: good_points, bad_points, occluded_points) 
+  uint8_t r1 = rand() % 32, g1 = 128 + rand() % 128, b1 = 128+rand() % 128; // Mark occluded point in cyan color
+  uint32_t rgb1 = ((uint32_t)r1 << 16 | (uint32_t)g1 << 8 | (uint32_t)b1);
+  uint8_t r2 = 128 + rand() % 128, g2 = rand() % 32,  b2 = 128+rand() % 128; // Mark bad points in magenta color
+  uint32_t rgb2 = ((uint32_t)r2 << 16 | (uint32_t)g2 << 8 | (uint32_t)b2);
+
+//#pragma omp parallel for reduction(+: good_points, bad_points, occluded_points) 
   for(int new_ry = 0; new_ry < (int)new_pc->height; new_ry+=skip_step){
     for(int new_rx = 0; new_rx < (int)new_pc->width; new_rx+=skip_step, all++){
       //Backproject transformed new 3D point to 2d raster of old image
@@ -894,23 +887,19 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
         ROS_DEBUG("New point not projected into old image, skipping");
         continue;
       }
-      int nbhd = 1; //1 => 3x3 neighbourhood
+      int nbhd = 2; //1 => 3x3 neighbourhood
       bool good_point = false, occluded_point = false, bad_point = false;
       int startx = std::max(0,old_rx_center - nbhd);
       int starty = std::max(0,old_ry_center - nbhd);
       int endx = std::min(static_cast<int>(old_pc->width), old_rx_center + nbhd +1);
       int endy = std::min(static_cast<int>(old_pc->height), old_ry_center + nbhd +1);
-      int neighbourhood_step = 4; //Search for depth jumps in this area
+      int neighbourhood_step = 2; //Search for depth jumps in this area
       for(int old_ry = starty; old_ry < endy; old_ry+=neighbourhood_step){
         for(int old_rx = startx; old_rx < endx; old_rx+=neighbourhood_step){
 
           const point_type& old_p = old_pc->at(old_rx, old_ry);
           if(old_p.z != old_p.z) continue; //NaN
-          //ROS_INFO("Msrmnt. P1: (%f;%f;%f) P2: (%f;%f;%f)", p.x, p.y, p.z, old_p.x, old_p.y, old_p.z);
           
-          //Sensor model
-          //double dz = (old_p.z - p.z);//Positive: behind old_z
-
           // likelihood for old msrmnt = new msrmnt:
           double old_sigma = cloud_creation_skip_step*depth_covariance(old_p.z);
           //TODO: (Wrong) Assumption: Transformation does not change the viewing angle. 
@@ -918,9 +907,6 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
           //Assumption: independence of sensor noise lets us sum variances
           double joint_sigma = old_sigma + new_sigma;
           ///TODO: Compute correctly transformed new sigma in old_z direction
-          //Gaussian probability of new being same as old
-          //double mahal_dist = -0.5*(dz*dz) / joint_sigma;
-          //double observation_p = 1.0/(SQRT_2_PI * sqrt(joint_sigma)) * exp(mahal_dist);
           
           //Cumulative of position: probability of being occluded
           double p_new_in_front = cdf(old_p.z, p.z, sqrt(joint_sigma));
@@ -948,8 +934,6 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
       } else if(occluded_point){
         occluded_points++;
         if(mark_outliers){
-          uint8_t r1 = rand() % 32, g1 = rand() % 256, b1 = rand() % 256; // Mark occluded point in red color
-          uint32_t rgb1 = ((uint32_t)r1 << 16 | (uint32_t)g1 << 8 | (uint32_t)b1);
 #ifndef RGB_IS_4TH_DIM
           new_pc->at(new_rx, new_ry).rgb = *reinterpret_cast<float*>(&rgb1);
           old_pc->at(old_rx_center, old_ry_center).rgb = *reinterpret_cast<float*>(&rgb1);
@@ -963,14 +947,12 @@ void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new 
         bad_points++;
         if(mark_outliers){
           //uint8_t r1 = 255, g1 = 0, b1 = 0; // Mark bad point in red color
-          uint8_t r1 = rand() % 256, g1 = rand()%32, b1 = rand() % 256; // Mark occluded point in red color
-          uint32_t rgb1 = ((uint32_t)r1 << 16 | (uint32_t)g1 << 8 | (uint32_t)b1);
 #ifndef RGB_IS_4TH_DIM
-          new_pc->at(new_rx, new_ry).rgb = *reinterpret_cast<float*>(&rgb1);
-          old_pc->at(old_rx_center, old_ry_center).rgb = *reinterpret_cast<float*>(&rgb1);
+          new_pc->at(new_rx, new_ry).rgb = *reinterpret_cast<float*>(&rgb2);
+          old_pc->at(old_rx_center, old_ry_center).rgb = *reinterpret_cast<float*>(&rgb2);
 #else
-          new_pc->at(new_rx, new_ry).data[3] = *reinterpret_cast<float*>(&rgb1);
-          old_pc->at(old_rx_center, old_ry_center).data[3] = *reinterpret_cast<float*>(&rgb1);
+          new_pc->at(new_rx, new_ry).data[3] = *reinterpret_cast<float*>(&rgb2);
+          old_pc->at(old_rx_center, old_ry_center).data[3] = *reinterpret_cast<float*>(&rgb2);
 #endif
           //Kill point
           //new_pc->at(new_rx, new_ry).z = std::numeric_limits<float>::quiet_NaN();

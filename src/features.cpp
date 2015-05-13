@@ -34,20 +34,24 @@ using namespace cv;
 StatefulFeatureDetector* adjusterWrapper(cv::Ptr<DetectorAdjuster> detadj, int min, int max)
 {
   int iterations = ParameterServer::instance()->get<int>("adjuster_max_iterations");
-  ROS_WARN("Using adjusted keypoint detector with %d maximum iterations, keeping the number of keypoints between %d and %d", iterations, min, max);
+  ROS_INFO("Using adjusted keypoint detector with %d maximum iterations, keeping the number of keypoints between %d and %d", iterations, min, max);
   return new  VideoDynamicAdaptedFeatureDetector(detadj, min, max, iterations);
 }
 
 StatefulFeatureDetector* adjustedGridWrapper(cv::Ptr<DetectorAdjuster> detadj)
 {
   ParameterServer* params = ParameterServer::instance();
+  //Try to get between "max" keypoints and 1.5 times of that.
+  //We actually want exactly "max_keypoints" keypoints. Therefore
+  //it's better to overshoot and then cut away the excessive keypoints
+  int min = params->get<int>("max_keypoints"); //Shall not get below max
+  int max = min * 1.5; //
+
   int gridRes = params->get<int>("detector_grid_resolution");
   int gridcells = gridRes*gridRes;
-  int min = params->get<int>("max_keypoints"); //Shall not get below max
-  int max = min * 1.5; //params->get<int>("max_keypoints");
   int gridmin = round(min/static_cast<float>(gridcells));
   int gridmax =  round(max/static_cast<float>(gridcells));
-  ROS_WARN("Using gridded keypoint detector with %dx%d cells, keeping %d keypoints in total.", gridRes, gridRes, max);
+  ROS_INFO("Using gridded keypoint detector with %dx%d cells, keeping %d keypoints in total.", gridRes, gridRes, max);
   
   StatefulFeatureDetector* detector = adjusterWrapper(detadj, gridmin, gridmax);
 
@@ -55,11 +59,11 @@ StatefulFeatureDetector* adjustedGridWrapper(cv::Ptr<DetectorAdjuster> detadj)
 }
 
 //Use Grid or Dynamic or GridDynamic as prefix of FAST, SIFT, SURF or AORB
-FeatureDetector* create(std::string detectorName){
+FeatureDetector* createDetector(const std::string& detectorName){
   //For anything but SIFTGPU
   DetectorAdjuster* detAdj = NULL;
 
-  ROS_WARN_STREAM("Using " << detectorName << " keypoint detector.");
+  ROS_INFO_STREAM("Using " << detectorName << " keypoint detector.");
   if( detectorName == "SIFTGPU" ) {
     return NULL;// Will not be used
   } 
@@ -76,10 +80,10 @@ FeatureDetector* create(std::string detectorName){
      detAdj = new DetectorAdjuster("AORB", 20);
   } 
   else {
-    ROS_ERROR("Unsupported Keypoint Detector. Using GridDynamicORB as fallback.");
-    return create("GridDynamicORB");
+    ROS_ERROR("Unsupported Keypoint Detector. Using SURF as fallback.");
+    return createDetector("SURF");
   }
-  assert(detAdj != NULL);
+  assert(detAdj != NULL && "No valid detector aduster");
 
   ParameterServer* params = ParameterServer::instance();
   bool gridWrap = (params->get<int>("detector_grid_resolution") > 1);
@@ -96,109 +100,34 @@ FeatureDetector* create(std::string detectorName){
   else return detAdj;
 }
 
-///Analog to opencv example file and modified to use adjusters
-FeatureDetector* createDetector( const string& detectorType ) 
-{
-  return create(detectorType);
-//	ParameterServer* params = ParameterServer::instance();
-//	FeatureDetector* fd = 0;
-//    if( !detectorType.compare( "FAST" ) ) {
-//        fd = adjustedGridWrapper(new DetectorAdjuster("FAST", 20));
-//    }
-//    else if( !detectorType.compare( "STAR" ) ) {
-//        fd = new StarFeatureDetector( 16/*max_size*/, 5/*response_threshold*/, 10/*line_threshold_projected*/,
-//                                      8/*line_threshold_binarized*/, 5/*suppress_nonmax_size*/ );
-//    }
-//    else if( !detectorType.compare( "SIFT" ) ) {
-//#if CV_MAJOR_VERSION > 2 || CV_MINOR_VERSION <= 3
-//        fd = new SiftFeatureDetector(SIFT::DetectorParams::GET_DEFAULT_THRESHOLD(),
-//                                     SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD());
-//        ROS_INFO("Default SIFT threshold: %f, Default SIFT Edge Threshold: %f", 
-//                 SIFT::DetectorParams::GET_DEFAULT_THRESHOLD(),
-//                 SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD());
-//#else
-//        DetectorAdjuster* detadj = new DetectorAdjuster("SIFT", 0.04, 0.0001);
-//        fd = adjustedGridWrapper(detadj);
-//#endif
-//    }
-//    else if( !detectorType.compare( "SURF" ) || !detectorType.compare( "SURF128" ) ) {
-//      /* fd = new SurfFeatureDetector(200.0, 6, 5); */
-//        fd = adjustedGridWrapper(new DetectorAdjuster("SURF", 200));
-//    }
-//    else if( !detectorType.compare( "MSER" ) ) {
-//        fd = new MserFeatureDetector( 1/*delta*/, 60/*min_area*/, 114400/*_max_area*/, 0.35f/*max_variation*/,
-//                0.2/*min_diversity*/, 200/*max_evolution*/, 1.01/*area_threshold*/, 0.003/*min_margin*/,
-//                5/*edge_blur_size*/ );
-//    }
-//    else if( !detectorType.compare( "HARRIS" ) ) {
-//        ROS_INFO("Creating GFTT detector with HARRIS.");
-//        fd = new GoodFeaturesToTrackDetector( params->get<int>("max_keypoints"), 0.0001, 2.0, 9, true);
-//    }
-//    else if( !detectorType.compare( "GFTT" ) ) {
-//        ROS_INFO("Creating GFTT detector.");
-//        fd = new GoodFeaturesToTrackDetector( params->get<int>("max_keypoints"), 0.0001, 2.0, 9);
-//    }
-//    else if( !detectorType.compare( "BRISK" ) ) {
-//        ROS_INFO("Creating BRISK detector.");
-//        fd = fd->create("BRISK");
-//    }
-//    else if( !detectorType.compare( "ORB" ) ) {
-//#if CV_MAJOR_VERSION > 2 || CV_MINOR_VERSION == 3
-//        fd = new OrbFeatureDetector(params->get<int>("max_keypoints")+1500,
-//                ORB::CommonParams(1.2, ORB::CommonParams::DEFAULT_N_LEVELS, 31, ORB::CommonParams::DEFAULT_FIRST_LEVEL));
-//#elif CV_MAJOR_VERSION > 2 || CV_MINOR_VERSION >= 4
-//        ROS_INFO("Using Adapted ORB");
-//        //fd = new AorbFeatureDetector(params->get<int>("max_keypoints"), 1.1, 8, 31, 0, 4, 0, 31, 10);
-//        fd = adjustedGridWrapper(new DetectorAdjuster("AORB"));
-//    //CV_WRAP explicit ORB(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 8, int edgeThreshold = 31,
-//     //   int firstLevel = 0, int WTA_K=2, int scoreType=ORB::HARRIS_SCORE, int patchSize=31 );
-//#else
-//        ROS_ERROR("ORB features are not implemented in your version of OpenCV");
-//        ROS_DEBUG("Creating FAST detector as fallback.");
-//        fd = createDetector("FAST"); //recursive call with correct parameter
-//#endif
-//    }
-//    else if( !detectorType.compare( "SIFTGPU" ) ) {
-//      ROS_INFO("%s is to be used", detectorType.c_str());
-//      ROS_DEBUG("Creating SURF detector as fallback.");
-//      fd = createDetector("SURF"); //recursive call with correct parameter
-//    }
-//    else {
-//      ROS_WARN("No valid detector-type given: %s. Using SURF.", detectorType.c_str());
-//      fd = createDetector("SURF"); //recursive call with correct parameter
-//    }
-//    ROS_ERROR_COND(fd == 0, "No detector could be created");
-//    return fd;
-}
-
-DescriptorExtractor* createDescriptorExtractor( const string& descriptorType ) 
+DescriptorExtractor* createDescriptorExtractor(const std::string& descriptorType) 
 {
     DescriptorExtractor* extractor = 0;
-    if( !descriptorType.compare( "SIFT" ) ) {
+    if(descriptorType == "SIFT") {
         extractor = new SiftDescriptorExtractor();/*( double magnification=SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION(), bool isNormalize=true, bool recalculateAngles=true, int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES, int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS, int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE, int angleMode=SIFT::CommonParams::FIRST_ANGLE )*/
     }
-    else if( !descriptorType.compare( "BRIEF" ) ) {
+    else if(descriptorType == "BRIEF") {
         extractor = new BriefDescriptorExtractor();
     }
-    else if( !descriptorType.compare( "BRISK" ) ) {
+    else if(descriptorType == "BRISK") {
         extractor = new cv::BRISK();/*brisk default: (int thresh=30, int octaves=3, float patternScale=1.0f)*/
     }
-    else if( !descriptorType.compare( "FREAK" ) ) {
+    else if(descriptorType == "FREAK") {
         extractor = new cv::FREAK();
     }
-    else if( !descriptorType.compare( "SURF" ) ) {
+    else if(descriptorType == "SURF") {
         extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
     }
-    else if( !descriptorType.compare( "SURF128" ) ) {
+    else if(descriptorType == "SURF128") {
         extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
         extractor->set("extended", 1);
     }
 #if CV_MAJOR_VERSION > 2 || CV_MINOR_VERSION >= 3
-    else if( !descriptorType.compare( "ORB" ) ) {
+    else if(descriptorType == "ORB") {
         extractor = new OrbDescriptorExtractor();
     }
 #endif
-    else if( !descriptorType.compare( "SIFTGPU" ) ) {
+    else if(descriptorType == "SIFTGPU") {
       ROS_DEBUG("%s is to be used as extractor, creating SURF descriptor extractor as fallback.", descriptorType.c_str());
       extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
     }
@@ -206,7 +135,26 @@ DescriptorExtractor* createDescriptorExtractor( const string& descriptorType )
       ROS_ERROR("No valid descriptor-matcher-type given: %s. Using SURF", descriptorType.c_str());
       extractor = createDescriptorExtractor("SURF");
     }
-    ROS_ERROR_COND(extractor == 0, "No extractor could be created");
+    assert(extractor != 0 && "No extractor could be created");
     return extractor;
 }
 
+static inline int hamming_distance_orb32x8_popcountll(const uint64_t* v1, const uint64_t* v2) {
+  return (__builtin_popcountll(v1[0] ^ v2[0]) + __builtin_popcountll(v1[1] ^ v2[1])) +
+         (__builtin_popcountll(v1[2] ^ v2[2]) + __builtin_popcountll(v1[3] ^ v2[3]));
+}
+
+int bruteForceSearchORB(const uint64_t* v, const uint64_t* search_array, const unsigned int& size, int& result_index){
+  constexpr unsigned int howmany64bitwords = 4;//32*8/64;
+  assert(search_array && "Nullpointer in bruteForceSearchORB");
+  result_index = -1;//impossible
+  int min_distance = 1 + 256;//More than maximum distance
+  for(unsigned int i = 0; i < size-1; i+=1, search_array+=4){
+    int hamming_distance_i = hamming_distance_orb32x8_popcountll(v, search_array);
+    if(hamming_distance_i < min_distance){
+      min_distance = hamming_distance_i;
+      result_index = i;
+    }
+  } 
+  return min_distance;
+}

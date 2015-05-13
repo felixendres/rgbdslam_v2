@@ -25,6 +25,7 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <nav_msgs/Odometry.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include "graph_manager.h"
@@ -82,6 +83,7 @@ class OpenNIListener : public QObject {
     ///Connect to this signal to get up-to-date optical images from the listener
     void newVisualImage(QImage);
     ///Connect to this signal to get up-to-date featureFlow visualizations from the listener
+    void newFeatureImage(QImage);
     void newFeatureFlowImage(QImage);
     ///Connect to this signal to get up-to-date depth images from the listener
     void newDepthImage(QImage);
@@ -98,7 +100,6 @@ class OpenNIListener : public QObject {
   public Q_SLOTS:
     ///Switch between processing or ignoring new incoming data
     void togglePause();
-    void toggleBagRecording();
     ///Process a single incomming frame. Useful in pause-mode for getting one snapshot at a time
     void getOneFrame();
     void loadPCDFiles(QStringList);
@@ -128,8 +129,9 @@ class OpenNIListener : public QObject {
                           const sensor_msgs::CameraInfoConstPtr& cam_info_msg) ;
     //! No depth image but pointcloud, e.g., for stereo cameras
     void stereoCallback(const sensor_msgs::ImageConstPtr& visual_img_msg, const sensor_msgs::PointCloud2ConstPtr& point_cloud);
+    //! Callback for the robot odometry
+    void odomCallback(const nav_msgs::OdometryConstPtr& odom_msg);
     void pcdCallback(const sensor_msgs::ImageConstPtr visual_img_msg, pointcloud_type::Ptr point_cloud);
-    //void pcdCallback(const sensor_msgs::ImageConstPtr visual_img_msg, sensor_msgs::PointCloud2::Ptr point_cloud);
 
   protected:
     void loadBag(std::string filename);
@@ -176,6 +178,7 @@ class OpenNIListener : public QObject {
     message_filters::Subscriber<sensor_msgs::Image> *depth_sub_;      
     message_filters::Subscriber<sensor_msgs::CameraInfo> *cinfo_sub_;      
     message_filters::Subscriber<sensor_msgs::PointCloud2> *cloud_sub_;
+    message_filters::Subscriber<nav_msgs::Odometry> *odom_sub_;
 
     BagSubscriber<sensor_msgs::Image>* rgb_img_sub_;
     BagSubscriber<sensor_msgs::Image>* depth_img_sub_;
@@ -189,16 +192,10 @@ class OpenNIListener : public QObject {
     cv::Mat visualization_img_;
     std::vector<cv::Mat> rgba_buffers_;
     
-    rosbag::Bag bag;
-    bool save_bag_file;
-    
-    //ros::Publisher pc_pub; 
-    /*unsigned int callback_counter_;*/
     bool pause_;
     bool getOneFrame_;
     bool first_frame_;
     QFuture<void> future_;
-    QMutex bagfile_mutex;
     tf::TransformListener* tflistener_; //!this being a pointer saves the include (using the above forward declaration)
     tf::TransformBroadcaster tf_br_;
     ros::Publisher tf_pub_;

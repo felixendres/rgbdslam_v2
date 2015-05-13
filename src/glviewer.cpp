@@ -626,7 +626,26 @@ void GLViewer::mousePressEvent(QMouseEvent *event) {
 }
 
 void GLViewer::wheelEvent(QWheelEvent *event) {
-    zTra += (-zTra/50.0)*((float)event->delta())/25.0; 
+      double size;
+      switch (QApplication::keyboardModifiers()){
+        case Qt::ControlModifier:  
+            size = ParameterServer::instance()->get<double>("gl_point_size");
+            /* event->delta():
+             * Returns the distance that the wheel is rotated, in eighths of a
+             * degree. A positive value indicates that the wheel was rotated
+             * forwards away from the user; a negative value indicates that the
+             * wheel was rotated backwards toward the user.  Most mouse types
+             * work in steps of 15 degrees, in which case the delta value is a
+             * multiple of 120; i.e., 120 units * 1/8 = 15 degrees.
+             */
+            size = std::max(1.0, size + event->delta()/120.0);
+            ParameterServer::instance()->set<double>("gl_point_size", size);
+            break;
+        case Qt::ShiftModifier:  
+        case Qt::NoModifier:  
+        default:
+          zTra += (-zTra/50.0)*((float)event->delta())/25.0; 
+      }
     clearAndUpdate();
 }
 void GLViewer::mouseMoveEvent(QMouseEvent *event) {//TODO: consolidate setRotation methods

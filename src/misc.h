@@ -139,6 +139,7 @@ float getMinDepthInNeighborhood(const cv::Mat& depth, cv::Point2f center, float 
 void observationLikelihood(const Eigen::Matrix4f& proposed_transformation,//new to old
                              pointcloud_type::Ptr new_pc,
                              pointcloud_type::Ptr old_pc,
+                             const sensor_msgs::CameraInfo& old_cam_info,
                              double& likelihood, 
                              double& confidence,
                              unsigned int& inliers,

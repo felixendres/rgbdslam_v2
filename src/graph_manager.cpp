@@ -1295,7 +1295,7 @@ QList<QMatrix4x4>* GraphManager::getAllPosesAsMatrixList() const{
     current_poses->reserve(camera_vertices.size()+10);//only allocates the internal pointer array. +10 for things like calibration vertices or whatever
 #endif
 
-    for (auto it = graph_.cbegin(); it !=graph_.cend(); ++it){
+    for (std::map<int, Node* >::const_iterator it = graph_.begin(); it !=graph_.end(); ++it){
       const Node *node = it->second;
       g2o::VertexSE3* v = dynamic_cast<g2o::VertexSE3*>(optimizer_->vertex( node->vertex_id_));
       if(v){ 

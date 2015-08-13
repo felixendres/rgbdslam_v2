@@ -218,8 +218,8 @@ VideoGridAdaptedFeatureDetector::VideoGridAdaptedFeatureDetector( const cv::Ptr<
 
 bool VideoGridAdaptedFeatureDetector::empty() const
 {
-    for(auto detector : detectors){
-      if(detector->empty()) return true;
+    for(std::vector<cv::Ptr<StatefulFeatureDetector> >::const_iterator it = detectors.begin(); it != detectors.end(); ++it){
+      if((*it)->empty()) return true;
     }
     return false;
 }
@@ -257,8 +257,8 @@ static void aggregateKeypointsPerGridCell(std::vector<std::vector<cv::KeyPoint> 
         {
             int colstart = std::max((j*imageSize.width)/gridSize.width - edgeThreshold, 0);
 
-            auto& cell_keypoints = sub_keypoint_vectors[j+i*gridSize.width];
-            auto it = cell_keypoints.begin(), end = cell_keypoints.end();
+            std::vector<cv::KeyPoint>& cell_keypoints = sub_keypoint_vectors[j+i*gridSize.width];
+            std::vector<cv::KeyPoint>::iterator it = cell_keypoints.begin(), end = cell_keypoints.end();
             for( ; it != end; ++it )
             {
                 it->pt.x += colstart;

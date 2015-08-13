@@ -145,7 +145,8 @@ static inline int hamming_distance_orb32x8_popcountll(const uint64_t* v1, const 
 }
 
 int bruteForceSearchORB(const uint64_t* v, const uint64_t* search_array, const unsigned int& size, int& result_index){
-  constexpr unsigned int howmany64bitwords = 4;//32*8/64;
+  //constexpr unsigned int howmany64bitwords = 4;//32*8/64;
+  const unsigned int howmany64bitwords = 4;//32*8/64;
   assert(search_array && "Nullpointer in bruteForceSearchORB");
   result_index = -1;//impossible
   int min_distance = 1 + 256;//More than maximum distance

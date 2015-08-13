@@ -511,16 +511,19 @@ const cv::flann::Index* Node::getFlannIndex() const {
   return flannIndex;
 }
 
+bool isNearer(const cv::DMatch& m1, const cv::DMatch& m2) { 
+  return m1.distance < m2.distance; 
+}
 //Throw away the worst matches based on their distance - which is the nn_ratio set in featureMatching(...)
 static void keepStrongestMatches(int n, std::vector<cv::DMatch>* matches)
 {
   if(matches->size() > n)
   {
     //m1 better than m2?
-    auto lambda = [](const cv::DMatch& m1, const cv::DMatch& m2) { return m1.distance < m2.distance; };
+    //auto lambda = [](const cv::DMatch& m1, const cv::DMatch& m2) { return m1.distance < m2.distance; };
 
     std::vector<cv::DMatch>::iterator nth = matches->begin() + n;
-    std::nth_element(matches->begin(), nth, matches->end(), lambda);
+    std::nth_element(matches->begin(), nth, matches->end(), isNearer);
     matches->erase(nth, matches->end());
   }
 }

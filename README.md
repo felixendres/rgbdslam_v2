@@ -49,7 +49,7 @@ not need to use indigo, I recommend using the hydro version.
 This walkthrough is taken from the hydro version and adapted. It is hardly tested, so
 look out for problems.
 Assuming you have installed ROS indigo on Ubuntu, issue the following commands in 
-a terminal (or copy-paste the whole sequence at once)
+a terminal (copy-paste will work except for the building of opencv from source)
 
 	#Prepare Workspace
 	source /opt/ros/indigo/setup.bash

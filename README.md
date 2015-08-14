@@ -22,29 +22,37 @@ Additional information can be found here:<br/>
 
 # Prerequisites  ################################################################
 - Ubuntu 12.04 - 13.04
-- [ROS hydro](http://wiki.ros.org/hydro/)
-- Problems may occur when using a version of the PCL library different from the ROS hydro version.
+- [ROS indigo](http://wiki.ros.org/indigo/)
+- Problems may occur when using a version of the PCL library different from the ROS indigo version.
 
 # Installation ################################################################
-The installation of RGBDSLAMv2 for ROS hydro should be straightforward.
-A copy-pastable walkthrough can be found below
+The installation of RGBDSLAMv2 for ROS indigo currently requires some work. 
+The hydro installation process of the hydro version is easy and thoroughly
+tested. Also, the indigo version does not any functionality, so if you do
+not need to use indigo, I recommend using the hydro version.
 
 1. Put RGBDSLAMv2 in a catkin workspace: See [the catkin tutorial](http://wiki.ros.org/catkin/Tutorials/create_a_workspace) 
-  for details. Use git to clone this repository into your workspace's "src/" directory. Or download RGBDSLAMv2 as an [archive](http://codeload.github.com/felixendres/rgbdslam_v2/zip/hydro) and extract it to "src/".
+  for details. Use git to clone this repository into your workspace's "src/" directory. Or download RGBDSLAMv2 as an [archive](http://codeload.github.com/felixendres/rgbdslam_v2/zip/indigo) and extract it to "src/".
 
 2. Use rosdep (i.e. "rosdep install rgbdslam") to install missing 
   dependencies. For details see http://wiki.ros.org/ROS/Tutorials/rosdep
 
-3. To build RGBDSLAMv2 go to your catkine workspace and execute "catkin_make". 
+3. You need to build OpenCV 2.4.X (tested with 2.4.9) from source, since the
+   binary distribution doesn't include the non-free SIFT and SURF code anymore.
+   Set the environment variable "OpenCV_DIR" to your build directory.
+
+4. To build RGBDSLAMv2 go to your catkine workspace and execute "catkin_make". 
    If you get an error about the missing siftgpu library, execute "catkin_make" again.
 
 
 ##Installation from Scratch #####################################################
-Assuming you have installed ROS hydro on Ubuntu, issue the following commands in 
+This walkthrough is taken from the hydro version and adapted. It is hardly tested, so
+look out for problems.
+Assuming you have installed ROS indigo on Ubuntu, issue the following commands in 
 a terminal (or copy-paste the whole sequence at once)
 
 	#Prepare Workspace
-	source /opt/ros/hydro/setup.bash
+	source /opt/ros/indigo/setup.bash
 	mkdir -p ~/rgbdslam_catkin_ws/src
 	cd ~/rgbdslam_catkin_ws/src
 	catkin_init_workspace
@@ -52,10 +60,15 @@ a terminal (or copy-paste the whole sequence at once)
 	catkin_make
 	source devel/setup.bash
 	
+	#Get OpenCV: Follow instructions on
+	#http://docs.opencv.org/doc/tutorials/introduction/linux_install/linux_install.html
+	#Set OpenCV_DIR
+	export OpenCV_DIR=~/opencv/release
+	
 	#Get RGBDSLAM
 	cd ~/rgbdslam_catkin_ws/src
-	wget -q http://github.com/felixendres/rgbdslam_v2/archive/hydro.zip
-	unzip -q hydro.zip
+	wget -q http://github.com/felixendres/rgbdslam_v2/archive/indigo.zip
+	unzip -q indigo.zip
 	cd ~/rgbdslam_catkin_ws/
 	
 	#Install
@@ -69,7 +82,7 @@ See the sections below for more details on the usage.
 But to get you started quickly here's the most important pointers:
 
 -   If you want to use RGBDSLAMv2 with an RGB-D camera you may have
-    to install openni (sudo apt-get install ros-hydro-openni-launch).
+    to install openni (sudo apt-get install ros-indigo-openni-launch).
 
 -   Check out the launch files in "launch/" for examples and specific 
     use cases. roslaunch rgbdslam openni+rgbdslam.launch is a good starting 

@@ -37,9 +37,6 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#ifdef CV_NONFREE
-#include "opencv2/nonfree/nonfree.hpp"
-#endif
 #endif
 #include "aorb.h"
 

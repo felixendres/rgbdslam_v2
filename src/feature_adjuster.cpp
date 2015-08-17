@@ -43,7 +43,9 @@
 #include "feature_adjuster.h"
 //#include "opencv2/features2d/precomp.hpp"
 #include "opencv2/features2d/features2d.hpp"
+#ifdef CV_NONFREE
 #include "opencv2/nonfree/features2d.hpp"
+#endif
 #include "opencv2/imgproc/imgproc.hpp"
 #include "aorb.h"
 #include <cassert>
@@ -59,6 +61,7 @@ DetectorAdjuster::DetectorAdjuster(const char* detector_name, double initial_thr
     increase_factor_(increase_factor), decrease_factor_(decrease_factor),
     detector_name_(detector_name)
 {
+#ifdef CV_NONFREE
     if(!(detector_name_ == "SURF" || 
          detector_name_ == "SIFT" ||
          detector_name_ == "FAST" ||
@@ -66,20 +69,23 @@ DetectorAdjuster::DetectorAdjuster(const char* detector_name, double initial_thr
     { //None of the above
       std::cerr << "Unknown Descriptor";
     }
+#else
+    if(detector_name_ == "SURF" || detector_name_ == "SIFT") {
+        std::cerr << "OpenCV non-free functionality (" << detector_name << ") not built in.";
+        std::cerr << "To enable non-free functionality build with CV_NONFREE set.";
+    }
+    if(!(detector_name_ == "FAST" ||
+         detector_name_ == "AORB"))
+    { //None of the above
+      std::cerr << "Unknown Descriptor";
+    }
+#endif
 }
 
 void DetectorAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
 {
     Ptr<FeatureDetector> detector; 
-    if(strcmp(detector_name_, "SURF") == 0){
-      //detector->set("hessianThreshold", thresh_);//Not threadsafe (parallelized grid)
-      detector = new SurfFeatureDetector(thresh_);
-    }
-    else if(strcmp(detector_name_, "SIFT") == 0){
-      //detector->set("contrastThreshold", thresh_);
-      detector = new SiftFeatureDetector(0 /*max_features*/, 3 /*default lvls/octave*/, thresh_);
-    }
-    else if(strcmp(detector_name_, "FAST") == 0){
+    if(strcmp(detector_name_, "FAST") == 0){
       //detector->set("threshold", static_cast<int>(thresh_));
       detector = new FastFeatureDetector(thresh_);
     }
@@ -88,6 +94,23 @@ void DetectorAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypo
       detector = new AorbFeatureDetector(10000, 1.2, 8, 15, 0, 2, 0, 31, static_cast<int>(thresh_));
       //detector->set("fastThreshold", static_cast<int>(thresh_));//Not threadsafe (parallelized grid)
     }
+#ifdef CV_NONFREE
+    else if(strcmp(detector_name_, "SURF") == 0){
+      //detector->set("hessianThreshold", thresh_);//Not threadsafe (parallelized grid)
+      detector = new SurfFeatureDetector(thresh_);
+    }
+    else if(strcmp(detector_name_, "SIFT") == 0){
+      //detector->set("contrastThreshold", thresh_);
+      detector = new SiftFeatureDetector(0 /*max_features*/, 3 /*default lvls/octave*/, thresh_);
+    }
+#else
+    else if(strcmp(detector_name_, "SIFT") == 0 || strcmp(detector_name_, "SURF") == 0){
+        std::cerr << "OpenCV non-free functionality (" << detector_name_ << ") not built in.";
+        std::cerr << "To enable non-free functionality build with CV_NONFREE set.";
+        std::cerr << "Using ORB.";
+        detector = new AorbFeatureDetector(10000, 1.2, 8, 15, 0, 2, 0, 31, static_cast<int>(thresh_));
+    }
+#endif
     else {
       FeatureDetector::create(detector_name_);
       std::cerr << "Unknown Descriptor, not setting threshold";

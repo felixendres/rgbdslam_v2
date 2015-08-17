@@ -18,7 +18,9 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#ifdef CV_NONFREE
 #include "opencv2/nonfree/nonfree.hpp"
+#endif
 #endif
 #include "aorb.h"
 
@@ -70,18 +72,29 @@ FeatureDetector* createDetector(const std::string& detectorName){
   else if(detectorName == "FAST") {
      detAdj = new DetectorAdjuster("FAST", 20);
   }
+#ifdef CV_NONFREE
   else if(detectorName == "SURF" || detectorName == "SURF128") {
      detAdj = new DetectorAdjuster("SURF", 200);
   }
   else if(detectorName == "SIFT") {
      detAdj = new DetectorAdjuster("SIFT", 0.04, 0.0001);
   }
+#else
+  else if(detectorName == "SURF" || detectorName == "SURF128" || detectorName == "SIFT") 
+  {
+     ROS_ERROR("OpenCV non-free functionality (%s) not built in.", detectorName.c_str());
+     ROS_ERROR("To enable non-free functionality build with CV_NONFREE set.");
+     ROS_WARN("Using ORB feature detection instead.");
+     ParameterServer::instance()->set("feature_detector_type", std::string("ORB"));
+     detAdj = new DetectorAdjuster("AORB", 20);
+  }
+#endif
   else if(detectorName == "ORB") {
      detAdj = new DetectorAdjuster("AORB", 20);
   } 
   else {
-    ROS_ERROR("Unsupported Keypoint Detector. Using SURF as fallback.");
-    return createDetector("SURF");
+    ROS_ERROR("Unsupported Keypoint Detector. Using ORB as fallback.");
+    return createDetector("ORB");
   }
   assert(detAdj != NULL && "No valid detector aduster");
 
@@ -103,9 +116,30 @@ FeatureDetector* createDetector(const std::string& detectorName){
 DescriptorExtractor* createDescriptorExtractor(const std::string& descriptorType) 
 {
     DescriptorExtractor* extractor = 0;
-    if(descriptorType == "SIFT") {
+    if(descriptorType == "ORB") {
+        extractor = new OrbDescriptorExtractor();
+    }
+#ifdef CV_NONFREE
+    else if(descriptorType == "SIFT") {
         extractor = new SiftDescriptorExtractor();/*( double magnification=SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION(), bool isNormalize=true, bool recalculateAngles=true, int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES, int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS, int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE, int angleMode=SIFT::CommonParams::FIRST_ANGLE )*/
     }
+    else if(descriptorType == "SURF") {
+        extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
+    }
+    else if(descriptorType == "SURF128") {
+        extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
+        extractor->set("extended", 1);
+    }
+#else
+    else if(descriptorType == "SURF128" || descriptorType == "SIFT" || descriptorType == "SURF") 
+    {
+        ROS_ERROR("OpenCV non-free functionality (%s) not built in.", descriptorType.c_str());
+        ROS_ERROR("To enable non-free functionality build with CV_NONFREE set.");
+        ROS_WARN("Using ORB feature detection instead.");
+        ParameterServer::instance()->set("feature_extractor_type", std::string("ORB"));
+        return createDescriptorExtractor("ORB");
+    }
+#endif
     else if(descriptorType == "BRIEF") {
         extractor = new BriefDescriptorExtractor();
     }
@@ -115,25 +149,13 @@ DescriptorExtractor* createDescriptorExtractor(const std::string& descriptorType
     else if(descriptorType == "FREAK") {
         extractor = new cv::FREAK();
     }
-    else if(descriptorType == "SURF") {
-        extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
-    }
-    else if(descriptorType == "SURF128") {
-        extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
-        extractor->set("extended", 1);
-    }
-#if CV_MAJOR_VERSION > 2 || CV_MINOR_VERSION >= 3
-    else if(descriptorType == "ORB") {
-        extractor = new OrbDescriptorExtractor();
-    }
-#endif
     else if(descriptorType == "SIFTGPU") {
-      ROS_DEBUG("%s is to be used as extractor, creating SURF descriptor extractor as fallback.", descriptorType.c_str());
-      extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
+      ROS_DEBUG("%s is to be used as extractor, creating ORB descriptor extractor as fallback.", descriptorType.c_str());
+      return createDescriptorExtractor("ORB");
     }
     else {
-      ROS_ERROR("No valid descriptor-matcher-type given: %s. Using SURF", descriptorType.c_str());
-      extractor = createDescriptorExtractor("SURF");
+      ROS_ERROR("No valid descriptor-matcher-type given: %s. Using ORB", descriptorType.c_str());
+      return createDescriptorExtractor("ORB");
     }
     assert(extractor != 0 && "No extractor could be created");
     return extractor;

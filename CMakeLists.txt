@@ -28,6 +28,7 @@ set(USE_GICP 0)
 IF (${USE_GICP_BIN} OR ${USE_GICP_CODE})
 	set(USE_GICP 1)
 ENDIF (${USE_GICP_BIN} OR ${USE_GICP_CODE})
+
 #########################################################
 #########################################################
 
@@ -169,8 +170,18 @@ ENDIF (${USE_PCL_ICP})
 #############################
 # OpenCV ####################
 #############################
+#For using SIFT and SURF provide your own opencv installation
+#via exporting a shell variable
 set(OpenCV_DIR $ENV{OpenCV_DIR})
-#set(OpenCV_DIR /home/felix/ros_indigo/opencv2/build/)
+#or set it directly here, e.g.
+#set(OpenCV_DIR /home/endres/ros_indigo/opencv2/build/)
+#Then activate the following definition
+#add_definitions(-DCV_NONFREE)
+
+IF (NOT "${OpenCV_DIR}" EQUAL "")
+    MESSAGE("Using OpenCV from " ${OpenCV_DIR})
+ENDIF (NOT "${OpenCV_DIR}" EQUAL "")
+
 find_package(OpenCV)
 include_directories(${OpenCV_INCLUDE_DIRS})
 link_directories(${OpenCV_LIBRARY_DIRS})

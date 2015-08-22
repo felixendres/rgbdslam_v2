@@ -21,15 +21,10 @@ Additional information can be found here:<br/>
 <img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_fr2desk.jpg" alt="RGBDSLAM on the RGB-D Benchmark Dataset" width="600">
 
 # Prerequisites  ################################################################
-- Ubuntu 12.04 - 13.04
+- Ubuntu 14.04 
 - [ROS indigo](http://wiki.ros.org/indigo/)
-- Problems may occur when using a version of the PCL library different from the ROS indigo version.
 
 # Installation ################################################################
-The installation of RGBDSLAMv2 for ROS indigo currently requires some work. 
-The hydro installation process of the hydro version is easy and thoroughly
-tested. Also, the indigo version does not any functionality, so if you do
-not need to use indigo, I recommend using the hydro version.
 
 1. Put RGBDSLAMv2 in a catkin workspace: See [the catkin tutorial](http://wiki.ros.org/catkin/Tutorials/create_a_workspace) 
   for details. Use git to clone this repository into your workspace's "src/" directory. Or download RGBDSLAMv2 as an [archive](http://codeload.github.com/felixendres/rgbdslam_v2/zip/indigo) and extract it to "src/".
@@ -37,18 +32,13 @@ not need to use indigo, I recommend using the hydro version.
 2. Use rosdep (i.e. "rosdep install rgbdslam") to install missing 
   dependencies. For details see http://wiki.ros.org/ROS/Tutorials/rosdep
 
-3. You need to build OpenCV 2.4.X (tested with 2.4.9) from source, since the
-   binary distribution doesn't include the non-free SIFT and SURF code anymore.
-   Set the environment variable "OpenCV_DIR" to your build directory.
-
-4. To build RGBDSLAMv2 go to your catkine workspace and execute "catkin_make". 
+4. To build RGBDSLAMv2 go to your catkin workspace and execute "catkin_make". 
    If you get an error about the missing siftgpu library, execute "catkin_make" again.
 
 
 ##Installation from Scratch #####################################################
-This walkthrough is taken from the hydro version and adapted. It is hardly tested, so
-look out for problems.
-Assuming you have installed ROS indigo on Ubuntu, issue the following commands in 
+This walkthrough is is hardly tested, so watch out for problems.
+Assuming you have installed ROS indigo on Ubuntu 14.04, issue the following commands in 
 a terminal (copy-paste will work except for the building of opencv from source)
 
 	#Prepare Workspace
@@ -60,11 +50,6 @@ a terminal (copy-paste will work except for the building of opencv from source)
 	catkin_make
 	source devel/setup.bash
 	
-	#Get OpenCV: Follow instructions on
-	#http://docs.opencv.org/doc/tutorials/introduction/linux_install/linux_install.html
-	#Set OpenCV_DIR
-	export OpenCV_DIR=~/opencv/release
-	
 	#Get RGBDSLAM
 	cd ~/rgbdslam_catkin_ws/src
 	wget -q http://github.com/felixendres/rgbdslam_v2/archive/indigo.zip
@@ -75,7 +60,6 @@ a terminal (copy-paste will work except for the building of opencv from source)
 	rosdep update
 	rosdep install rgbdslam
 	catkin_make 
-	catkin_make
 
 # Installation done! What's next?
 See the sections below for more details on the usage. 
@@ -91,6 +75,13 @@ But to get you started quickly here's the most important pointers:
 -   Check out the README in "test/" for running, testing and evaluating
     RGBDSLAMv2 on Juergen Sturm's RGB-D SLAM Dataset and Benchmark:
     http://vision.in.tum.de/data/datasets/rgbd-dataset
+
+-   If you want to use SURF or SIFT, you will need to build OpenCV from source,
+    including the non-free module (this does not include SIFTGPU, which works
+    out of the box). In the CMakeLists.txt of RGBDSLAMv2 you can set the build
+    directory of OpenCV and enable the non-free functionality.  Note that SIFT
+    and SURF are not the best choice. Due to new (software) features in
+    RGBDSLAMv2, ORB outperforms both.
 
 <img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_empty.jpg" alt="RGBDSLAM right after startup" width="600">
 

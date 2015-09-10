@@ -23,6 +23,7 @@
 #include "misc.h"
 #include "pcl_ros/transforms.h"
 #include "pcl/io/pcd_io.h"
+#include "pcl/io/ply_io.h"
 //#include <sensor_msgs/PointCloud2.h>
 #include <opencv2/features2d/features2d.hpp>
 #include <qtconcurrentrun.h>
@@ -552,7 +553,8 @@ void GraphManager::saveAllCloudsToFile(QString filename){
     aggregate_normal_cloud.header.frame_id = base_frame;
     if (filename.endsWith(".ply", Qt::CaseInsensitive) ){
         	ROS_INFO("ply saving");
-          savePlyFile(qPrintable(filename), aggregate_normal_cloud); //Last arg is binary mode
+          //savePlyFile(qPrintable(filename), aggregate_normal_cloud); //Last arg is binary mode
+          pcl::io::savePLYFileBinary(qPrintable(filename), aggregate_cloud);
     } else {
       ROS_INFO("pcd saving");
       if(!filename.endsWith(".pcd", Qt::CaseInsensitive)){

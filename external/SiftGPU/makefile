@@ -14,7 +14,6 @@ ifneq ($(simple_find_cuda), )
 else
 	siftgpu_enable_cuda = 0
 endif
-siftgpu_enable_cuda = 0
 
 CUDA_INSTALL_PATH = /usr/local/cuda
 #change  additional  settings, like SM version here if it is not 1.0 (eg. -arch sm_13 for GTX280)

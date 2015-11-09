@@ -205,6 +205,8 @@ $ rosservice call /rgbdslam/ros_ui save_individual
 
 
 # Further Help ##################################################################
+The compilation may take a lot of memory, particularly if the environment variable
+$ROS_PARALLEL_JOBS is set.
 
 If you are located in Germany and get errors loading the saved ply files
 into meshlab, try switching to U.S. locale or replace the decimal point with a
@@ -235,6 +237,9 @@ on Ubuntu 10.04 x64) To use SiftGPU you should install "libdevil-dev".
   
   Additional compiling information can be changed in
   external/siftgpu/linux/makefile.
+  
+  If you get an error that the siftgpu library is not found, execute "make" manually
+  in the directory external/siftgpu/ and rerun catkin_make.
 
   GICP Generalized ICP can be (de)activated for refining the registration. For
   more information see http://stanford.edu/~avsegal/generalized_icp.html

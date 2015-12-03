@@ -639,7 +639,7 @@ void OpenNIListener::noCloudCallback (const sensor_msgs::ImageConstPtr& visual_i
     ROS_INFO_NAMED("OpenNIListener", "Converting from Bayer to RGB");
     cv::cvtColor(cv_bridge::toCvCopy(visual_img_msg)->image, visual_img, CV_BayerGR2RGB, 3);
   } else{
-    ROS_DEBUG_STREAM("Encoding: " << visual_img_msg->encoding);
+    ROS_INFO_STREAM("Encoding: " << visual_img_msg->encoding);
     visual_img =  cv_bridge::toCvCopy(visual_img_msg)->image;
   }
   //const cv::Mat& visual_img_big =  cv_bridge::toCvShare(visual_img_msg)->image;
@@ -649,9 +649,9 @@ void OpenNIListener::noCloudCallback (const sensor_msgs::ImageConstPtr& visual_i
   //cv::resize(depth_float_img_big, depth_float_img, newsize);
   if(visual_img.rows != depth_float_img.rows || 
      visual_img.cols != depth_float_img.cols){
-    ROS_ERROR("depth and visual image differ in size! Ignoring Data");
-    //cv::resize(depth_float_img, depth_float_img, visual_img.size(), 0,0,cv::INTER_NEAREST);
-    return;
+    ROS_WARN("depth and visual image differ in size! Rescaling Depth Data");
+    cv::resize(depth_float_img, depth_float_img, visual_img.size(), 0,0,cv::INTER_NEAREST);
+    //return;
   }
   image_encoding_ = visual_img_msg->encoding;
 

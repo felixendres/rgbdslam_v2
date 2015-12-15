@@ -7,13 +7,8 @@ siftgpu_enable_server = 0
 siftgpu_enable_opencl = 0
 #------------------------------------------------------------------------------------------------
 # enable CUDA-based SiftGPU?
-# Felix Endres: This test gives a false positive for me, so I made it mor specific
-simple_find_cuda = $(shell locate /usr/local/cuda/lib/libcudart.so*) 
-ifneq ($(simple_find_cuda), )
- 	siftgpu_enable_cuda = 1
-else
-	siftgpu_enable_cuda = 0
-endif
+# Felix Endres: Cannot get the automatic distinction to work
+siftgpu_enable_cuda = 0
 
 CUDA_INSTALL_PATH = /usr/local/cuda
 #change  additional  settings, like SM version here if it is not 1.0 (eg. -arch sm_13 for GTX280)
@@ -56,7 +51,7 @@ SRC_SIFTGPU = src/SiftGPU
 SRC_DRIVER = src/TestWin
 SRC_SERVER = src/ServerSiftGPU
 CC = g++
-CFLAGS = -I$(INC_DIR) -fPIC -L/usr/lib64 -L/usr/lib -L./bin -L./lib -Wall -Wno-write-strings -Wno-deprecated -Wno-int-to-pointer-cast -pthread  
+CFLAGS = -I$(INC_DIR) -fPIC -L/usr/lib64 -L/usr/lib -L./bin -L./lib -Wall -Wno-deprecated -Wno-write-strings -Wno-narrowing -Wno-int-to-pointer-cast -pthread  
 
 #simple hack to repalce the native flat on OSX because gcc version is low
 ifneq ($(DARWIN),) 
@@ -161,8 +156,6 @@ endif
 
 OBJ_SIFTGPU = $(patsubst %,$(ODIR_SIFTGPU)/%,$(_OBJ_SIFTGPU))
 LIBS_DRIVER = $(BIN_DIR)/libsiftgpu.a $(LIBS_SIFTGPU) 
-SRC_TESTWIN = $(SRC_DRIVER)/TestWinGlut.cpp $(SRC_DRIVER)/BasicTestWin.cpp  
-DEP_TESTWIN = $(SRC_DRIVER)/TestWinGlut.h $(SRC_DRIVER)/BasicTestwin.h $(SRC_DRIVER)/GLTransform.h 
 
 
 
@@ -177,7 +170,6 @@ siftgpu: makepath $(OBJ_SIFTGPU)
 	$(CC) -o $(BIN_DIR)/libsiftgpu.so $(OBJ_SIFTGPU) $(LIBS_SIFTGPU) $(CFLAGS) -shared -fPIC
  
 driver: makepath 
-	$(CC) -o $(BIN_DIR)/TestWinGlut $(SRC_TESTWIN) $(LIBS_DRIVER) $(CFLAGS)
 	$(CC) -o $(BIN_DIR)/SimpleSIFT $(SRC_DRIVER)/SimpleSIFT.cpp $(LIBS_SIMPLESIFT) $(CFLAGS) 
 	$(CC) -o $(BIN_DIR)/speed $(SRC_DRIVER)/speed.cpp $(LIBS_DRIVER) $(CFLAGS) 
 	$(CC) -o $(BIN_DIR)/MultiThreadSIFT $(SRC_DRIVER)/MultiThreadSIFT.cpp $(LIBS_DRIVER) $(CFLAGS)  -pthread
@@ -199,7 +191,6 @@ clean:
 	rm -f $(ODIR_SIFTGPU)/*.o
 	rm -f $(BIN_DIR)/libsiftgpu.a
 	rm -f $(BIN_DIR)/libsiftgpu.so
-	rm -f $(BIN_DIR)/TestWinGlut
 	rm -f $(BIN_DIR)/SimpleSIFT
 	rm -f $(BIN_DIR)/speed
 	rm -f $(BIN_DIR)/server_siftgpu

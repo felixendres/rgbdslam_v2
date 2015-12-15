@@ -39,7 +39,7 @@ Additional information can be found here:<br/>
 ##Installation from Scratch #####################################################
 This walkthrough is is hardly tested, so watch out for problems.
 Assuming you have installed ROS indigo on Ubuntu 14.04, issue the following commands in 
-a terminal (copy-paste will work except for the building of opencv from source)
+a terminal (copy-paste should work)
 
 	#Prepare Workspace
 	source /opt/ros/indigo/setup.bash

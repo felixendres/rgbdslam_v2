@@ -13,7 +13,7 @@
 
   <!-- These parameters are defined in the calling script (run_tests.sh)-->
   <arg name="bagfile_name" />
-  <arg name="feature_type" default="SIFTGPU"/>
+  <arg name="feature_type" default="ORB"/>
   <arg name="ransac_iterations" default="100"/>
   <arg name="optimizer_skip_step" default="10"/>
   <arg name="observability_threshold" default="0"/>

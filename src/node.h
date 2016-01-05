@@ -30,6 +30,7 @@
 //#include <image_geometry/pinhole_camera_model.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/CameraInfo.h>
+#include <geometry_msgs/PoseWithCovariance.h>
 /*
 #include <pcl/registration/icp.h>
 #include <pcl/registration/impl/icp.hpp>
@@ -37,6 +38,7 @@
 #include <pcl/registration/impl/registration.hpp>
 */
 #include "parameter_server.h"
+#include "rc_msgs/Frame.h"
 //for ground truth
 #include <tf/transform_datatypes.h>
 #include <QMutex>
@@ -80,7 +82,13 @@ public:
 	Node(){}
 	///Delete the flannIndex if built
 	~Node();
-
+  ///Get the header of the data belonging to the node
+  myHeader getHeader(){ return header_; }
+  ///return a message containing the feature location and descriptions
+  rc_msgs::Frame toFeatureMessage();
+  ///Set the current estimate from the initial guess (VO-like)
+  void setPoseEstimate(const Eigen::Isometry3d& transform, 
+                       const Eigen::Matrix<double, 6,6>& informationMatrix);
 	///Compare the features of two nodes and compute the transformation
   MatchingResult matchNodePair(const Node* older_node);
   //MatchingResult matchNodePair2(const Node* older_node);
@@ -194,6 +202,7 @@ public:
                  const cv::flann::SearchParams& params) const;
 
   myHeader header_;
+
   const sensor_msgs::CameraInfo& getCamInfo() const {return cam_info_;}
 
 protected:
@@ -206,6 +215,8 @@ protected:
   tf::StampedTransform odom_transform_;        //!<contains the transformation from the wheel encoders/joint states
   int initial_node_matches_;
   sensor_msgs::CameraInfo cam_info_; 
+  ///Only for the initial guess
+  geometry_msgs::PoseWithCovariance pose_with_covariance_;
   //void computeKeypointDepthStats(const cv::Mat& depth_img, const std::vector<cv::KeyPoint> keypoints);
 
 #ifdef USE_SIFT_GPU

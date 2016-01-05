@@ -1236,7 +1236,7 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
                            max_dist_m*max_dist_m); 
     ROS_INFO_STREAM(nodesstring << ": g2o transformation estimated to Node " << earlier_node->id_ << ":\n" << transformation);
     //superior in inliers or equal inliers and better rmse?
-    if (inlier.size() >= matches.size() || inlier.size() >= min_inlier_threshold && inlier_error < rmse) {
+    if (inlier.size() >= matches.size() || (inlier.size() >= min_inlier_threshold && inlier_error < rmse)) {
       //if More inliers -> Refine with them included
       if (inlier.size() > matches.size()) {
         //Refine using the new inliers
@@ -1629,6 +1629,43 @@ void copy_filter_features (const Eigen::Vector3f& center, float radius, const No
   }
 }
 
+rc_msgs::Frame Node::toFeatureMessage()
+{
+  rc_msgs::Frame frame;
+  if(this->feature_descriptors_.type() != CV_8UC1){
+    ROS_INFO("Sending of non-binary features (%s) may produce undefined results", 
+        openCVCode2String(this->feature_descriptors_.type()).c_str());
+  }
+  frame.header = this->getHeader().toRosHeader();
+  frame.features.reserve(this->feature_locations_2d_.size());
+  for(size_t i = 0; i < this->feature_locations_2d_.size(); ++i) 
+  {
+    cv::KeyPoint &kp = this->feature_locations_2d_[i];
+    rc_msgs::Feature feature;
+
+    feature.u = kp.pt.x;
+    feature.v = kp.pt.y;
+    feature.orientation = kp.angle;
+    feature.response = kp.response;
+
+    Eigen::Vector4f& pt = this->feature_locations_3d_[i];
+    feature.x = pt.x();
+    feature.y = pt.y();
+    feature.z = pt.z();
+
+    cv::Mat row = this->feature_descriptors_.row(i);
+    feature.description.reserve(row.cols);
+    for(size_t j = 0; j < row.cols; ++j)
+    {
+      feature.description.push_back(row.at<unsigned char>(j));
+      ROS_DEBUG_STREAM(+row.at<unsigned char>(j) << ":" << +feature.description[j] << " ");
+    }
+    frame.features.push_back(feature);//C++11: use emplace in the beginning
+  }
+  frame.vo_pose = pose_with_covariance_;
+  return frame;
+}
+
 Node* Node::copy_filtered(const Eigen::Vector3f& center, float radius) const
 {
   Node* clone = new Node();
@@ -1639,4 +1676,29 @@ Node* Node::copy_filtered(const Eigen::Vector3f& center, float radius) const
   this->getMemoryFootprint(true);
   clone->getMemoryFootprint(true);
   return clone;
+}
+
+void Node::setPoseEstimate(const Eigen::Isometry3d& transformation, 
+                           const Eigen::Matrix<double, 6,6>& informationMatrix)
+{
+  geometry_msgs::Pose& pose = pose_with_covariance_.pose;
+  pose.position.x = transformation.translation().x();
+  pose.position.y = transformation.translation().y();
+  pose.position.z = transformation.translation().z();
+  Eigen::Quaterniond quat(transformation.rotation());
+  pose.orientation.x = quat.x(); 
+  pose.orientation.y = quat.y(); 
+  pose.orientation.z = quat.z(); 
+  pose.orientation.w = quat.w(); 
+
+  geometry_msgs::PoseWithCovariance::_covariance_type& cov = pose_with_covariance_.covariance;
+  //Eigen Matrices are by default in ColMajor mode:
+  //http://eigen.tuxfamily.org/dox/group__TopicStorageOrders.html
+  //PoseWithCovariance uses a RowMajor matrix:
+  //http://docs.ros.org/indigo/api/geometry_msgs/html/msg/PoseWithCovariance.html
+  //Eigen can convert automagically, so eigen_cov is set to RowMajor.
+  Eigen::Matrix<double, 6,6, Eigen::RowMajor> eigen_cov = informationMatrix.inverse();
+  for(int i=0; i < 36; ++i) cov[i] = eigen_cov(i);
+  ROS_DEBUG_STREAM("GeometryMsgs-Covariance:\n" << pose_with_covariance_);
+  ROS_DEBUG_STREAM("Eigen-Covariance:\n" << eigen_cov);
 }

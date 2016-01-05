@@ -187,6 +187,7 @@ class OpenNIListener : public QObject {
                                const sensor_msgs::CameraInfoConstPtr& cam_info);
     //!Load files in Background to not deadlock
     void loadPCDFilesAsync(QStringList);
+
     ///The GraphManager uses the Node objects to do the actual SLAM
     ///Public, s.t. the qt signals can be connected to by the holder of the OpenNIListener
     GraphManager* graph_mgr_;
@@ -223,6 +224,7 @@ class OpenNIListener : public QObject {
     tf::TransformListener* tflistener_; //!this being a pointer saves the include (using the above forward declaration)
     tf::TransformBroadcaster tf_br_;
     ros::Publisher tf_pub_;
+    ros::Publisher frame_pub_;
     int data_id_;
     int num_processed_;
     std::string image_encoding_;

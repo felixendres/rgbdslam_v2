@@ -130,6 +130,9 @@ OpenNIListener::OpenNIListener(GraphManager* graph_mgr)
   detector_ = createDetector(ps->get<std::string>("feature_detector_type"));
   extractor_ = createDescriptorExtractor(ps->get<std::string>("feature_extractor_type"));
   setupSubscribers();
+
+  ros::NodeHandle nh;
+  frame_pub_ = nh.advertise<rc_msgs::Frame>("frames", 10);
 }
 
 
@@ -781,8 +784,6 @@ void OpenNIListener::noCloudCameraCallback(cv::Mat visual_img,
   callProcessing(visual_img, node_ptr);
 }
 
-
-
 //Call function either regularly or as background thread
 void OpenNIListener::callProcessing(cv::Mat visual_img, Node* node_ptr)
 {
@@ -822,6 +823,9 @@ void OpenNIListener::processNode(Node* new_node)
   ++num_processed_;
   Q_EMIT setGUIInfo2(QString("Frames processed: ")+QString::number(num_processed_));
 
+  if(has_been_added){
+    frame_pub_.publish(new_node->toFeatureMessage());
+  }
   ///ODOMETRY
   if(has_been_added && !ps->get<std::string>("odom_frame_name").empty()){
     ROS_INFO_NAMED("OpenNIListener", "Verifying Odometry Information");

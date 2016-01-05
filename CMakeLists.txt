@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 2.4.6)
+if(COMMAND cmake_policy)
+  cmake_policy(SET CMP0003 NEW)
+endif(COMMAND cmake_policy)
 #########################################################
 ### USER CONFIG #########################################
 #########################################################
@@ -41,20 +44,23 @@ ENDIF (${USE_GICP_BIN} OR ${USE_GICP_CODE})
 ####################################################
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules/")
 #message(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
-find_package(catkin REQUIRED COMPONENTS pcl_conversions pcl_ros roscpp image_transport cv_bridge sensor_msgs cmake_modules
-             geometry_msgs visualization_msgs std_msgs tf message_generation message_filters rosbag rosconsole)
+find_package(catkin REQUIRED COMPONENTS pcl_conversions pcl_ros roscpp
+  image_transport cv_bridge sensor_msgs cmake_modules geometry_msgs
+  visualization_msgs std_msgs tf message_generation message_filters rosbag
+  rosconsole rc_msgs)
 
 project(rgbdslam)
 
 #add_definitions(-DROSCONSOLE_SEVERITY_INFO)
 
 add_service_files(DIRECTORY srv FILES rgbdslam_ros_ui.srv rgbdslam_ros_ui_b.srv rgbdslam_ros_ui_f.srv rgbdslam_ros_ui_s.srv) 
-generate_messages()
+#add_message_files(FILES Feature.msg Frame.msg )
+#generate_messages(DEPENDENCIES std_msgs geometry_msgs )
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES my_pcl_tutorial
-  CATKIN_DEPENDS pcl_conversions pcl_ros roscpp sensor_msgs 
-  DEPENDS message_runtime std_msgs 
+  CATKIN_DEPENDS pcl_conversions pcl_ros roscpp sensor_msgs message_runtime 
+  DEPENDS std_msgs 
 )
 include_directories(${catkin_INCLUDE_DIRS})
 link_directories(${catkin_LIBRARY_DIRS})

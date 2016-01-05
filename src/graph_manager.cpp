@@ -653,7 +653,8 @@ bool GraphManager::nodeComparisons(Node* new_node,
       mr.edge = odom_edge;
       curr_best_result_ = mr;
     }
-
+    new_node->setPoseEstimate(curr_best_result_.edge.transform, 
+                              curr_best_result_.edge.informationMatrix);
     return cam_cam_edges_.size() > num_edges_before;
 }
 

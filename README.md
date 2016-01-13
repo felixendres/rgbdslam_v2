@@ -75,6 +75,7 @@ But to get you started quickly here's the most important pointers:
 -   Check out the README in "test/" for running, testing and evaluating
     RGBDSLAMv2 on Juergen Sturm's RGB-D SLAM Dataset and Benchmark:
     http://vision.in.tum.de/data/datasets/rgbd-dataset
+    You need cython for the evaluation scripts (sudo apt-get install cython).
 
 -   If you want to use SURF or SIFT, you will need to build OpenCV from source,
     including the non-free module (this does not include SIFTGPU, which works

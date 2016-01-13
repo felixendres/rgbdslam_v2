@@ -78,11 +78,11 @@ But to get you started quickly here's the most important pointers:
     You need cython for the evaluation scripts (sudo apt-get install cython).
 
 -   If you want to use SURF or SIFT, you will need to build OpenCV from source,
-    including the non-free module (this does not include SIFTGPU, which works
-    out of the box). In the CMakeLists.txt of RGBDSLAMv2 you can set the build
-    directory of OpenCV and enable the non-free functionality.  Note that SIFT
-    and SURF are not the best choice. Due to new (software) features in
-    RGBDSLAMv2, ORB outperforms both.
+    including the non-free module (this does not include SIFTGPU, which is
+    included, but needs to be enabled in CMakeLists.txt). In the CMakeLists.txt 
+    of RGBDSLAMv2 you can set the build directory of OpenCV and enable the
+    non-free functionality.  Note that SIFT and SURF are not the best choice.
+    Due to new (software) features in RGBDSLAMv2, ORB outperforms both.
 
 <img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_empty.jpg" alt="RGBDSLAM right after startup" width="600">
 
@@ -228,10 +228,10 @@ current directory.
 
 If there are problems related to the compilation or linking of GICP or SIFTGPU,
 you can deactivate these features at the top of CMakeLists.txt. You might get
-even faster GPU features setting SIFT_GPU_MODE to 1 (CUDA) but you will need to
-install proprietary drivers: SiftGPU uses (in our case) CUDA, which needs a new
-NVidia GPU (see http://www.nvidia.com/object/cuda_gpus.html).  For installing
-the development drivers and the CUDA SDK you can use the following tutorial:
+even faster GPU features setting the parameter "siftgpu_with_cuda" but you will
+need to install the proprietary CUDA drivers that may require a NVidia GPU 
+(see http://www.nvidia.com/object/cuda_gpus.html).  For installing the
+development drivers and the CUDA SDK you can use the following tutorial:
 http://sublimated.wordpress.com/2011/03/25/installing-cuda-4-0-rc-on-ubuntu-10-10-64-bit/
 or for ubuntu 10.04: http://ubuntuforums.org/showthread.php?t=1625433 (tested
 on Ubuntu 10.04 x64) To use SiftGPU you should install "libdevil-dev".

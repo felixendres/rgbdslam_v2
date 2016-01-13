@@ -90,6 +90,7 @@ void ParameterServer::defaultConfig() {
   addOption("use_feature_min_depth",         static_cast<bool>(false),                  "Consider the nearest point in the neighborhood of the feature as its depth, as it will dominate the motion");
   addOption("use_feature_mask",              static_cast<bool>(false),                  "Whether to extract features without depth");
   addOption("use_root_sift",                 static_cast<bool>(true),                   "Whether to use euclidean distance or Hellman kernel for feature comparison");
+  addOption("siftgpu_with_cuda",             static_cast<bool>(false),                  "Use CUDA instead of GLSL for the computation of SIFTGPU features. Requires CUDA drivers to be installed.");
 
   // Frontend settings 
   addOption("max_translation_meter",         static_cast<double> (1e10),                "Sanity check for smooth motion.");

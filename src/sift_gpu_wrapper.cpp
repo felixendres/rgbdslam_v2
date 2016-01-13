@@ -33,12 +33,13 @@ SiftGPUWrapper::SiftGPUWrapper() {
     imageHeight = 0;
     imageWidth = 0;
     siftgpu = new SiftGPU();
-
-#if defined(SIFT_GPU_MODE) and SIFT_GPU_MODE == 1
-    char method[] = {"-cuda"};
-#elif defined(SIFT_GPU_MODE) and SIFT_GPU_MODE == 2
-    char method[] = {"-glsl"};
-#endif
+    bool use_cuda = ParameterServer::instance()->get<bool>("siftgpu_with_cuda");
+    char method[6];
+    if(use_cuda){
+      strcpy(method, "-cuda");
+    } else {
+      strcpy(method, "-glsl");
+    }
 
     //sprintf(method, "%s", ParameterServer::instance()->get<bool>("cuda_available") ? "-cuda" : "-glsl");
     int max_features = ParameterServer::instance()->get<int>("max_keypoints");

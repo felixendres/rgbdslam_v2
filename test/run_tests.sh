@@ -26,7 +26,7 @@ for CANDIDATES in 4; do
           echo Evaluating $FEAT_TYPE
 
           echo "Will evaluate RGBD-SLAM on the following bagfiles:"
-          SELECTION=`ls *plant.bag`
+          SELECTION=`ls *.bag`
           echo $SELECTION
 
           for MAXFEATURES in 600; do

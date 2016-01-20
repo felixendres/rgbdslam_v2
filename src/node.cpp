@@ -1629,9 +1629,9 @@ void copy_filter_features (const Eigen::Vector3f& center, float radius, const No
   }
 }
 
-rc_msgs::Frame Node::toFeatureMessage()
+rgbdslam::Frame Node::toFeatureMessage()
 {
-  rc_msgs::Frame frame;
+  rgbdslam::Frame frame;
   if(this->feature_descriptors_.type() != CV_8UC1){
     ROS_INFO("Sending of non-binary features (%s) may produce undefined results", 
         openCVCode2String(this->feature_descriptors_.type()).c_str());
@@ -1641,7 +1641,7 @@ rc_msgs::Frame Node::toFeatureMessage()
   for(size_t i = 0; i < this->feature_locations_2d_.size(); ++i) 
   {
     cv::KeyPoint &kp = this->feature_locations_2d_[i];
-    rc_msgs::Feature feature;
+    rgbdslam::Feature feature;
 
     feature.u = kp.pt.x;
     feature.v = kp.pt.y;
@@ -1654,11 +1654,11 @@ rc_msgs::Frame Node::toFeatureMessage()
     feature.z = pt.z();
 
     cv::Mat row = this->feature_descriptors_.row(i);
-    feature.description.reserve(row.cols);
+    feature.descriptor.reserve(row.cols);
     for(size_t j = 0; j < row.cols; ++j)
     {
-      feature.description.push_back(row.at<unsigned char>(j));
-      ROS_DEBUG_STREAM(+row.at<unsigned char>(j) << ":" << +feature.description[j] << " ");
+      feature.descriptor.push_back(row.at<unsigned char>(j));
+      ROS_DEBUG_STREAM(+row.at<unsigned char>(j) << ":" << +feature.descriptor[j] << " ");
     }
     frame.features.push_back(feature);//C++11: use emplace in the beginning
   }

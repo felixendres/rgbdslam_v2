@@ -46,7 +46,6 @@
   <build_depend>roscpp</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
-  <build_depend>rc_msgs</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>octomap</build_depend>
   <build_depend>visualization_msgs</build_depend> 
@@ -55,8 +54,8 @@
   <run_depend>pcl_ros</run_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>std_msgs</run_depend>
-  <run_depend>rc_msgs</run_depend>
   <run_depend>sensor_msgs</run_depend>
+  <run_depend>geometry_msgs</run_depend>
   <run_depend>octomap</run_depend>
   <run_depend>visualization_msgs</run_depend>
   <run_depend>cmake_modules</run_depend>

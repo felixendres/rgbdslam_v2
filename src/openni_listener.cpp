@@ -132,7 +132,8 @@ OpenNIListener::OpenNIListener(GraphManager* graph_mgr)
   setupSubscribers();
 
   ros::NodeHandle nh;
-  frame_pub_ = nh.advertise<rc_msgs::Frame>("frames", 10);
+  std::string feature_tpc = ps->get<std::string>("features_out_topic");
+  frame_pub_ = nh.advertise<rgbdslam::Frame>(feature_tpc, 10);
 }
 
 

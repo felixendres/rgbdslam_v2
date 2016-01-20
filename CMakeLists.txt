@@ -47,19 +47,19 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake-mo
 find_package(catkin REQUIRED COMPONENTS pcl_conversions pcl_ros roscpp
   image_transport cv_bridge sensor_msgs cmake_modules geometry_msgs
   visualization_msgs std_msgs tf message_generation message_filters rosbag
-  rosconsole rc_msgs)
+  rosconsole)
 
 project(rgbdslam)
 
 #add_definitions(-DROSCONSOLE_SEVERITY_INFO)
 
 add_service_files(DIRECTORY srv FILES rgbdslam_ros_ui.srv rgbdslam_ros_ui_b.srv rgbdslam_ros_ui_f.srv rgbdslam_ros_ui_s.srv) 
-#add_message_files(FILES Feature.msg Frame.msg )
-#generate_messages(DEPENDENCIES std_msgs geometry_msgs )
+add_message_files(FILES Feature.msg Frame.msg )
+generate_messages(DEPENDENCIES geometry_msgs )
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES my_pcl_tutorial
-  CATKIN_DEPENDS pcl_conversions pcl_ros roscpp sensor_msgs message_runtime 
+  CATKIN_DEPENDS pcl_conversions pcl_ros roscpp sensor_msgs message_runtime geometry_msgs
   DEPENDS std_msgs 
 )
 include_directories(${catkin_INCLUDE_DIRS})
@@ -185,10 +185,11 @@ set(OpenCV_DIR $ENV{OpenCV_DIR})
 #add_definitions(-DCV_NONFREE)
 
 IF (NOT "${OpenCV_DIR}" EQUAL "")
-    MESSAGE("Using OpenCV from " ${OpenCV_DIR})
+    MESSAGE(STATUS "Using OpenCV from " "${OpenCV_DIR}")
 ENDIF (NOT "${OpenCV_DIR}" EQUAL "")
 
-find_package(OpenCV)
+find_package(OpenCV 2.4.8 REQUIRED)
+message(STATUS "${OpenCV_INCLUDE_DIRS}")
 include_directories(${OpenCV_INCLUDE_DIRS})
 link_directories(${OpenCV_LIBRARY_DIRS})
 

@@ -38,7 +38,7 @@
 #include <pcl/registration/impl/registration.hpp>
 */
 #include "parameter_server.h"
-#include "rc_msgs/Frame.h"
+#include "rgbdslam/Frame.h"
 //for ground truth
 #include <tf/transform_datatypes.h>
 #include <QMutex>
@@ -85,7 +85,7 @@ public:
   ///Get the header of the data belonging to the node
   myHeader getHeader(){ return header_; }
   ///return a message containing the feature location and descriptions
-  rc_msgs::Frame toFeatureMessage();
+  rgbdslam::Frame toFeatureMessage();
   ///Set the current estimate from the initial guess (VO-like)
   void setPoseEstimate(const Eigen::Isometry3d& transform, 
                        const Eigen::Matrix<double, 6,6>& informationMatrix);

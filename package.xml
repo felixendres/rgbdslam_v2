@@ -3,8 +3,12 @@
   <name>rgbdslam</name>
   <version>0.2.0</version>
   <description>
-    This package can be used to register the point clouds from RGBD sensors such as the kinect or stereo cameras.
-    The created world model can be saved as point cloud or integrated into an octomap.
+    rgbdslam (v2) is a SLAM solution for RGB-D cameras. It provides the current pose of the camera and allows to  
+    create a registered point cloud or an octomap. 
+    
+    It features a GUI interface for easy usage, but can also be controlled by ROS service calls, e.g., when running on a robot.
+
+    For installation and usage instructions see the README file of <a href="https://github.com/felixendres/rgbdslam_v2">the github repository</a>. 
   </description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 

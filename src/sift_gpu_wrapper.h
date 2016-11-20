@@ -42,11 +42,11 @@ public:
 	 * and the third parameter can be used for defining a mask
 	 *
 	 * \param  image        the image
-	 * \param  keypoints    a cv::vector of cv::Keypoints, which is used for storing the keypoints
+	 * \param  keypoints    a std::vector of cv::Keypoints, which is used for storing the keypoints
 	 * \param  mask         a mask (see OpenCV)
 	 * \return a pointer to the descriptor values
 	 */
-	void detect(const cv::Mat& image, cv::vector<cv::KeyPoint>& keypoints, std::vector<float>& descriptors, const cv::Mat& mask = cv::Mat()) const;
+	void detect(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, std::vector<float>& descriptors, const cv::Mat& mask = cv::Mat()) const;
 
 	/*!
 	 * Is used for matching two descriptors

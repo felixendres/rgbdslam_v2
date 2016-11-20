@@ -537,7 +537,7 @@ bool GraphManager::nodeComparisons(Node* new_node,
             nodes_to_comp.push_front(graph_[vertices_to_comp[id_of_id]]); 
             ss << vertices_to_comp[id_of_id] << ", ";
         }
-        ROS_INFO_STREAM("Nodes to compare: " << ss);
+        ROS_INFO_STREAM("Nodes to compare: " << ss.str());
         QThreadPool* qtp = QThreadPool::globalInstance();
         ROS_INFO("Running node comparisons in parallel in %i (of %i) available threads", qtp->maxThreadCount() - qtp->activeThreadCount(), qtp->maxThreadCount());
         if (qtp->maxThreadCount() - qtp->activeThreadCount() == 1) {

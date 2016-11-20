@@ -110,7 +110,7 @@ SiftGPUWrapper* SiftGPUWrapper::getInstance() {
     return instance;
 }
 
-void SiftGPUWrapper::detect(const cv::Mat& image, cv::vector<cv::KeyPoint>& keypoints, std::vector<float>& descriptors, const Mat& mask) const {
+void SiftGPUWrapper::detect(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, std::vector<float>& descriptors, const Mat& mask) const {
     ScopedTimer s(__FUNCTION__);
     if (error) {
         keypoints.clear();

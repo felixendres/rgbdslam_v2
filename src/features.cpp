@@ -113,25 +113,33 @@ FeatureDetector* createDetector(const std::string& detectorName){
   else return detAdj;
 }
 
-DescriptorExtractor* createDescriptorExtractor(const std::string& descriptorType) 
+cv::Ptr<DescriptorExtractor> createDescriptorExtractor(const std::string& descriptorType) 
 {
-    DescriptorExtractor* extractor = 0;
     if(descriptorType == "ORB") {
-        extractor = new OrbDescriptorExtractor();
+        return ORB::create();
     }
 #ifdef CV_NONFREE
     else if(descriptorType == "SIFT") {
-        extractor = new SiftDescriptorExtractor();/*( double magnification=SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION(), bool isNormalize=true, bool recalculateAngles=true, int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES, int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS, int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE, int angleMode=SIFT::CommonParams::FIRST_ANGLE )*/
+        return cv::xfeatures2d::SiftDescriptorExtractor::create();/*( double magnification=SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION(), bool isNormalize=true, bool recalculateAngles=true, int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES, int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS, int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE, int angleMode=SIFT::CommonParams::FIRST_ANGLE )*/
     }
     else if(descriptorType == "SURF") {
-        extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
+        return cv:xfeatures2d::SURF();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
     }
     else if(descriptorType == "SURF128") {
-        extractor = new SurfDescriptorExtractor();/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/
-        extractor->set("extended", 1);
+        auto extractor = cv:xfeatures2d::SURF();
+        extractor->setExtended(true);
+        return extractor;
+    }
+    else if(descriptorType == "BRIEF") {
+        return cv::xfeatures2d::BriefDescriptorExtractor::create();
+    }
+    else if(descriptorType == "FREAK") {
+        return cv::xfeatures2d::FREAK::create();
     }
 #else
-    else if(descriptorType == "SURF128" || descriptorType == "SIFT" || descriptorType == "SURF") 
+    else if(descriptorType == "SURF128" || descriptorType == "SIFT" || 
+            descriptorType == "SURF" || descriptorType == "BRIEF" ||
+            descriptorType == "FREAK") 
     {
         ROS_ERROR("OpenCV non-free functionality (%s) not built in.", descriptorType.c_str());
         ROS_ERROR("To enable non-free functionality build with CV_NONFREE set.");
@@ -140,14 +148,8 @@ DescriptorExtractor* createDescriptorExtractor(const std::string& descriptorType
         return createDescriptorExtractor("ORB");
     }
 #endif
-    else if(descriptorType == "BRIEF") {
-        extractor = new BriefDescriptorExtractor();
-    }
     else if(descriptorType == "BRISK") {
-        extractor = new cv::BRISK();/*brisk default: (int thresh=30, int octaves=3, float patternScale=1.0f)*/
-    }
-    else if(descriptorType == "FREAK") {
-        extractor = new cv::FREAK();
+        return cv::BRISK::create();/*brisk default: (int thresh=30, int octaves=3, float patternScale=1.0f)*/
     }
     else if(descriptorType == "SIFTGPU") {
       ROS_DEBUG("%s is to be used as extractor, creating ORB descriptor extractor as fallback.", descriptorType.c_str());
@@ -157,8 +159,6 @@ DescriptorExtractor* createDescriptorExtractor(const std::string& descriptorType
       ROS_ERROR("No valid descriptor-matcher-type given: %s. Using ORB", descriptorType.c_str());
       return createDescriptorExtractor("ORB");
     }
-    assert(extractor != 0 && "No extractor could be created");
-    return extractor;
 }
 
 static inline int hamming_distance_orb32x8_popcountll(const uint64_t* v1, const uint64_t* v2) {

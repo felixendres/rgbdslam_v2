@@ -25,7 +25,8 @@
 #include "pcl/io/pcd_io.h"
 #include "pcl/io/ply_io.h"
 //#include <sensor_msgs/PointCloud2.h>
-#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/features2d.hpp>
+#include <opencv2/imgproc.hpp>
 #include <qtconcurrentrun.h>
 #include <QFile>
 #include <utility>

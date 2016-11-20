@@ -87,7 +87,7 @@ void DetectorAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypo
     Ptr<FeatureDetector> detector; 
     if(strcmp(detector_name_, "FAST") == 0){
       //detector->set("threshold", static_cast<int>(thresh_));
-      detector = new FastFeatureDetector(thresh_);
+      detector = FastFeatureDetector::create(thresh_);
     }
     else if(strcmp(detector_name_, "AORB") == 0){
       //Default params except last
@@ -112,8 +112,8 @@ void DetectorAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypo
     }
 #endif
     else {
-      FeatureDetector::create(detector_name_);
-      std::cerr << "Unknown Descriptor, not setting threshold";
+      detector = FastFeatureDetector::create(thresh_);
+      std::cerr << "Unknown Descriptor '"<< detector_name_ << "', using default";
     }
     //ROS_INFO("Calling Detect with threshold %f", thresh_);
     //std::cout << "Performing detection with " << detector_name_ << ". Threshold: " << thresh_ << std::endl;
@@ -148,9 +148,9 @@ bool DetectorAdjuster::good() const
     return (thresh_ > min_thresh_) && (thresh_ < max_thresh_);
 }
 
-Ptr<AdjusterAdapter> DetectorAdjuster::clone() const
+Ptr<DetectorAdjuster> DetectorAdjuster::clone() const
 {
-    Ptr<AdjusterAdapter> cloned_obj(new DetectorAdjuster(detector_name_, thresh_, min_thresh_, max_thresh_, increase_factor_, decrease_factor_ ));
+    Ptr<DetectorAdjuster> cloned_obj(new DetectorAdjuster(detector_name_, thresh_, min_thresh_, max_thresh_, increase_factor_, decrease_factor_ ));
     return cloned_obj;
 }
 
@@ -158,7 +158,7 @@ Ptr<AdjusterAdapter> DetectorAdjuster::clone() const
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
- VideoDynamicAdaptedFeatureDetector::VideoDynamicAdaptedFeatureDetector(Ptr<AdjusterAdapter> a,
+ VideoDynamicAdaptedFeatureDetector::VideoDynamicAdaptedFeatureDetector(Ptr<DetectorAdjuster> a,
                                          int min_features, int max_features, int max_iters ) :
         escape_iters_(max_iters), min_features_(min_features), max_features_(max_features), adjuster_(a)
 {}
@@ -171,11 +171,6 @@ cv::Ptr<StatefulFeatureDetector> VideoDynamicAdaptedFeatureDetector::clone() con
                                                                        escape_iters_);
   cv::Ptr<StatefulFeatureDetector> cloned_obj(fd);
   return cloned_obj;
-}
-
-bool VideoDynamicAdaptedFeatureDetector::empty() const
-{
-    return !adjuster_ || adjuster_->empty();
 }
 
 bool hasNonZero(const cv::Mat& img){
@@ -239,13 +234,6 @@ VideoGridAdaptedFeatureDetector::VideoGridAdaptedFeatureDetector( const cv::Ptr<
   }
 }
 
-bool VideoGridAdaptedFeatureDetector::empty() const
-{
-    for(std::vector<cv::Ptr<StatefulFeatureDetector> >::const_iterator it = detectors.begin(); it != detectors.end(); ++it){
-      if((*it)->empty()) return true;
-    }
-    return false;
-}
 
 struct ResponseComparator
 {
@@ -255,7 +243,7 @@ struct ResponseComparator
     }
 };
 
-void keepStrongest( int N, vector<KeyPoint>& keypoints )
+void keepStrongest( int N, std::vector<KeyPoint>& keypoints )
 {
     if( (int)keypoints.size() > N )
     {

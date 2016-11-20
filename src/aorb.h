@@ -62,18 +62,18 @@ public:
     int descriptorType() const;
 
     // Compute the AORB features and descriptors on an image
-    void operator()(InputArray image, InputArray mask, vector<KeyPoint>& keypoints) const;
+    void operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const;
 
     // Compute the AORB features and descriptors on an image
-    void operator()( InputArray image, InputArray mask, vector<KeyPoint>& keypoints,
+    void operator()( InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
                      OutputArray descriptors, bool useProvidedKeypoints=false ) const;
   
-    AlgorithmInfo* info() const;
+    //AlgorithmInfo* info() const;
     
 protected:
 
-    void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
-    void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
     
     CV_PROP_RW int nfeatures;
     CV_PROP_RW double scaleFactor;

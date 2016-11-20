@@ -20,7 +20,7 @@
 #endif
 #include "parameter_server.h"
 //Documentation see header file
-#include "pcl/ros/conversions.h"
+#include "pcl/conversions.h"
 #include <pcl/common/distances.h>
 #include <pcl/io/io.h>
 #include <pcl/io/impl/pcd_io.hpp>

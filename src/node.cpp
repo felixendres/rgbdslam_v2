@@ -25,6 +25,7 @@
 //#include "pcl/ros/conversions.h"
 #include <pcl/common/transformation_from_correspondences.h>
 //#include <opencv2/highgui/highgui.hpp>
+#include "opencv2/imgproc.hpp"
 //#include <qtconcurrentrun.h>
 //#include <QtConcurrentMap> 
 
@@ -137,7 +138,7 @@ Node::Node(const cv::Mat& visual,
 
   cv::Mat gray_img; 
   if(visual.type() == CV_8UC3){
-    cvtColor(visual, gray_img, CV_RGB2GRAY);
+    cv::cvtColor(visual, gray_img, CV_RGB2GRAY);
   } else {
     gray_img = visual;
   }
@@ -271,7 +272,7 @@ Node::Node(const cv::Mat visual,
   ScopedTimer s("Node Constructor");
 
   cv::Mat gray_img; 
-  if(visual.type() == CV_8UC3){ cvtColor(visual, gray_img, CV_RGB2GRAY); } 
+  if(visual.type() == CV_8UC3){ cv::cvtColor(visual, gray_img, CV_RGB2GRAY); } 
   else { gray_img = visual; }
 
 

@@ -37,6 +37,7 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 #endif
 #include "aorb.h"
 
@@ -792,7 +793,7 @@ float getMinDepthInNeighborhood(const cv::Mat& depth, cv::Point2f center, float 
 
 
 //#include "parameter_server.h" //For pointcloud definitions
-#include <pcl/ros/conversions.h>
+#include <pcl/conversions.h>
 //#include <pcl_ros/transforms.h>
 
 //#include <Eigen/Core>

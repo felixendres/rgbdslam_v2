@@ -21,17 +21,37 @@
  * that can be used to show qimages via the slots
  * setDepthImage and setVisualImage.
  */
+#include "qt_gui.h"
+#include <limits>
+#include "glviewer.h"
 #include <QtGui>
 #include <QDir>
 #include <QPixmap>
 #include <QFont>
 #include <QIcon>
 #include <QKeySequence>
-#include "qt_gui.h"
-#include <limits>
-#include "glviewer.h"
 #include <QList>
 #include <QComboBox>
+#include <QString>
+#include <QLabel>
+#include <QFrame>
+#include <QSizePolicy>
+#include <QSplitter>
+#include <QSize>
+#include <QFileDialog>
+#include <QStringList>
+#include <QMessageBox>
+#include <QInputDialog>
+#include <QLineEdit>
+#include <QProgressBar>
+#include <QAction>
+#include <QMenu>
+#include <QScrollArea>
+
+#include <QActionGroup>
+#include <QStatusBar>
+#include <QMenuBar>
+
 
 ///Constructs a QT GUI for easy control of RGBDSLAM
 Graphical_UI::Graphical_UI() : filename("quicksave.pcd"), glviewer(NULL)

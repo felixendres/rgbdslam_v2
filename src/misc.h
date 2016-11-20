@@ -40,8 +40,8 @@ tf::Transform g2o2TF(     const g2o::SE3Quat se3) ;
 template <typename T >
 QMatrix4x4 eigenTF2QMatrix(const T& transf) 
 {
-  Eigen::Matrix<qreal, 4, 4, Eigen::RowMajor> m = transf.matrix();
-  QMatrix4x4 qmat( static_cast<qreal*>( m.data() )  );
+  Eigen::Matrix<float, 4, 4, Eigen::RowMajor> m = transf.matrix().template cast<float>();
+  QMatrix4x4 qmat( static_cast<float*>( m.data() )  );
   printQMatrix4x4("From Eigen::Transform", qmat); 
   return qmat;
 }

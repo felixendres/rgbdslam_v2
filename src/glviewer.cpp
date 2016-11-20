@@ -338,7 +338,7 @@ void GLViewer::drawRenderable() {
 }
 void GLViewer::drawOneCloud(int i) {
         glPushMatrix();
-        glMultMatrixd(static_cast<GLdouble*>( (*cloud_matrices)[i].data() ));//works as long as qreal and GLdouble are typedefs to double (might depend on hardware)
+        glMultMatrixf(static_cast<GLfloat*>( (*cloud_matrices)[i].data() ));//works as long as qreal and GLdouble are typedefs to double (might depend on hardware)
         if(show_clouds_) glCallList(cloud_list_indices[i]);
         if(show_features_ && feature_list_indices.size()>i){
           glCallList(feature_list_indices[i]);
@@ -374,7 +374,7 @@ void GLViewer::drawClouds(float xshift) {
       drawNavigationAxis(2, 0.5, "ctrl + left/right");
     }
 
-    glMultMatrixd(static_cast<GLdouble*>( viewpoint_tf_.data() ));//works as long as qreal and GLdouble are typedefs to double (might depend on hardware)
+    glMultMatrixf(static_cast<GLfloat*>( viewpoint_tf_.data() ));//works as long as qreal and GLdouble are typedefs to double (might depend on hardware)
     if(show_grid_) {
       drawGrid(); //Draw a 10x10 grid with 1m x 1m cells
     }
@@ -413,7 +413,7 @@ void GLViewer::drawClouds(float xshift) {
 
     for(int i = 0; i<cloud_list_indices.size() && i<cloud_matrices->size(); i++){
         glPushMatrix();
-        glMultMatrixd(static_cast<GLdouble*>( (*cloud_matrices)[i].data() ));//works as long as qreal and GLdouble are typedefs to double (might depend on hardware)
+        glMultMatrixf(static_cast<GLfloat*>( (*cloud_matrices)[i].data() ));//works as long as qreal and GLdouble are typedefs to double (might depend on hardware)
         if(show_poses_) drawAxes((i + 1 == cloud_list_indices.size()) ? 0.5:0.075); //Draw last pose Big
         if(show_ids_) {
           glColor4f(1-bg_col_[0],1-bg_col_[1],1-bg_col_[2],1.0); //inverse of bg color

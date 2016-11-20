@@ -94,9 +94,9 @@ void logTransform(QTextStream& out, const tf::Transform& t, double timestamp, co
 
 
 QMatrix4x4 g2o2QMatrix(const g2o::SE3Quat se3) {
-    Eigen::Matrix<double, 4, 4> m = se3.to_homogeneous_matrix(); //_Matrix< 4, 4, double >
+    Eigen::Matrix<float, 4, 4> m = se3.to_homogeneous_matrix().cast<float>(); //_Matrix< 4, 4, double >
     ROS_DEBUG_STREAM("Eigen Matrix:\n" << m);
-    QMatrix4x4 qmat( static_cast<qreal*>( m.data() )  );
+    QMatrix4x4 qmat( static_cast<float*>( m.data()), 4, 4);
     // g2o/Eigen seems to use a different row-major/column-major array layout
     printQMatrix4x4("from conversion", qmat.transposed());//thus the transposes
     return qmat.transposed();//thus the transposes

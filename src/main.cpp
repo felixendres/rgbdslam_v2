@@ -76,14 +76,14 @@ void gui_connections(Graphical_UI* gui, GraphManager* graph_mgr, OpenNIListener*
     QObject::connect(gui, SIGNAL(openBagFile(QString)), listener, SLOT(loadBagFileFromGUI(QString)));
     if (ParameterServer::instance()->get<bool>("use_glwidget") && gui->getGLViewer() != NULL) {
       GLViewer* glv = gui->getGLViewer();
-	    QObject::connect(graph_mgr, SIGNAL(setPointCloud(pointcloud_type *, QMatrix4x4)), glv, SLOT(addPointCloud(pointcloud_type *, QMatrix4x4)), Qt::BlockingQueuedConnection ); //Needs to block, otherwise the opengl list compilation makes the app unresponsive. This effectively throttles the processing rate though
+      QObject::connect(graph_mgr, SIGNAL(setPointCloud(pointcloud_type *, QMatrix4x4)), glv, SLOT(addPointCloud(pointcloud_type *, QMatrix4x4)), Qt::BlockingQueuedConnection ); //Needs to block, otherwise the opengl list compilation makes the app unresponsive. This effectively throttles the processing rate though
       typedef const std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f> >* cnst_ft_vectors;
-	    QObject::connect(graph_mgr, SIGNAL(setFeatures(const std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f> >*)), glv, SLOT(addFeatures(const std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f> >*))); //, Qt::DirectConnection);
-	    QObject::connect(graph_mgr, SIGNAL(setGraphEdges(const QList<QPair<int, int> >*)), glv, SLOT(setEdges(const QList<QPair<int, int> >*)));
-	    QObject::connect(graph_mgr, SIGNAL(updateTransforms(QList<QMatrix4x4>*)), glv, SLOT(updateTransforms(QList<QMatrix4x4>*)));
+      QObject::connect(graph_mgr, SIGNAL(setFeatures(const std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f> >*)), glv, SLOT(addFeatures(const std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f> >*))); //, Qt::DirectConnection);
+      QObject::connect(graph_mgr, SIGNAL(setGraphEdges(const QList<QPair<int, int> >*)), glv, SLOT(setEdges(const QList<QPair<int, int> >*)));
+      QObject::connect(graph_mgr, SIGNAL(updateTransforms(QList<QMatrix4x4>*)), glv, SLOT(updateTransforms(QList<QMatrix4x4>*)));
       QObject::connect(graph_mgr, SIGNAL(deleteLastNode()), glv, SLOT(deleteLastNode()));
-	    QObject::connect(graph_mgr, SIGNAL(resetGLViewer()),  glv, SLOT(reset()));
-	    QObject::connect(graph_mgr, SIGNAL(renderableOctomap(Renderable*)),  glv, SLOT(setRenderable(Renderable*)));
+      QObject::connect(graph_mgr, SIGNAL(resetGLViewer()),  glv, SLOT(reset()));
+      QObject::connect(graph_mgr, SIGNAL(renderableOctomap(Renderable*)),  glv, SLOT(setRenderable(Renderable*)));
       //QObject::connect(glv, SIGNAL(clickedPosition(float,float,float)), graph_mgr, SLOT(filterNodesByPosition(float,float,float)));
       if(!ParameterServer::instance()->get<bool>("store_pointclouds")) {
           QObject::connect(glv, SIGNAL(cloudRendered(pointcloud_type *)), graph_mgr, SLOT(clearPointCloud(pointcloud_type const *))); // 
@@ -115,7 +115,12 @@ int main(int argc, char** argv)
   QtROS qtRos(argc, argv, "rgbdslam"); //ros node name & namespace
 
   //Depending an use_gui on the Parameter Server, a gui- or a headless application is used
-  QApplication app(argc, argv, ParameterServer::instance()->get<bool>("use_gui")); 
+  QCoreApplication* app;
+  if(ParameterServer::instance()->get<bool>("use_gui")) {
+    app = new QApplication(argc, argv);
+  } else {
+    app = new QCoreApplication(argc, argv);
+  }
 
   GraphManager graph_mgr;
   //Instantiate the kinect image listener
@@ -123,14 +128,14 @@ int main(int argc, char** argv)
   std::string bagfile_name = ParameterServer::instance()->get<std::string>("bagfile_name");
   if(!bagfile_name.empty()) 
   {
-    QObject::connect(&listener, SIGNAL(bagFinished()), &app, SLOT(quit()));
+    QObject::connect(&listener, SIGNAL(bagFinished()), app, SLOT(quit()));
     QObject::connect(&listener, SIGNAL(bagFinished()), &qtRos, SLOT(quitNow()));
     listener.loadBagFileFromGUI(bagfile_name.c_str());
     //QtConcurrent::run(&listener, &OpenNIListener::loadBag, bagfile_name);
   }
 
   Graphical_UI* gui = NULL;
-	if (app.type() == QApplication::GuiClient){
+  if (qobject_cast<QApplication*>(app)){
       gui = new Graphical_UI();
       gui->show();
       gui_connections(gui, &graph_mgr, &listener);
@@ -143,13 +148,14 @@ int main(int argc, char** argv)
   ui_connections(&ui, &graph_mgr, &listener);//common connections for the user interfaces
 
   //If one thread receives a exit signal from the user, signal the other thread to quit too
-  QObject::connect(&app, SIGNAL(aboutToQuit()), &qtRos, SLOT(quitNow()));
-  QObject::connect(&qtRos, SIGNAL(rosQuits()), &app, SLOT(quit()));
+  QObject::connect(app, SIGNAL(aboutToQuit()), &qtRos, SLOT(quitNow()));
+  QObject::connect(&qtRos, SIGNAL(rosQuits()), app, SLOT(quit()));
 
   qtRos.start();// Run main loop.
-  app.exec();
+  app->exec();
   //if(ros::ok()) ros::shutdown();//If not yet done through the qt connection
   //ros::waitForShutdown(); //not sure if necessary. 
+  delete app;
 }
 
 

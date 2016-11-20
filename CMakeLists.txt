@@ -31,7 +31,8 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #For annotated profiling with perf: 
 #SET(CMAKE_CXX_FLAGS "-ggdb -O3 -fPIC -std=c++0x")
 #SET(CMAKE_CXX_FLAGS "-ggdb -O3 -fPIC")
-add_compile_options(-std=c++11 -Wall -Wextra -Og)
+SET(CMAKE_BUILD_TYPE RelWithDebInfo)
+add_compile_options(-std=c++11)
 IF (${USE_GL2PS})
   add_definitions(-DGL2PS)
 ENDIF (${USE_GL2PS})
@@ -70,7 +71,6 @@ catkin_package(
 )
 include_directories(SYSTEM ${catkin_INCLUDE_DIRS})
 link_directories(${catkin_LIBRARY_DIRS})
-link_libraries(rgbdslam ${catkin_LIBRARIES})
 
 ####################################################
 # Required 3rd party
@@ -98,7 +98,7 @@ message("G2o-libraries " ${G2O_LIBRARIES})
 find_package(Qt5Widgets)
 find_package(Qt5OpenGL)
 find_package(Qt5Concurrent)
-set(CMAKE_AUTOMOC ON)
+#set(CMAKE_AUTOMOC ON)
 add_definitions(-DQT_NO_KEYWORDS)
 
 # OpenMP ########################
@@ -191,14 +191,14 @@ IF (NOT "${OpenCV_DIR}" EQUAL "")
     MESSAGE("Using OpenCV from " ${OpenCV_DIR})
 ENDIF (NOT "${OpenCV_DIR}" EQUAL "")
 
-find_package(OpenCV)
+find_package(OpenCV REQUIRED)
 include_directories(SYSTEM ${OpenCV_INCLUDE_DIRS})
 link_directories(${OpenCV_LIBRARY_DIRS})
 
 #############################
 # Eigen ####################
 #############################
-find_package(Eigen)
+find_package(Eigen3 REQUIRED)
 include_directories(SYSTEM ${EIGEN_INCLUDE_DIRS})
 add_definitions(${EIGEN_DEFINITIONS})
 

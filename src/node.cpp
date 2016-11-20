@@ -451,7 +451,7 @@ dgc::gicp::GICPPointSet* Node::getGICPStructure(unsigned int max_count) const
   non_NaN.reserve((*pc_col).points.size());
   for (unsigned int i=0; i<(*pc_col).points.size(); i++ ){
     point_type&  p = (*pc_col).points.at(i);
-    if (!isnan(p.z)) { // add points to candidate pointset for icp
+    if (!std::isnan(p.z)) { // add points to candidate pointset for icp
       g_p.x=p.x;
       g_p.y=p.y;
       g_p.z=p.z;
@@ -878,7 +878,7 @@ void Node::projectTo3D(std::vector<cv::KeyPoint>& feature_locations_2d,
     point_type p3d = point_cloud->at((int) p2d.x,(int) p2d.y);
 
     // Check for invalid measurements
-    if ( (p3d.z > maximum_depth) || isnan(p3d.x) || isnan(p3d.y) || isnan(p3d.z))
+    if ( (p3d.z > maximum_depth) || std::isnan(p3d.x) || std::isnan(p3d.y) || std::isnan(p3d.z))
     {
       ROS_DEBUG_NAMED(__FILE__, "Feature %d has been extracted at NaN depth. Omitting", i);
       feature_locations_2d.erase(feature_locations_2d.begin()+i);
@@ -1117,8 +1117,8 @@ bool Node::getRelativeTransformationTo(const Node* earlier_node,
       matches_with_depth = new std::vector<cv::DMatch>(); //matches without depth can validate but not create the trafo
       matches_with_depth->reserve(initial_matches->size());
     BOOST_FOREACH(const cv::DMatch& m, *initial_matches){
-        if(!isnan(this->feature_locations_3d_[m.queryIdx](2)) 
-           && !isnan(earlier_node->feature_locations_3d_[m.trainIdx](2)))
+        if(!std::isnan(this->feature_locations_3d_[m.queryIdx](2)) 
+           && !std::isnan(earlier_node->feature_locations_3d_[m.trainIdx](2)))
             matches_with_depth->push_back(m);
     }
   }

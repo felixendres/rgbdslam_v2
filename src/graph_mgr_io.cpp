@@ -1085,7 +1085,7 @@ void GraphManager::drawFeatureFlow(cv::Mat& canvas, cv::Scalar line_color,
     //Generate different keypoint sets for those with depth and those without
     std::vector<cv::KeyPoint> with_depth, without_depth;
     for(int i = 0; i < newernode->feature_locations_2d_.size(); i++){
-      if(isnan(newernode->feature_locations_3d_[i](2))){
+      if(std::isnan(newernode->feature_locations_3d_[i](2))){
           without_depth.push_back(newernode->feature_locations_2d_[i]);
       } else {
           with_depth.push_back(newernode->feature_locations_2d_[i]);
@@ -1140,7 +1140,7 @@ void GraphManager::drawFeatureFlow(cv::Mat& canvas, cv::Mat& canvas_features, cv
     //Generate different keypoint sets for those with depth and those without
     std::vector<cv::KeyPoint> with_depth, without_depth;
     for(int i = 0; i < newernode->feature_locations_2d_.size(); i++){
-      if(isnan(newernode->feature_locations_3d_[i](2))){
+      if(std::isnan(newernode->feature_locations_3d_[i](2))){
           without_depth.push_back(newernode->feature_locations_2d_[i]);
       } else {
           with_depth.push_back(newernode->feature_locations_2d_[i]);

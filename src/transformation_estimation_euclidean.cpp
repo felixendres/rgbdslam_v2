@@ -19,7 +19,7 @@ Eigen::Matrix4f getTransformFromMatches(const Node* newer_node,
   {
     Eigen::Vector3f from = newer_node->feature_locations_3d_[m.queryIdx].head<3>();
     Eigen::Vector3f to = earlier_node->feature_locations_3d_[m.trainIdx].head<3>();
-    if(isnan(from(2)) || isnan(to(2)))
+    if(std::isnan(from(2)) || std::isnan(to(2)))
       continue;
 
     weight = 1.0/(from(2) * to(2));
@@ -70,7 +70,7 @@ Eigen::Matrix4f getTransformFromMatchesUmeyama(const Node* newer_node,
   for (int i = 0 ;it!=matches.end(); it++, i++) {
     Eigen::Vector3f f = newer_node->feature_locations_3d_[it->queryIdx].head<3>(); //Oh my god, c++
     Eigen::Vector3f t = earlier_node->feature_locations_3d_[it->trainIdx].head<3>();
-    if(isnan(f(2)) || isnan(t(2)))
+    if(std::isnan(f(2)) || std::isnan(t(2)))
       continue;
     froms.col(i) = f;
     tos.col(i) = t;

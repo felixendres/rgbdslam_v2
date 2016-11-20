@@ -110,7 +110,7 @@ void ColorOctomapServer::insertCloudCallbackCommon(boost::shared_ptr<octomap::Po
   pointcloud_type::const_iterator it;
   for (it = color_cloud->begin(); it != color_cloud->end(); ++it) {
     // Check if the point is invalid
-    if (!isnan(it->x) && !isnan(it->y) && !isnan(it->z)) {
+    if (!std::isnan(it->x) && !std::isnan(it->y) && !std::isnan(it->z)) {
 #ifndef RGB_IS_4TH_DIM
       const int rgb = *reinterpret_cast<const int*>(&(it->rgb));
 #else

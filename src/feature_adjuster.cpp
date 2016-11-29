@@ -55,7 +55,7 @@
 using namespace cv;
 
 
-DetectorAdjuster::DetectorAdjuster(const char* detector_name, double initial_thresh, double min_thresh, double max_thresh, double increase_factor, double decrease_factor ) :
+DetectorAdjuster::DetectorAdjuster(std::string detector_name, double initial_thresh, double min_thresh, double max_thresh, double increase_factor, double decrease_factor ) :
     thresh_(initial_thresh), 
     min_thresh_(min_thresh), max_thresh_(max_thresh),
     increase_factor_(increase_factor), decrease_factor_(decrease_factor),
@@ -67,7 +67,7 @@ DetectorAdjuster::DetectorAdjuster(const char* detector_name, double initial_thr
          detector_name_ == "FAST" ||
          detector_name_ == "AORB"))
     { //None of the above
-      std::cerr << "Unknown Descriptor";
+      std::cerr << "Unknown Descriptor: " << detector_name_ << "\n";
     }
 #else
     if(detector_name_ == "SURF" || detector_name_ == "SIFT") {
@@ -77,7 +77,7 @@ DetectorAdjuster::DetectorAdjuster(const char* detector_name, double initial_thr
     if(!(detector_name_ == "FAST" ||
          detector_name_ == "AORB"))
     { //None of the above
-      std::cerr << "Unknown Descriptor";
+      std::cerr << "Unknown Descriptor" << detector_name_ << "\n";
     }
 #endif
 }
@@ -85,26 +85,26 @@ DetectorAdjuster::DetectorAdjuster(const char* detector_name, double initial_thr
 void DetectorAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
 {
     Ptr<FeatureDetector> detector; 
-    if(strcmp(detector_name_, "FAST") == 0){
+    if(detector_name_ == "FAST"){
       //detector->set("threshold", static_cast<int>(thresh_));
       detector = FastFeatureDetector::create(thresh_);
     }
-    else if(strcmp(detector_name_, "AORB") == 0){
+    else if(detector_name_ == "AORB"){
       //Default params except last
       detector = new AorbFeatureDetector(10000, 1.2, 8, 15, 0, 2, 0, 31, static_cast<int>(thresh_));
       //detector->set("fastThreshold", static_cast<int>(thresh_));//Not threadsafe (parallelized grid)
     }
 #ifdef CV_NONFREE
-    else if(strcmp(detector_name_, "SURF") == 0){
+    else if(detector_name_ == "SURF"){
       //detector->set("hessianThreshold", thresh_);//Not threadsafe (parallelized grid)
       detector = new SurfFeatureDetector(thresh_);
     }
-    else if(strcmp(detector_name_, "SIFT") == 0){
+    else if(detector_name_ == "SIFT"){
       //detector->set("contrastThreshold", thresh_);
       detector = new SiftFeatureDetector(0 /*max_features*/, 3 /*default lvls/octave*/, thresh_);
     }
 #else
-    else if(strcmp(detector_name_, "SIFT") == 0 || strcmp(detector_name_, "SURF") == 0){
+    else if(detector_name_ == "SIFT" || detector_name_ == "SURF"){
         std::cerr << "OpenCV non-free functionality (" << detector_name_ << ") not built in.";
         std::cerr << "To enable non-free functionality build with CV_NONFREE set.";
         std::cerr << "Using ORB.";
@@ -113,7 +113,7 @@ void DetectorAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypo
 #endif
     else {
       detector = FastFeatureDetector::create(thresh_);
-      std::cerr << "Unknown Descriptor '"<< detector_name_ << "', using default";
+      std::cerr << "Unknown Descriptor '"<< detector_name_ << "', using default\n";
     }
     //ROS_INFO("Calling Detect with threshold %f", thresh_);
     //std::cout << "Performing detection with " << detector_name_ << ". Threshold: " << thresh_ << std::endl;

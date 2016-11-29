@@ -9,6 +9,6 @@
 cv::FeatureDetector* createDetector(const std::string& detectorType);
 /// Create an object to extract features at keypoints. The Exctractor is passed
 ///to the Node constructor and must be the same for each node.
-cv::DescriptorExtractor* createDescriptorExtractor(const std::string& descriptorType);
+cv::Ptr<cv::DescriptorExtractor> createDescriptorExtractor(std::string descriptorType);
 
 int bruteForceSearchORB(const uint64_t* v, const uint64_t* search_array, const unsigned int& size, int& result_index);

@@ -1,6 +1,7 @@
 #ifndef FEATUREADJUSTER_H
 #define FEATUREADJUSTER_H
 #include <opencv2/features2d.hpp>
+#include <string>
 
 /** \brief an detector adjuster optimized for image sequences (video).
  * Use this Adjuster with the DynamicAdaptedFeatureDetector. 
@@ -12,7 +13,7 @@ class DetectorAdjuster: public cv::Feature2D
 {
 public:
     ///Initial values are for SURF detector
-    DetectorAdjuster(const char* detector_name, double initial_thresh=200.f, double min_thresh=2, double max_thresh=10000, double increase_factor=1.3, double decrease_factor=0.7 );
+    DetectorAdjuster(std::string detector_name, double initial_thresh=200.f, double min_thresh=2, double max_thresh=10000, double increase_factor=1.3, double decrease_factor=0.7 );
     
     virtual void tooFew(int minv, int n_detected);
     virtual void tooMany(int maxv, int n_detected);
@@ -27,7 +28,7 @@ protected:
 
     double thresh_, min_thresh_, max_thresh_;
     double increase_factor_, decrease_factor_;
-    const char* detector_name_;
+    const std::string detector_name_;
 };
 
 /** A Feature Detector that saves some state.

@@ -113,7 +113,7 @@ FeatureDetector* createDetector(const std::string& detectorName){
   else return detAdj;
 }
 
-cv::Ptr<DescriptorExtractor> createDescriptorExtractor(const std::string& descriptorType) 
+cv::Ptr<DescriptorExtractor> createDescriptorExtractor(std::string descriptorType) 
 {
     if(descriptorType == "ORB") {
         return ORB::create();

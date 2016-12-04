@@ -40,6 +40,7 @@
 //#include "opencv2/core/internal.hpp"
 #include "aorb.h"
 #include <iterator>
+#include <iostream>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -663,7 +664,7 @@ static void computeKeyPoints(const std::vector<Mat>& imagePyramid,
         std::vector<KeyPoint> & keypoints = allKeypoints[level];
         
         // Detect FAST features, 20 is not a good threshold for SLAM
-        FastFeatureDetector* fd = FastFeatureDetector::create(fastThreshold, true);
+        cv::Ptr<FastFeatureDetector> fd = FastFeatureDetector::create(fastThreshold, true);
         fd->detect(imagePyramid[level], keypoints, maskPyramid[level]);
         
         // Remove keypoints very close to the border

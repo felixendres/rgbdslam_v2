@@ -192,7 +192,7 @@ class OpenNIListener : public QObject {
     GraphManager* graph_mgr_;
     
     //Variables
-    cv::Ptr<cv::FeatureDetector> detector_;
+    cv::Ptr<cv::Feature2D> detector_;
     cv::Ptr<cv::DescriptorExtractor> extractor_;
 
     message_filters::Synchronizer<StereoSyncPolicy>* stereo_sync_;

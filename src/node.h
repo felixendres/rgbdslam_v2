@@ -66,13 +66,13 @@ public:
 			 const cv::Mat& detection_mask,
        const sensor_msgs::CameraInfoConstPtr& cam_info, 
        myHeader depth_header,
-			 cv::Ptr<cv::FeatureDetector> detector,
+			 cv::Ptr<cv::Feature2D> detector,
 			 cv::Ptr<cv::DescriptorExtractor> extractor);
 	///Visual must be CV_8UC1
 	///detection_mask must be CV_8UC1 with non-zero 
 	///at potential keypoint locations
 	Node(const cv::Mat visual,
-			 cv::Ptr<cv::FeatureDetector> detector,
+			 cv::Ptr<cv::Feature2D> detector,
 			 cv::Ptr<cv::DescriptorExtractor> extractor,
 			 pointcloud_type::Ptr point_cloud,
 			 const cv::Mat detection_mask = cv::Mat());

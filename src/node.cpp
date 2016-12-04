@@ -103,7 +103,7 @@ Node::Node(const cv::Mat& visual,
            const cv::Mat& detection_mask,
            const sensor_msgs::CameraInfoConstPtr& cam_info, 
            myHeader depth_header,
-           cv::Ptr<cv::FeatureDetector> detector,
+           cv::Ptr<cv::Feature2D> detector,
            cv::Ptr<cv::DescriptorExtractor> extractor) :
   id_(-1), seq_id_(-1), vertex_id_(-1), valid_tf_estimate_(true),
   timestamp_(depth_header.stamp),
@@ -156,6 +156,7 @@ Node::Node(const cv::Mat& visual,
   {
     ScopedTimer s("Feature Detection");
     ROS_FATAL_COND(detector.empty(), "No valid detector!");
+
     detector->detect( gray_img, feature_locations_2d_, detection_mask);// fill 2d locations
   }
 
@@ -249,7 +250,7 @@ Node::Node(const cv::Mat& visual,
 
 
 Node::Node(const cv::Mat visual,
-           cv::Ptr<cv::FeatureDetector> detector,
+           cv::Ptr<cv::Feature2D> detector,
            cv::Ptr<cv::DescriptorExtractor> extractor,
            pointcloud_type::Ptr point_cloud,
            const cv::Mat detection_mask) : 

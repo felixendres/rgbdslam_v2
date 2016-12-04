@@ -2,6 +2,7 @@
 #define FEATUREADJUSTER_H
 #include <opencv2/features2d.hpp>
 #include <string>
+#include <iostream>
 
 /** \brief an detector adjuster optimized for image sequences (video).
  * Use this Adjuster with the DynamicAdaptedFeatureDetector. 
@@ -23,8 +24,9 @@ public:
 
     void setIncreaseFactor(double new_factor);
     void setDecreaseFactor(double new_factor);
+    //virtual void detect( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask=cv::Mat() ) const;
+    virtual void detect(cv::InputArray _image, std::vector<cv::KeyPoint>& keypoints, cv::InputArray _mask);
 protected:
-    virtual void detectImpl( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask=cv::Mat() ) const;
 
     double thresh_, min_thresh_, max_thresh_;
     double increase_factor_, decrease_factor_;
@@ -33,9 +35,13 @@ protected:
 
 /** A Feature Detector that saves some state.
  * The copy constructor of */
-class StatefulFeatureDetector : public cv::FeatureDetector {
+class StatefulFeatureDetector : public cv::Feature2D {
   public:
     virtual cv::Ptr<StatefulFeatureDetector> clone() const = 0;
+    CV_WRAP virtual void detect( cv::InputArray image,
+                                 CV_OUT std::vector<cv::KeyPoint>& keypoints,
+                                 cv::InputArray mask=cv::noArray() )
+    {std::cerr << "StatefulFeatureDetector::detect\n";}
 };
 
 /** 
@@ -65,8 +71,10 @@ public:
 
     virtual cv::Ptr<StatefulFeatureDetector> clone() const;
 
-protected:
-    virtual void detectImpl( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask=cv::Mat() ) const;
+    //virtual void detect( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask=cv::Mat() ) const;
+    CV_WRAP virtual void detect( cv::InputArray image,
+                                 CV_OUT std::vector<cv::KeyPoint>& keypoints,
+                                 cv::InputArray mask=cv::noArray() );
 
 private:
     VideoDynamicAdaptedFeatureDetector& operator=(const VideoDynamicAdaptedFeatureDetector&);
@@ -103,12 +111,13 @@ public:
     
     // TODO implement read/write
     virtual cv::Ptr<StatefulFeatureDetector> clone() const;
+    virtual void detect(cv::InputArray _image, std::vector<cv::KeyPoint>& keypoints, cv::InputArray _mask) const;
+     // detect( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask=cv::Mat() ) const;
 
 protected:
     VideoGridAdaptedFeatureDetector& operator=(const VideoGridAdaptedFeatureDetector&);
     VideoGridAdaptedFeatureDetector(const VideoGridAdaptedFeatureDetector&);
 
-    virtual void detectImpl( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask=cv::Mat() ) const;
 
     std::vector<cv::Ptr<StatefulFeatureDetector> > detectors;
     int maxTotalKeypoints;

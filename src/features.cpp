@@ -61,7 +61,7 @@ StatefulFeatureDetector* adjustedGridWrapper(cv::Ptr<DetectorAdjuster> detadj)
 }
 
 //Use Grid or Dynamic or GridDynamic as prefix of FAST, SIFT, SURF or AORB
-FeatureDetector* createDetector(const std::string& detectorName){
+Feature2D* createDetector(const std::string& detectorName){
   //For anything but SIFTGPU
   DetectorAdjuster* detAdj = NULL;
 
@@ -86,11 +86,12 @@ FeatureDetector* createDetector(const std::string& detectorName){
      ROS_ERROR("To enable non-free functionality build with CV_NONFREE set.");
      ROS_WARN("Using ORB feature detection instead.");
      ParameterServer::instance()->set("feature_detector_type", std::string("ORB"));
-     detAdj = new DetectorAdjuster("AORB", 20);
+     detAdj = new DetectorAdjuster("ORB", 20);
   }
 #endif
   else if(detectorName == "ORB") {
-     detAdj = new DetectorAdjuster("AORB", 20);
+    std::cerr << "create DetectorAdjuster(ORB)\n";
+     detAdj = new DetectorAdjuster("ORB", 20);
   } 
   else {
     ROS_ERROR("Unsupported Keypoint Detector. Using ORB as fallback.");

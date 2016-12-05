@@ -21,13 +21,19 @@ Additional information can be found here:<br/>
 <img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_fr2desk.jpg" alt="RGBDSLAM on the RGB-D Benchmark Dataset" width="600">
 
 # Prerequisites  ################################################################
-- Ubuntu 14.04 
-- [ROS indigo](http://wiki.ros.org/indigo/)
+Other versions may work, but are yet untested. Please report success if you use other versions.
+- Ubuntu 16.04 
+- [ROS kinetic](http://wiki.ros.org/kinetic/)
 
 # Installation ################################################################
+This is a canonical way, feel free to adapt if you known what you are doing.
 
 1. Put RGBDSLAMv2 in a catkin workspace: See [the catkin tutorial](http://wiki.ros.org/catkin/Tutorials/create_a_workspace) 
   for details. Use git to clone this repository into your workspace's "src/" directory. Or download RGBDSLAMv2 as an [archive](http://codeload.github.com/felixendres/rgbdslam_v2/zip/indigo) and extract it to "src/".
+
+2. Download my [g2o fork|https://github.com/felixendres/g2o], put it in some other directory. 
+   Build and install. Export the environment variable `$G2O_DIR` to the installation directory to
+   let rgbdslam_v2 know where to find it (see Installation from Scratch for an example).
 
 2. Use rosdep (i.e. "rosdep install rgbdslam") to install missing 
   dependencies. For details see http://wiki.ros.org/ROS/Tutorials/rosdep
@@ -50,13 +56,19 @@ a terminal (copy-paste should work)
 	catkin_make
 	source devel/setup.bash
 	
-	#Get RGBDSLAM
+  #Get and build g2o fork
+  mkdir -p ~/g2ofork
+  git clone https://github.com/felixendres/g2o.git
+  mkdir -p ~/g2ofork/build
+  cd ~/g2ofork/build
+  cmake .. -DCMAKE_INSTALL_PREFIX=~/g2ofork/install
+  make -j2 install
+
+	#Get and build rgbdslam_v2
+  export G2O_DIR=~/g2ofork/install
 	cd ~/rgbdslam_catkin_ws/src
-	wget -q http://github.com/felixendres/rgbdslam_v2/archive/indigo.zip
-	unzip -q indigo.zip
+  git clone -b kinetic https://github.com/felixendres/g2o.git
 	cd ~/rgbdslam_catkin_ws/
-	
-	#Install
 	rosdep update
 	rosdep install rgbdslam
 	catkin_make 

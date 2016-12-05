@@ -39,7 +39,6 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #endif
-#include "aorb.h"
 
 #include <omp.h>
 #include "misc2.h"

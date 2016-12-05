@@ -127,7 +127,6 @@ OpenNIListener::OpenNIListener(GraphManager* graph_mgr)
   if(ps->get<bool>("encoding_bgr")){
     image_encoding_ = "bgr8";//used in conversion to qimage. exact value does not matter, just not rgb8
   }
-  std::cerr << "Create Detector\n";
   detector_.reset(createDetector(ps->get<std::string>("feature_detector_type")));
 
   extractor_ = createDescriptorExtractor(ps->get<std::string>("feature_extractor_type"));

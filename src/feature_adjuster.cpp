@@ -47,7 +47,6 @@
 #include "opencv2/nonfree/features2d.hpp"
 #endif
 #include "opencv2/imgproc/imgproc.hpp"
-#include "aorb.h"
 #include <cassert>
 #include <iostream>
 #include <algorithm> //for min
@@ -61,7 +60,6 @@ DetectorAdjuster::DetectorAdjuster(std::string detector_name, double initial_thr
     increase_factor_(increase_factor), decrease_factor_(decrease_factor),
     detector_name_(detector_name)
 {
-std::cerr << "DetectorAdjuster ctor \n";
 #ifdef CV_NONFREE
     if(!(detector_name_ == "SURF" || 
          detector_name_ == "SIFT" ||
@@ -86,7 +84,6 @@ std::cerr << "DetectorAdjuster ctor \n";
 //void DetectorAdjuster::detect(const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
 void DetectorAdjuster::detect(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask)
 {
-    std::cerr << "DetectorAdjuster::detect\n";
     Ptr<Feature2D> detector; 
     if(detector_name_ == "FAST"){
       //detector->set("threshold", static_cast<int>(thresh_));
@@ -94,7 +91,6 @@ void DetectorAdjuster::detect(InputArray image, std::vector<KeyPoint>& keypoints
     }
     else if(detector_name_ == "ORB"){
       //Default params except last
-      std::cerr << "Creating ORB\n";
       detector = ORB::create(10000, 1.2, 8, 15, 0, 2, 0, 31, static_cast<int>(thresh_));
       //detector->set("fastThreshold", static_cast<int>(thresh_));//Not threadsafe (parallelized grid)
     }
@@ -188,7 +184,6 @@ bool hasNonZero(const cv::Mat& img){
 }
 void VideoDynamicAdaptedFeatureDetector::detect(InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask)
 {
-  std::cerr << "VideoDynamicAdaptedFeatureDetector::detect\n";
     //In contraast to the original, no oscillation testing is needed as
     //the loop is broken out of anyway, if too many features were found.
 
@@ -234,7 +229,6 @@ void VideoDynamicAdaptedFeatureDetector::detect(InputArray _image, std::vector<K
 VideoGridAdaptedFeatureDetector::VideoGridAdaptedFeatureDetector( const cv::Ptr<StatefulFeatureDetector>& _detector, int _maxTotalKeypoints, int _gridRows, int _gridCols, int _edgeThreshold)
     : maxTotalKeypoints(_maxTotalKeypoints), gridRows(_gridRows), gridCols(_gridCols), edgeThreshold(_edgeThreshold)
 {
-  std::cerr << "VideoGridAdaptedFeatureDetector ctor \n";
   detectors.push_back(_detector);//Use original one
   while(detectors.size() < gridRows*gridCols){
     detectors.push_back(_detector->clone());//clone, so the state is not shared
@@ -289,11 +283,10 @@ static void aggregateKeypointsPerGridCell(std::vector<std::vector<cv::KeyPoint> 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //void VideoGridAdaptedFeatureDetector::detect( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask ) const
-void VideoGridAdaptedFeatureDetector::detect(InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask) const
+void VideoGridAdaptedFeatureDetector::detect(InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask)
 {
   cv::Mat image = _image.getMat();
   cv::Mat mask = _mask.getMat();
-  std::cerr << "VideoGridAdaptedFeatureDetector::detect\n";
     std::vector<std::vector<cv::KeyPoint> > sub_keypoint_vectors(gridCols*gridRows);
     keypoints.reserve(maxTotalKeypoints);
     int maxPerCell = maxTotalKeypoints / (gridRows * gridCols);

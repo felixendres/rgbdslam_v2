@@ -22,7 +22,6 @@
 #include "opencv2/nonfree/nonfree.hpp"
 #endif
 #endif
-#include "aorb.h"
 
 #include "feature_adjuster.h"
 #include "parameter_server.h"
@@ -90,7 +89,6 @@ Feature2D* createDetector(const std::string& detectorName){
   }
 #endif
   else if(detectorName == "ORB") {
-    std::cerr << "create DetectorAdjuster(ORB)\n";
      detAdj = new DetectorAdjuster("ORB", 20);
   } 
   else {

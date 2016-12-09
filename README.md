@@ -48,7 +48,7 @@ Assuming you have installed ROS indigo on Ubuntu 14.04, issue the following comm
 a terminal (copy-paste should work)
 
 	#Prepare Workspace
-	source /opt/ros/indigo/setup.bash
+	source /opt/ros/kinetic/setup.bash
 	mkdir -p ~/rgbdslam_catkin_ws/src
 	cd ~/rgbdslam_catkin_ws/src
 	catkin_init_workspace
@@ -56,18 +56,18 @@ a terminal (copy-paste should work)
 	catkin_make
 	source devel/setup.bash
 	
-  #Get and build g2o fork
-  mkdir -p ~/g2ofork
-  git clone https://github.com/felixendres/g2o.git
-  mkdir -p ~/g2ofork/build
-  cd ~/g2ofork/build
-  cmake .. -DCMAKE_INSTALL_PREFIX=~/g2ofork/install
-  make -j2 install
+	#Get and build g2o fork
+	mkdir -p ~/g2ofork
+	git clone https://github.com/felixendres/g2o.git
+	mkdir -p ~/g2ofork/build
+	cd ~/g2ofork/build
+	cmake .. -DCMAKE_INSTALL_PREFIX=~/g2ofork/install -DG2O_BUILD_EXAMPLES=OFF
+	make -j2 install
 
 	#Get and build rgbdslam_v2
-  export G2O_DIR=~/g2ofork/install
+	export G2O_DIR=~/g2ofork/install
 	cd ~/rgbdslam_catkin_ws/src
-  git clone -b kinetic https://github.com/felixendres/g2o.git
+	git clone -b kinetic https://github.com/felixendres/g2o.git
 	cd ~/rgbdslam_catkin_ws/
 	rosdep update
 	rosdep install rgbdslam

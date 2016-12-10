@@ -47,6 +47,8 @@ This walkthrough is is hardly tested, so watch out for problems.
 Assuming you have installed ROS indigo on Ubuntu 14.04, issue the following commands in 
 a terminal (copy-paste should work)
 
+	#Prepare System
+	sudo apt-get purge ros-kinetic-libg2o libqglviewer-dev
 	#Prepare Workspace
 	source /opt/ros/kinetic/setup.bash
 	mkdir -p ~/rgbdslam_catkin_ws/src
@@ -57,9 +59,8 @@ a terminal (copy-paste should work)
 	source devel/setup.bash
 	
 	#Get and build g2o fork
-	mkdir -p ~/g2ofork
-	git clone https://github.com/felixendres/g2o.git
 	mkdir -p ~/g2ofork/build
+	git clone -b c++03 https://github.com/felixendres/g2o.git g2ofork
 	cd ~/g2ofork/build
 	cmake .. -DCMAKE_INSTALL_PREFIX=~/g2ofork/install -DG2O_BUILD_EXAMPLES=OFF
 	make -j2 install
@@ -67,7 +68,7 @@ a terminal (copy-paste should work)
 	#Get and build rgbdslam_v2
 	export G2O_DIR=~/g2ofork/install
 	cd ~/rgbdslam_catkin_ws/src
-	git clone -b kinetic https://github.com/felixendres/g2o.git
+	git clone -b kinetic https://github.com/felixendres/rgbdslam_v2.git
 	cd ~/rgbdslam_catkin_ws/
 	rosdep update
 	rosdep install rgbdslam

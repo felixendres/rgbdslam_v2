@@ -13,6 +13,8 @@ can be found in the following publication:
 *F. Endres, J. Hess, J. Sturm, D. Cremers, W. Burgard*,<br/>
 IEEE Transactions on Robotics, 2014.
 
+Even more information can be found in my [PhD thesis](http://www2.informatik.uni-freiburg.de/~endres/files/publications/felix-endres-phd-thesis.pdf)
+
 Additional information can be found here:<br/>
 * www.informatik.uni-freiburg.de/~endres
 * http://www.ros.org/wiki/rgbdslam
@@ -21,15 +23,16 @@ Additional information can be found here:<br/>
 <img src="http://raw.githubusercontent.com/felixendres/rgbdslam_v2/hydro/media/rgbdslamv2_fr2desk.jpg" alt="RGBDSLAM on the RGB-D Benchmark Dataset" width="600">
 
 # Prerequisites  ################################################################
-Other versions may work, but are yet untested. Please report success if you use other versions.
 - Ubuntu 16.04 
 - [ROS kinetic](http://wiki.ros.org/kinetic/)
+- Amd64 processor (there are known problems with ARM, mostly related to qt and opengl)
+Other versions may work, but are not tested. Please report success if you use other versions.
 
 # Installation ################################################################
 This is a canonical way, feel free to adapt if you known what you are doing.
 
 1. Put RGBDSLAMv2 in a catkin workspace: See [the catkin tutorial](http://wiki.ros.org/catkin/Tutorials/create_a_workspace) 
-  for details. Use git to clone this repository into your workspace's "src/" directory. Or download RGBDSLAMv2 as an [archive](http://codeload.github.com/felixendres/rgbdslam_v2/zip/indigo) and extract it to "src/".
+  for details. Use git to clone this repository into your workspace's "src/" directory. Or download RGBDSLAMv2 as an [archive](http://codeload.github.com/felixendres/rgbdslam_v2/zip/kinetic) and extract it to "src/".
 
 2. Download my [g2o fork|https://github.com/felixendres/g2o], put it in some other directory. 
    Build and install. Export the environment variable `$G2O_DIR` to the installation directory to
@@ -43,47 +46,32 @@ This is a canonical way, feel free to adapt if you known what you are doing.
 
 
 ##Installation from Scratch #####################################################
-This walkthrough is is hardly tested, so watch out for problems.
-Assuming you have installed ROS indigo on Ubuntu 14.04, issue the following commands in 
-a terminal (copy-paste should work)
+There is now an install.sh script, which can be executed (`bash install.sh`).
+It installs everything required below ~/Code (you can change the location in the script).
 
-	#Prepare System
-	sudo apt-get purge ros-kinetic-libg2o libqglviewer-dev
-	#Prepare Workspace
-	source /opt/ros/kinetic/setup.bash
-	mkdir -p ~/rgbdslam_catkin_ws/src
-	cd ~/rgbdslam_catkin_ws/src
-	catkin_init_workspace
-	cd ~/rgbdslam_catkin_ws/
-	catkin_make
-	source devel/setup.bash
-	
-	#Get and build g2o fork
-	mkdir -p ~/g2ofork/build
-	git clone -b c++03 https://github.com/felixendres/g2o.git g2ofork
-	cd ~/g2ofork/build
-	cmake .. -DCMAKE_INSTALL_PREFIX=~/g2ofork/install -DG2O_BUILD_EXAMPLES=OFF
-	make -j2 install
+The script is short and not complicated, so you can also use it as a manual.
 
-	#Get and build rgbdslam_v2
-	export G2O_DIR=~/g2ofork/install
-	cd ~/rgbdslam_catkin_ws/src
-	git clone -b kinetic https://github.com/felixendres/rgbdslam_v2.git
-	cd ~/rgbdslam_catkin_ws/
-	rosdep update
-	rosdep install rgbdslam
-	catkin_make 
+If you want to use the install script, it is sufficient to 
+[download it directly](https://raw.githubusercontent.com/felixendres/rgbdslam_v2/kinetic/install.sh). 
+There is no need to clone this repository then, as the script will do that for you.
+
+If you have a multi-core machine with 4GB RAM or more, you can speed up the compilation
+by increasing the two occurences of "-j2" to, e.g., "-j4".
 
 # Installation done! What's next?
 See the sections below for more details on the usage. 
 But to get you started quickly here's the most important pointers:
 
 -   If you want to use RGBDSLAMv2 with an RGB-D camera you may have
-    to install openni (sudo apt-get install ros-indigo-openni-launch).
+    to install openni (sudo apt-get install ros-kinetic-openni-launch)
+    or something similar
 
 -   Check out the launch files in "launch/" for examples and specific 
     use cases. roslaunch rgbdslam openni+rgbdslam.launch is a good starting 
     point for live mapping.
+
+-   You probably need to adapt the parameters for the input topics depending
+    on your camera driver node.
 
 -   Check out the README in "test/" for running, testing and evaluating
     RGBDSLAMv2 on Juergen Sturm's RGB-D SLAM Dataset and Benchmark:

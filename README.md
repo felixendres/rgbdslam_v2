@@ -45,7 +45,7 @@ This is a canonical way, feel free to adapt if you known what you are doing.
    If you get an error about the missing siftgpu library, execute "catkin_make" again.
 
 
-##Installation from Scratch #####################################################
+## Installation from Scratch  #####################################################
 There is now an install.sh script, which can be executed (`bash install.sh`).
 It installs everything required below ~/Code (you can change the location in the script).
 

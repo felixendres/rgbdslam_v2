@@ -31,6 +31,10 @@ echo "Updating ROS dependency database"
 echo
 rosdep update
 
+echo "Install dependences for g2o"
+sudo apt-get install libsuitesparse-dev libeigen3-dev
+echo
+
 echo
 echo "Downloading, building and installing g2o"
 echo

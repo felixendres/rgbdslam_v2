@@ -94,10 +94,13 @@ link_directories(${G2O_LIBRARY_DIRS})
 link_libraries(${G2O_LIBRARIES})
 message("G2o-libraries " ${G2O_LIBRARIES})
 
+# x11
+find_package(X11)
+find_package(PkgConfig)
+pkg_check_modules(GLEW REQUIRED glew)
+
 # Qt ########################
-find_package(Qt5Widgets)
-find_package(Qt5OpenGL)
-find_package(Qt5Concurrent)
+find_package(Qt5 COMPONENTS Widgets OpenGL Concurrent)
 #set(CMAKE_AUTOMOC ON)
 add_definitions(-DQT_NO_KEYWORDS)
 
@@ -108,7 +111,7 @@ if (OPENMP_FOUND)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 # This is necessary as all ui files etc will get dumped in the bottom of then binary directory. 
-include_directories(SYSTEM ${CMAKE_CURRENT_BINARY_DIR} ${QT_QTOPENGL_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/external/gicp/ann_1.1.2/include/ANN)
+include_directories(SYSTEM ${CMAKE_CURRENT_BINARY_DIR} ${Qt5_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/external/gicp/ann_1.1.2/include/ANN)
 
 #get_directory_property(clean ADDITIONAL_MAKE_CLEAN_FILES)
 #SET(clean external/siftgpu/linux/bin/libsiftgpu.so)
@@ -260,7 +263,7 @@ IF (${USE_GICP})
  	SET(LIBS_LINK ${LIBS_LINK} gicp ANN gsl gslcblas)
 ENDIF (${USE_GICP})
 #link libraries
-target_link_libraries(rgbdslam ${LIBS_LINK}  ${catkin_LIBRARIES})
+target_link_libraries(rgbdslam ${LIBS_LINK} ${X11_LIBRARIES} ${GLEW_LIBRARIES} IL ${catkin_LIBRARIES})
 
 IF (${USE_GICP})
   set(ROS_COMPILE_FLAGS ${ROS_COMPILE_FLAGS} -fpermissive)

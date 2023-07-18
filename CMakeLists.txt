@@ -252,7 +252,7 @@ SET(LIBS_LINK GL GLU cholmod cxsparse ${G2O_LIBRARIES} ${QT_LIBRARIES} ${QT_QTOP
 #-lboost_signals -lrt -loctomap -loctomap_server -loctomath)
 
 IF (${USE_SIFT_GPU})
- 	SET(LIBS_LINK ${LIBS_LINK} siftgpu)
+ 	SET(LIBS_LINK ${LIBS_LINK} siftgpu -lGLEW -lglut)
 ENDIF (${USE_SIFT_GPU})
 IF (${USE_GL2PS})
  	SET(LIBS_LINK ${LIBS_LINK} -lgl2ps)
